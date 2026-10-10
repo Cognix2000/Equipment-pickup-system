@@ -1,0 +1,9 @@
+{
+  "stryker-config": {
+    "project": "Retirada.Ordens.csproj",
+    "test-projects": ["tests/Retirada.Ordens.Testes/Retirada.Ordens.Testes.csproj"],
+    "mutate": ["**/Dominio/**/*.cs"],
+    "reporters": ["html", "progress", "cleartext"],
+    "thresholds": { "high": 90, "low": 80, "break": 80 }
+  }
+}

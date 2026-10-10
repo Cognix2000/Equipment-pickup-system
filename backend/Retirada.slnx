@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Retirada.Api/Retirada.Api.csproj" />
+    <Project Path="src/Retirada.Banco/Retirada.Banco.csproj" />
+    <Project Path="src/Retirada.Comum/Retirada.Comum.csproj" />
+  </Folder>
+  <Folder Name="/src/Modulos/">
+    <Project Path="src/Modulos/Retirada.Acesso/Retirada.Acesso.csproj" />
+    <Project Path="src/Modulos/Retirada.Ordens/Retirada.Ordens.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Retirada.Acesso.Testes/Retirada.Acesso.Testes.csproj" />
+    <Project Path="tests/Retirada.Arquitetura.Testes/Retirada.Arquitetura.Testes.csproj" />
+    <Project Path="tests/Retirada.Ordens.Testes/Retirada.Ordens.Testes.csproj" />
+    <Project Path="tests/Retirada.Ordens.TestesBanco/Retirada.Ordens.TestesBanco.csproj" />
+  </Folder>
+</Solution>

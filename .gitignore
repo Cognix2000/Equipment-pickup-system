@@ -1,0 +1,26 @@
+# Segredos
+.env
+*.pfx
+appsettings.*.local.json
+
+# .NET
+bin/
+obj/
+TestResults/
+StrykerOutput/
+*.user
+
+# Front-end
+node_modules/
+dist/
+dev-dist/
+storybook-static/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Sistema e editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

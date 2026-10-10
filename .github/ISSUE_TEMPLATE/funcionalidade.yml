@@ -1,0 +1,44 @@
+name: Funcionalidade
+description: Um requisito (RF), regra (RN) ou caso de uso para o kanban
+title: "feat(modulo): "
+labels: ["tipo: funcionalidade"]
+body:
+  - type: input
+    id: requisito
+    attributes:
+      label: Requisito
+      description: RF, RN ou UC do documento de requisitos
+      placeholder: RF12 · UC04
+    validations:
+      required: true
+  - type: dropdown
+    id: incremento
+    attributes:
+      label: Incremento
+      options: ["1", "2", "3", "4", "5"]
+    validations:
+      required: true
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo
+      options: [ordens, importacao, acesso, estoque, contato, parceiros, front-end, infraestrutura]
+    validations:
+      required: true
+  - type: textarea
+    id: historia
+    attributes:
+      label: O que a pessoa precisa
+      placeholder: Como técnico, quero registrar a retirada com foto e série, para provar que recolhi o equipamento.
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critério de aceite
+      description: Vira teste automatizado
+      placeholder: |
+        - Dado uma ordem atribuída, quando confirmo com todos os itens, então ela vira Concluída
+        - Dado uma ordem cancelada, quando tento registrar, então o app bloqueia (RN07)
+    validations:
+      required: true

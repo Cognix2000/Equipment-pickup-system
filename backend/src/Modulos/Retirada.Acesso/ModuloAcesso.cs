@@ -1,0 +1,175 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Npgsql;
+using Retirada.Acesso.Casos;
+using Retirada.Acesso.Dominio;
+using Retirada.Acesso.Infraestrutura;
+using Retirada.Acesso.Seguranca;
+using Retirada.Comum;
+
+namespace Retirada.Acesso;
+
+/// <summary>Porta de entrada do módulo Acesso (ADR-010).</summary>
+public static class ModuloAcesso
+{
+    public const string LimiteDeTentativas = "tentativas_de_acesso";
+
+    /// <summary>Cabeçalho que o PWA manda em todo comando. Outro site não consegue mandar sem CORS: barra CSRF.</summary>
+    public const string CabecalhoAntiCsrf = "X-Retirada";
+
+    public static IServiceCollection AddModuloAcesso(
+        this IServiceCollection services, string connectionString, IConfiguration config, IHostEnvironment ambiente)
+    {
+        services.AddDbContext<AcessoDbContext>(o => o.UseNpgsql(connectionString));
+        services.AddSingleton<SegundoFator>();
+
+        // As chaves cifram o cookie e o segredo do 2FA. Perdê-las derruba sessões e invalida todo 2FA:
+        // fora do desenvolvimento, a pasta é obrigatória e precisa estar num volume com backup.
+        var pasta = config["DataProtection:Pasta"];
+        if (string.IsNullOrWhiteSpace(pasta))
+        {
+            if (!ambiente.IsDevelopment())
+                throw new InvalidOperationException("Configure DataProtection:Pasta (volume persistente e com backup).");
+            pasta = Path.Combine(Path.GetTempPath(), "retirada-chaves-dev");
+        }
+        services.AddDataProtection().SetApplicationName("retirada").PersistKeysToFileSystem(new DirectoryInfo(pasta));
+
+        services.AddAuthentication(Sessao.Esquema).AddCookie(o =>
+        {
+            o.Cookie.Name = "retirada_sessao";
+            o.Cookie.HttpOnly = true;
+            o.Cookie.SameSite = SameSiteMode.Strict;
+            o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS em produção vem do Nginx (cabeçalhos repassados)
+            o.ExpireTimeSpan = TimeSpan.FromHours(12);
+            o.SlidingExpiration = true;
+            // API não redireciona para página de login: responde 401 e 403, e o PWA decide.
+            o.Events.OnRedirectToLogin = c => { c.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
+            o.Events.OnRedirectToAccessDenied = c => { c.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+            o.Events.OnValidatePrincipal = ValidarSessaoAsync;
+        });
+
+        services.AddAuthorizationBuilder()
+            // Sem dizer nada, todo endpoint exige login completo; o que é público declara AllowAnonymous.
+            .SetFallbackPolicy(Completo().Build())
+            .AddPolicy(Politicas.LoginParcial, p => p.RequireAuthenticatedUser())
+            .AddPolicy(Politicas.Gestao, p => Completo(p).RequireRole(Papeis.Gestor))
+            .AddPolicy(Politicas.LerOrdens, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico, Papeis.Estoque));
+
+        var porMinuto = config.GetValue("Acesso:TentativasPorMinuto", 10);
+        services.AddRateLimiter(o =>
+        {
+            o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            // Mesmo formato dos outros erros (ADR-009), com o tempo de espera para o cliente.
+            o.OnRejected = (contexto, cancelamento) =>
+            {
+                contexto.HttpContext.Response.Headers.RetryAfter = "60";
+                return new ValueTask(Results.Problem(
+                    title: "Muitas tentativas. Espere um minuto e tente de novo.",
+                    statusCode: StatusCodes.Status429TooManyRequests,
+                    extensions: new Dictionary<string, object?> { ["codigo"] = "MUITAS_TENTATIVAS" })
+                    .ExecuteAsync(contexto.HttpContext));
+            };
+            o.AddPolicy(LimiteDeTentativas, http => RateLimitPartition.GetFixedWindowLimiter(
+                http.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
+        });
+
+        return services;
+    }
+
+    private static AuthorizationPolicyBuilder Completo(AuthorizationPolicyBuilder? p = null) =>
+        (p ?? new AuthorizationPolicyBuilder()).RequireAuthenticatedUser().RequireClaim(Reivindicacoes.Etapa, EtapasDeAcesso.Completo);
+
+    /// <summary>Barra comandos sem o cabeçalho do PWA. Precisa vir antes da autenticação.</summary>
+    public static IApplicationBuilder UseProtecaoCsrf(this IApplicationBuilder app) => app.Use(async (http, proximo) =>
+    {
+        var metodo = http.Request.Method;
+        var ehComando = !(HttpMethods.IsGet(metodo) || HttpMethods.IsHead(metodo) || HttpMethods.IsOptions(metodo));
+        if (ehComando && http.Request.Path.StartsWithSegments("/api") && http.Request.Headers[CabecalhoAntiCsrf] != "1")
+        {
+            await Results.Problem(title: "Requisição sem o cabeçalho de proteção do aplicativo.", statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["codigo"] = "CSRF" }).ExecuteAsync(http);
+            return;
+        }
+        await proximo(http);
+    });
+
+    public static IEndpointRouteBuilder MapModuloAcesso(this IEndpointRouteBuilder app)
+    {
+        var grupo = app.MapGroup("/api/acesso").WithTags("Acesso");
+        Entrar.Mapear(grupo);
+        ConfirmarCodigo.Mapear(grupo);
+        IniciarConfiguracao2FA.Mapear(grupo);
+        ConfirmarConfiguracao2FA.Mapear(grupo);
+        QuemSouEu.Mapear(grupo);
+        Sair.Mapear(grupo);
+        AceitarConvite.Mapear(grupo);
+        GestaoDeUsuarios.Mapear(app);
+        return app;
+    }
+
+    /// <summary>
+    /// RF02 "revogar corta o acesso na hora": a cada requisição, confere no banco se o usuário segue ativo
+    /// e se o carimbo da sessão é o atual. Uma consulta por chave primária, barata para este volume.
+    /// </summary>
+    private static async Task ValidarSessaoAsync(CookieValidatePrincipalContext contexto)
+    {
+        var principal = contexto.Principal;
+        if (!Guid.TryParse(principal?.FindFirstValue(Reivindicacoes.Usuario), out var id)
+            || !Guid.TryParse(principal?.FindFirstValue(Reivindicacoes.Carimbo), out var carimbo))
+        {
+            contexto.RejectPrincipal();
+            return;
+        }
+
+        var db = contexto.HttpContext.RequestServices.GetRequiredService<AcessoDbContext>();
+        var atual = await db.Usuarios.AsNoTracking()
+            .Where(u => u.Id == id)
+            .Select(u => new { u.Situacao, u.CarimboSeguranca })
+            .SingleOrDefaultAsync(contexto.HttpContext.RequestAborted);
+
+        if (atual is null || atual.Situacao != SituacaoUsuario.Ativo || atual.CarimboSeguranca != carimbo)
+        {
+            contexto.RejectPrincipal();
+            await Sessao.FecharAsync(contexto.HttpContext);
+        }
+    }
+
+    /// <summary>Homologação: dá a senha de demonstração aos usuários fictícios (@exemplo.invalid) que ainda não têm senha.</summary>
+    public static async Task<int> DefinirSenhasDeDemonstracaoAsync(string connectionString, string senha, CancellationToken ct = default)
+    {
+        await using var conexao = new NpgsqlConnection(connectionString);
+        await conexao.OpenAsync(ct);
+        await using var comando = new NpgsqlCommand("""
+            UPDATE retirada.usuario
+               SET senha_hash = @hash, situacao = 'ativo', atualizado_em = now()
+             WHERE email LIKE '%@exemplo.invalid' AND senha_hash IS NULL
+            """, conexao);
+        comando.Parameters.AddWithValue("hash", HashDeSenha.Gerar(senha));
+        return await comando.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>Produção: cria o primeiro gestor e devolve o link de primeiro acesso (vale 48 h).</summary>
+    public static async Task<string> ConvidarPrimeiroGestorAsync(string connectionString, string nome, string email, CancellationToken ct = default)
+    {
+        var opcoes = new DbContextOptionsBuilder<AcessoDbContext>().UseNpgsql(connectionString).Options;
+        await using var db = new AcessoDbContext(opcoes);
+        var agora = DateTimeOffset.UtcNow;
+        var gestor = Usuario.CadastrarPrimeiroGestor(nome, email, agora);
+        var (convite, token) = Convite.Gerar(gestor.Id, gestor.Id, agora);
+        db.Usuarios.Add(gestor);
+        db.Convites.Add(convite);
+        await db.SaveChangesAsync(ct);
+        return LinkDeConvite.De(convite, token).Caminho;
+    }
+}

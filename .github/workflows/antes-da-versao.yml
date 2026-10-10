@@ -1,0 +1,65 @@
+# ADR-007: os testes pesados, rodados à mão contra homologação antes de cada versão.
+#   Actions › "Antes da versão" › Run workflow › informe a URL de homologação.
+# Nunca aponte para produção: carga e ZAP mexem de verdade no sistema.
+name: Antes da versão
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL de homologação, ex.: https://retirada-homolog.exemplo"
+        required: true
+      cenario_de_carga:
+        description: Cenário do k6
+        type: choice
+        options: [carga, estresse, fumaca]
+        default: carga
+
+permissions:
+  contents: read
+  issues: write # o ZAP abre uma issue com os achados
+
+jobs:
+  carga:
+    name: Carga com k6 (${{ inputs.cenario_de_carga }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: grafana/setup-k6-action@v1
+      - uses: grafana/run-k6-action@v1
+        env:
+          BASE_URL: ${{ inputs.url }}
+          CENARIO: ${{ inputs.cenario_de_carga }}
+        with:
+          path: testes-carga/ordens.js
+
+  zap:
+    name: Segurança da aplicação (OWASP ZAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ inputs.url }}
+          rules_file_name: .github/zap-regras.tsv
+          issue_title: "Achados do OWASP ZAP em homologação"
+
+  mutacao:
+    name: Mutação no domínio (Stryker.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet tool restore
+      - name: Escore mínimo de 80% (quebra abaixo disso)
+        run: dotnet stryker --config-file stryker-config.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: stryker
+          path: backend/StrykerOutput/**/reports/*.html

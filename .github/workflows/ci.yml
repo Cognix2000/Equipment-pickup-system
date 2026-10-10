@@ -1,0 +1,101 @@
+# ADR-006 e ADR-007: todo PR passa por aqui. A main só aceita merge com tudo verde.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  titulo-do-pr:
+    name: Título no padrão Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confere o título
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          padrao='^(feat|fix|docs|test|refactor|perf|chore|ci|build)(\([a-z0-9-]+\))?!?: .+'
+          if ! echo "$TITULO" | grep -Eq "$padrao"; then
+            echo "::error::Use 'tipo(modulo): descrição'. Ex.: feat(ordens): registrar retirada (RF12)"
+            exit 1
+          fi
+
+  backend:
+    name: API .NET
+    runs-on: ubuntu-latest
+    services:
+      banco:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: retirada_teste
+          POSTGRES_USER: retirada_dono
+          POSTGRES_PASSWORD: senha_so_do_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U retirada_dono -d retirada_teste"
+          --health-interval 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - name: Testes (unidade, banco, arquitetura e contrato da API)
+        run: dotnet test --no-build -c Release --collect:"XPlat Code Coverage"
+        env:
+          RETIRADA_TESTE_BANCO: Host=localhost;Database=retirada_teste;Username=retirada_dono;Password=senha_so_do_ci;GSS Encryption Mode=Disable
+
+  frontend:
+    name: PWA React
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run build-storybook
+      - run: npx playwright install --with-deps chromium
+      - name: Testes de tela (ponta a ponta, acessibilidade, rolagem lateral e capturas)
+        run: npm run test:e2e
+      - name: Relatório e capturas novas
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright
+          path: |
+            frontend/playwright-report
+            frontend/e2e/**/*-snapshots
+          retention-days: 14
+
+  imagens:
+    name: Imagens Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Monta as imagens da API e do PWA
+        run: |
+          cp .env.example .env
+          docker compose build
