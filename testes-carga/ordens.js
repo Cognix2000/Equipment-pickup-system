@@ -6,10 +6,16 @@
 //   CENARIO=fumaca k6 run testes-carga/ordens.js                   # 1 usuário, só para conferir o script
 //
 // Nunca rode contra produção: use homologação, com os dados fictícios.
+//
+// Login (ADR-010): o script entra uma vez como o técnico fictício (EMAIL e SENHA mudam isso)
+// e todos os usuários virtuais usam a mesma sessão. Como o limite da API é por usuário
+// (300 por minuto), suba a homologação com Acesso__RequisicoesPorMinuto=100000 durante o teste.
 import http from 'k6/http'
 import { check, group, sleep } from 'k6'
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080'
+const EMAIL = __ENV.EMAIL || 'tecnico.demo@exemplo.invalid'
+const SENHA = __ENV.SENHA || 'Demo@Retirada2026'
 
 // Uso esperado no incremento 1: até 30 técnicos olhando a lista e 5 pessoas no painel ao mesmo tempo.
 const cenarios = {
@@ -46,7 +52,21 @@ export const options = {
   },
 }
 
-export default function () {
+export function setup() {
+  const resposta = http.post(`${BASE_URL}/api/acesso/entrar`, JSON.stringify({ email: EMAIL, senha: SENHA }), {
+    headers: { 'Content-Type': 'application/json', 'X-Retirada': '1' },
+    tags: { tipo: 'login' },
+  })
+  const sessao = resposta.cookies.retirada_sessao?.[0]?.value
+  if (resposta.status !== 200 || resposta.json('etapa') !== 'pronto' || !sessao) {
+    throw new Error(`Login falhou (${resposta.status}). Use um usuário sem 2FA, como o técnico fictício.`)
+  }
+  return { sessao }
+}
+
+export default function ({ sessao }) {
+  const jar = http.cookieJar()
+  jar.set(BASE_URL, 'retirada_sessao', sessao)
   let ordens = []
 
   group('técnico abre a lista de ordens', () => {

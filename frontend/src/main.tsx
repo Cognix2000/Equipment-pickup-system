@@ -25,8 +25,8 @@ const clienteDeConsultas: QueryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: true,
-      // Não insiste em erro de acesso (401/403) nem em 404: a resposta não vai mudar.
-      retry: (tentativas, erro) => !(erro instanceof ErroDaApi && [401, 403, 404].includes(erro.status)) && tentativas < 1,
+      // Não insiste em erro de acesso (401/403), 404 ou limite de requisições (429): repetir na hora não muda a resposta.
+      retry: (tentativas, erro) => !(erro instanceof ErroDaApi && [401, 403, 404, 429].includes(erro.status)) && tentativas < 1,
     },
   },
 })
