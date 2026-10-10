@@ -1,4 +1,9 @@
 # ADR-007: análise estática de segurança (SAST) em todo PR e toda semana.
+#
+# O repositório é privado e não tem GitHub Code Security (pago), então o resultado
+# não vai para a aba Security. O CodeQL roda igual, o job falha se achar alerta e o
+# relatório SARIF fica anexado ao run (abre no VS Code com a extensão SARIF Viewer).
+# Se um dia o Code Security for contratado, basta trocar "upload: never" por "always".
 name: Segurança do código
 
 on:
@@ -10,7 +15,7 @@ on:
 
 permissions:
   contents: read
-  security-events: write
+  actions: read # a action do CodeQL lê os dados do próprio run, mesmo sem enviar resultado
 
 jobs:
   codeql:
@@ -28,3 +33,19 @@ jobs:
           build-mode: none
           queries: security-extended
       - uses: github/codeql-action/analyze@v4
+        with:
+          upload: never
+          output: sarif
+      - name: Anexar o relatório
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-${{ matrix.linguagem }}
+          path: sarif
+          if-no-files-found: ignore
+      - name: Falhar se houver alerta
+        run: |
+          alertas=$(jq -s '[.[].runs[].results[]] | length' sarif/*.sarif)
+          jq -r '.runs[].results[] | "\(.ruleId)  \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)  \(.message.text)"' sarif/*.sarif
+          echo "Alertas: $alertas"
+          test "$alertas" -eq 0
