@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   security-events: write
+  actions: read # em repositório privado, o CodeQL lê o próprio run para enviar o resultado
 
 jobs:
   codeql:
