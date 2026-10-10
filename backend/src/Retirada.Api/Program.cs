@@ -109,11 +109,12 @@ app.UseExceptionHandler(erro => erro.Run(async contexto =>
         .ExecuteAsync(contexto);
 }));
 
-// ADR-010: CSRF antes de tudo; depois sessão, permissões e limite de tentativas.
+// ADR-010: CSRF antes de tudo; depois sessão, limite de requisições e permissões.
+// O limite vem antes da autorização para contar também quem leva 401/403.
 app.UseProtecaoCsrf();
 app.UseAuthentication();
-app.UseAuthorization();
 app.UseRateLimiter();
+app.UseAuthorization();
 
 // Contrato da API em /openapi/v1.json fora de produção (desenvolvimento e homologação).
 if (!app.Environment.IsProduction())

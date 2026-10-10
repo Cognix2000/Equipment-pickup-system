@@ -65,27 +65,46 @@ public static class ModuloAcesso
             .AddPolicy(Politicas.Gestao, p => Completo(p).RequireRole(Papeis.Gestor))
             .AddPolicy(Politicas.LerOrdens, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico, Papeis.Estoque));
 
-        var porMinuto = config.GetValue("Acesso:TentativasPorMinuto", 10);
+        var tentativasPorMinuto = config.GetValue("Acesso:TentativasPorMinuto", 10);
+        var requisicoesPorMinuto = config.GetValue("Acesso:RequisicoesPorMinuto", 300);
+        var requisicoesAnonimasPorMinuto = config.GetValue("Acesso:RequisicoesAnonimasPorMinuto", 60);
         services.AddRateLimiter(o =>
         {
             o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             // Mesmo formato dos outros erros (ADR-009), com o tempo de espera para o cliente.
             o.OnRejected = (contexto, cancelamento) =>
             {
-                contexto.HttpContext.Response.Headers.RetryAfter = "60";
+                var espera = contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var tempo) ? tempo : TimeSpan.FromMinutes(1);
+                contexto.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(espera.TotalSeconds)).ToString();
                 return new ValueTask(Results.Problem(
                     title: "Muitas tentativas. Espere um minuto e tente de novo.",
                     statusCode: StatusCodes.Status429TooManyRequests,
                     extensions: new Dictionary<string, object?> { ["codigo"] = "MUITAS_TENTATIVAS" })
                     .ExecuteAsync(contexto.HttpContext));
             };
-            o.AddPolicy(LimiteDeTentativas, http => RateLimitPartition.GetFixedWindowLimiter(
-                http.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
-                _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
+
+            // Limite geral, em toda a API: por usuário quando há sessão, por IP quando não há.
+            // Roda depois da autenticação, então uma sessão revogada já conta como anônima.
+            o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+            {
+                if (http.Request.Path.StartsWithSegments("/health")) return RateLimitPartition.GetNoLimiter("saude");
+                var usuario = http.User.FindFirst(Reivindicacoes.Usuario)?.Value;
+                return usuario is not null
+                    ? PorMinuto($"usuario:{usuario}", requisicoesPorMinuto)
+                    : PorMinuto($"ip:{IpDe(http)}", requisicoesAnonimasPorMinuto);
+            });
+
+            // Além do geral, login e 2FA têm um limite bem menor por IP (força bruta).
+            o.AddPolicy(LimiteDeTentativas, http => PorMinuto(IpDe(http), tentativasPorMinuto));
         });
 
         return services;
     }
+
+    private static string IpDe(HttpContext http) => http.Connection.RemoteIpAddress?.ToString() ?? "desconhecido";
+
+    private static RateLimitPartition<string> PorMinuto(string chave, int limite) =>
+        RateLimitPartition.GetFixedWindowLimiter(chave, _ => new FixedWindowRateLimiterOptions { PermitLimit = limite, Window = TimeSpan.FromMinutes(1) });
 
     private static AuthorizationPolicyBuilder Completo(AuthorizationPolicyBuilder? p = null) =>
         (p ?? new AuthorizationPolicyBuilder()).RequireAuthenticatedUser().RequireClaim(Reivindicacoes.Etapa, EtapasDeAcesso.Completo);

@@ -35,6 +35,8 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Retirada", Conexao);
         builder.UseSetting("Acesso:TentativasPorMinuto", "10000");
+        builder.UseSetting("Acesso:RequisicoesPorMinuto", "10000");
+        builder.UseSetting("Acesso:RequisicoesAnonimasPorMinuto", "10000");
         builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
     }
 
