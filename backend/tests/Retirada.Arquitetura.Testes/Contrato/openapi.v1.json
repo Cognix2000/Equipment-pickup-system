@@ -1,0 +1,890 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Retirada.Api | v1",
+    "version": "1.0.0"
+  },
+  "servers": [],
+  "paths": {
+    "/api/acesso/entrar": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Entrar com e-mail e senha (RF01)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pedido"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaDeLogin"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/codigo": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Confirmar o c\u00F3digo do aplicativo autenticador",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeCodigo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaDeLogin"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/2fa/iniciar": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Gerar o QR code para cadastrar o aplicativo autenticador",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/2fa/confirmar": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Ativar o 2FA com o primeiro c\u00F3digo do aplicativo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeCodigo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaDeLogin"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/eu": {
+      "get": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Usu\u00E1rio da sess\u00E3o",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/sair": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Sair",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/acesso/convite": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Definir a senha pelo link de convite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pedido"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/usuarios": {
+      "get": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Usu\u00E1rios e situa\u00E7\u00E3o (RF02)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioNaLista"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Cadastrar usu\u00E1rio; ele fica pendente at\u00E9 usar o convite (RF02)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeCadastro"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cadastrado"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/{id}/convite": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Novo link de primeiro acesso ou de nova senha",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkDeConvite"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/usuarios/{id}/revogar": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Revogar: corta o acesso na hora (RF02)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioNaLista"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/usuarios/{id}/reativar": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Reativar usu\u00E1rio revogado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioNaLista"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/usuarios/{id}/zerar-2fa": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Zerar o 2FA de quem trocou de celular",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioNaLista"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/ordens": {
+      "get": {
+        "tags": [
+          "Ordens"
+        ],
+        "summary": "Lista ordens, com filtro por status e bairro (RF06)",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bairro",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrdemDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ordens/{id}": {
+      "get": {
+        "tags": [
+          "Ordens"
+        ],
+        "summary": "Detalhe da ordem (RF07)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Cadastrado": {
+        "required": [
+          "usuario",
+          "convite"
+        ],
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioNaLista"
+          },
+          "convite": {
+            "$ref": "#/components/schemas/LinkDeConvite"
+          }
+        }
+      },
+      "Endereco": {
+        "required": [
+          "logradouro",
+          "numero",
+          "complemento",
+          "bairro",
+          "cidade",
+          "uf",
+          "referencia"
+        ],
+        "type": "object",
+        "properties": {
+          "logradouro": {
+            "type": "string"
+          },
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "complemento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bairro": {
+            "type": "string"
+          },
+          "cidade": {
+            "type": "string"
+          },
+          "uf": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EquipamentoDto": {
+        "required": [
+          "id",
+          "tipo",
+          "modelo",
+          "numeroSerie",
+          "situacao"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoEquipamento"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "numeroSerie": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "situacao": {
+            "$ref": "#/components/schemas/SituacaoEquipamento"
+          }
+        }
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "LinkDeConvite": {
+        "required": [
+          "caminho",
+          "expiraEm"
+        ],
+        "type": "object",
+        "properties": {
+          "caminho": {
+            "type": "string"
+          },
+          "expiraEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Localizacao": {
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "OrdemDto": {
+        "required": [
+          "id",
+          "numeroOs",
+          "tipoOs",
+          "status",
+          "cliente",
+          "endereco",
+          "localizacao",
+          "observacao",
+          "carenciaAte",
+          "aguardaBaixaNoHubsoft",
+          "equipamentos"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numeroOs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tipoOs": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusOrdem"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "endereco": {
+            "$ref": "#/components/schemas/Endereco"
+          },
+          "localizacao": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Localizacao"
+              }
+            ]
+          },
+          "observacao": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "carenciaAte": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "aguardaBaixaNoHubsoft": {
+            "type": "boolean"
+          },
+          "equipamentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EquipamentoDto"
+            }
+          }
+        }
+      },
+      "Pedido": {
+        "required": [
+          "email",
+          "senha"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "senha": {
+            "type": "string"
+          }
+        }
+      },
+      "PedidoDeCadastro": {
+        "required": [
+          "nome",
+          "email",
+          "papel"
+        ],
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "type": "string"
+          }
+        }
+      },
+      "PedidoDeCodigo": {
+        "required": [
+          "codigo"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          }
+        }
+      },
+      "Resposta": {
+        "required": [
+          "enderecoOtpAuth",
+          "segredo"
+        ],
+        "type": "object",
+        "properties": {
+          "enderecoOtpAuth": {
+            "type": "string"
+          },
+          "segredo": {
+            "type": "string"
+          }
+        }
+      },
+      "RespostaDeLogin": {
+        "required": [
+          "etapa",
+          "usuario"
+        ],
+        "type": "object",
+        "properties": {
+          "etapa": {
+            "type": "string"
+          },
+          "usuario": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UsuarioDto"
+              }
+            ]
+          }
+        }
+      },
+      "SituacaoEquipamento": {
+        "enum": [
+          "pendente",
+          "retirado",
+          "devolvido_na_loja",
+          "conferido",
+          "divergente",
+          "extraviado"
+        ]
+      },
+      "StatusOrdem": {
+        "enum": [
+          "nova",
+          "disponivel",
+          "atribuida",
+          "em_rota",
+          "concluida",
+          "conferida",
+          "nao_concluida",
+          "cancelada",
+          "devolvida_na_loja",
+          "encerrada_sem_retirada"
+        ]
+      },
+      "TipoEquipamento": {
+        "enum": [
+          "ont",
+          "onu",
+          "roteador",
+          "repetidor_mesh",
+          "fonte"
+        ]
+      },
+      "UsuarioDto": {
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papel"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "type": "string"
+          }
+        }
+      },
+      "UsuarioNaLista": {
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "papel",
+          "situacao",
+          "doisFatores",
+          "ultimoLoginEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "papel": {
+            "type": "string"
+          },
+          "situacao": {
+            "type": "string"
+          },
+          "doisFatores": {
+            "type": "boolean"
+          },
+          "ultimoLoginEm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Acesso"
+    },
+    {
+      "name": "Usu\u00E1rios"
+    },
+    {
+      "name": "Ordens"
+    }
+  ]
+}

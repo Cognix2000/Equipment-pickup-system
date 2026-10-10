@@ -1,0 +1,18 @@
+# Rótulos do kanban (ADR-006). Para criar no GitHub, com o gh instalado e logado:
+#   python3 .github/criar-rotulos.py
+- { nome: "tipo: funcionalidade", cor: "0059BD", descricao: "RF, RN ou caso de uso" }
+- { nome: "tipo: bug", cor: "9B1C1C", descricao: "Não funciona como o requisito diz" }
+- { nome: "tipo: débito técnico", cor: "8A3B00", descricao: "Melhoria interna, sem mudança para o usuário" }
+- { nome: "tipo: documentação", cor: "4D5761", descricao: "Documento, ADR ou README" }
+- { nome: "incremento: 1", cor: "043E69", descricao: "Fluxo completo de uma retirada" }
+- { nome: "incremento: 2", cor: "043E69", descricao: "Aceite on-demand e modo offline" }
+- { nome: "incremento: 3", cor: "043E69", descricao: "Parceiros, custódia e remuneração" }
+- { nome: "incremento: 4", cor: "043E69", descricao: "HubSoft e API do mapa" }
+- { nome: "incremento: 5", cor: "043E69", descricao: "Apps nas lojas" }
+- { nome: "módulo: ordens", cor: "00D9FF", descricao: "" }
+- { nome: "módulo: importação", cor: "00D9FF", descricao: "" }
+- { nome: "módulo: acesso", cor: "00D9FF", descricao: "" }
+- { nome: "módulo: estoque", cor: "00D9FF", descricao: "" }
+- { nome: "módulo: front-end", cor: "00D9FF", descricao: "" }
+- { nome: "prioridade: alta", cor: "B35200", descricao: "" }
+- { nome: "LGPD", cor: "6B21A8", descricao: "Toca em dado pessoal: revisar com cuidado" }

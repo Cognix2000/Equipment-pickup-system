@@ -1,0 +1,4 @@
+# Quem revisa cada parte (ADR-006). Acrescente pessoas quando a equipe crescer.
+*                         @pedromendes-dev
+/backend/src/Retirada.Banco/   @pedromendes-dev
+/docs/adr/                @pedromendes-dev

@@ -1,0 +1,76 @@
+# Ambiente de homologação (e de desenvolvimento local), sempre com dados fictícios.
+#   cp .env.example .env   # e troque as senhas
+#   docker compose up --build
+# App em http://localhost:8080 · API em http://localhost:8080/api/ordens
+name: retirada-netwise
+
+services:
+  banco:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_DB: retirada
+      POSTGRES_USER: retirada_dono
+      POSTGRES_PASSWORD: ${BANCO_SENHA_DONO:?defina BANCO_SENHA_DONO no .env}
+      RETIRADA_API_SENHA: ${BANCO_SENHA_API:?defina BANCO_SENHA_API no .env}
+      TZ: UTC
+    volumes:
+      - banco:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432" # só na própria máquina
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retirada_dono -d retirada"]
+      interval: 5s
+      retries: 20
+
+  # Aplica as migrações e a carga fictícia, depois sai. A API só sobe se ele terminar bem.
+  migrador:
+    image: retirada-netwise/api:local
+    build: ./backend
+    command: ["migrar", "--dados-ficticios", "/dados-ficticios/demo.sql"]
+    environment:
+      ConnectionStrings__Migracao: Host=banco;Database=retirada;Username=retirada_dono;Password=${BANCO_SENHA_DONO};GSS Encryption Mode=Disable
+    volumes:
+      - ./db/dados-ficticios:/dados-ficticios:ro
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: retirada-netwise/api:local
+    environment:
+      ASPNETCORE_ENVIRONMENT: Homologacao
+      ConnectionStrings__Retirada: Host=banco;Database=retirada;Username=retirada_api;Password=${BANCO_SENHA_API};GSS Encryption Mode=Disable
+      # ADR-008: vazio = não exporta. Com o perfil "observabilidade", use http://observabilidade:4317.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-}
+      DataProtection__Pasta: /chaves
+    volumes:
+      # ADR-010: chaves que cifram a sessão e o 2FA. Perder este volume derruba sessões e todo 2FA: entra no backup.
+      - chaves:/chaves
+    depends_on:
+      migrador:
+        condition: service_completed_successfully
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+  # ADR-008: Grafana, Loki, Tempo e Prometheus num contêiner só, para desenvolvimento e homologação.
+  #   docker compose --profile observabilidade up   (e OTEL_ENDPOINT=http://observabilidade:4317 no .env)
+  # Grafana em http://localhost:3000 (admin/admin na primeira vez).
+  observabilidade:
+    image: grafana/otel-lgtm:0.35.0
+    profiles: ["observabilidade"]
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - observabilidade:/data
+
+volumes:
+  banco:
+  chaves:
+  observabilidade:
