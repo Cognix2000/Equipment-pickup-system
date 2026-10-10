@@ -15,7 +15,7 @@ O RNF10 pede testes automáticos de todas as regras; o sistema mexe com cobranç
 | Arquitetura | NetArchTest | Todo PR |
 | Contrato da API | OpenAPI comparado com `Contrato/openapi.v1.json` | Todo PR |
 | Ponta a ponta, visual e acessibilidade | Playwright e axe | Todo PR |
-| Segurança do código | CodeQL; Dependabot | Todo PR e semanal |
+| Segurança do código | CodeQL (sem a aba Security: o job falha se houver alerta e anexa o relatório); Dependabot | Todo PR e semanal |
 | Segurança da aplicação | OWASP ZAP | Antes de cada versão |
 | Carga e estresse | k6 (`testes-carga/`) | Antes de cada versão |
 | Mutação | Stryker.NET no domínio | Antes de cada versão |
