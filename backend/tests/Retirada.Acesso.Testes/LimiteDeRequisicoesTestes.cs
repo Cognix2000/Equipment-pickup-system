@@ -9,7 +9,8 @@ using Shouldly;
 namespace Retirada.Acesso.Testes;
 
 /// <summary>Limite geral da API: por usuário com sessão, por IP sem sessão.</summary>
-public class LimiteDeRequisicoesTestes(ApiDeTeste api) : IClassFixture<ApiDeTeste>
+[Collection(ColecaoDaApi.Nome)]
+public class LimiteDeRequisicoesTestes(ApiDeTeste api)
 {
     // Cada teste sobe a API com limites baixos e contadores zerados.
     private WebApplicationFactory<Program> ApiComLimite(int porUsuario, int anonimo) =>
