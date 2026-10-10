@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # a action do CodeQL lê os dados do próprio run, mesmo sem enviar resultado
 
 jobs:
   codeql:
