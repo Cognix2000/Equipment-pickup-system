@@ -85,7 +85,18 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
     }
 }
 
-public class FluxoDeAcessoTestes(ApiDeTeste api) : IClassFixture<ApiDeTeste>
+/// <summary>
+/// Uma API de teste para todas as classes que usam o banco: elas rodam em sequência
+/// e as migrações são aplicadas uma vez só (em paralelo, duas aplicações colidiam).
+/// </summary>
+[CollectionDefinition(Nome)]
+public sealed class ColecaoDaApi : ICollectionFixture<ApiDeTeste>
+{
+    public const string Nome = "API com banco";
+}
+
+[Collection(ColecaoDaApi.Nome)]
+public class FluxoDeAcessoTestes(ApiDeTeste api)
 {
     private static async Task<string> EtapaAsync(HttpResponseMessage resposta) =>
         (await resposta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("etapa").GetString()!;
