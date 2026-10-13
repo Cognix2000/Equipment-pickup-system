@@ -79,10 +79,12 @@ backend/
   src/Retirada.Banco/         migrações; a primeira aplica o modelo revisado (Scripts/0001_modelo_inicial.sql)
   src/Modulos/Retirada.Ordens/
     Dominio/                  agregado Ordem, Equipamento, objetos de valor
-    Casos/                    um arquivo por caso de uso (ListarOrdens, ObterOrdem)
+    Casos/                    um arquivo por caso de uso: consultas (ListarOrdens, ObterOrdem) e comandos
+                              (Designar, RegistrarRetirada, Conferir...), que passam todos por ComandoDaOrdem
     Infraestrutura/           EF Core mapeando o esquema "retirada"
     ModuloOrdens.cs           porta de entrada do módulo
-  tests/                      domínio, banco, arquitetura e contrato da API (Contrato/openapi.v1.json)
+  tests/                      unidade por módulo; Retirada.Api.Testes sobe a API inteira contra o banco;
+                              arquitetura e contrato da API (Contrato/openapi.v1.json)
 frontend/
   src/components/ui/          componentes no padrão shadcn/ui (Radix + Tailwind)
   src/features/               ordens, mapa, importação
@@ -133,7 +135,7 @@ Todas estão em [docs/adr](docs/adr/README.md). Resumo:
 | Tipo | Comando | No CI |
 | --- | --- | --- |
 | Unidade, arquitetura e contrato da API | `cd backend && dotnet test` | Todo PR |
-| Integração com o banco | `RETIRADA_TESTE_BANCO=... dotnet test` | Todo PR |
+| Integração com o banco e a API inteira (login, limites, comandos da ordem) | `RETIRADA_TESTE_BANCO=... dotnet test` | Todo PR |
 | Telas: ponta a ponta, visual e acessibilidade | `cd frontend && npm run test:e2e` | Todo PR |
 | Mutação do domínio (mínimo 80%) | `cd backend && dotnet tool restore && dotnet stryker --config-file stryker-config.json` | Antes da versão |
 | Carga e estresse | `k6 run testes-carga/ordens.js` (`CENARIO=estresse`) | Antes da versão |
@@ -166,6 +168,8 @@ docker compose --profile observabilidade up --build
 ## O que falta no incremento 1
 
 - Importação com prévia no servidor (RF03–RF05). A tela já valida formato e tamanho no navegador.
-- Comandos da ordem na API: designar, registrar retirada, visita sem sucesso, conferir, cancelar e marcar baixa. As regras já estão no domínio e testadas.
+- Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
+- Rotinas automáticas: liberar a ordem quando a carência de 48 h vence (RN03) e encerrar após 10 dias sem resposta (RN09).
+- Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.
 - Telefones no detalhe da ordem, com o botão de ligar e a janela das 8h às 18h (RN10).
 - Telas de registro da retirada e de conferência no estoque, seguindo os protótipos do canvas.

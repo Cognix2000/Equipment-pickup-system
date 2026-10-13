@@ -13,111 +13,17 @@ using Retirada.Banco;
 using Retirada.Comum;
 using Shouldly;
 
-namespace Retirada.Acesso.Testes;
-
-/// <summary>Com banco de TESTE em RETIRADA_TESTE_BANCO; sem a variável, os testes ficam ignorados.</summary>
-public sealed class FatoComBancoAttribute : FactAttribute
-{
-    public FatoComBancoAttribute()
-    {
-        if (string.IsNullOrWhiteSpace(ApiDeTeste.Conexao)) Skip = "Defina RETIRADA_TESTE_BANCO para rodar os testes com banco.";
-    }
-}
-
-/// <summary>A API inteira, de verdade, contra o PostgreSQL de teste.</summary>
-public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
-{
-    public static string? Conexao => Environment.GetEnvironmentVariable("RETIRADA_TESTE_BANCO");
-    public const string Senha = "senha de teste bem comprida";
-
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseEnvironment("Development");
-        builder.UseSetting("ConnectionStrings:Retirada", Conexao);
-        builder.UseSetting("Acesso:TentativasPorMinuto", "10000");
-        builder.UseSetting("Acesso:RequisicoesPorMinuto", "10000");
-        builder.UseSetting("Acesso:RequisicoesAnonimasPorMinuto", "10000");
-        builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
-    }
-
-    public async Task InitializeAsync()
-    {
-        if (Conexao is not null) await Migrador.AplicarAsync(Conexao, null, TextWriter.Null);
-    }
-
-    Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
-
-    public HttpClient NovoCliente()
-    {
-        var cliente = CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
-        cliente.DefaultRequestHeaders.Add("X-Retirada", "1");
-        return cliente;
-    }
-
-    /// <summary>Cria um usuário ativo, com senha, direto no banco.</summary>
-    public async Task<Usuario> CriarUsuarioAsync(string papel)
-    {
-        await using var db = new AcessoDbContext(new DbContextOptionsBuilder<AcessoDbContext>().UseNpgsql(Conexao).Options);
-        var usuario = Usuario.CadastrarAutoaprovado($"Teste {papel}", $"{papel}.{Guid.NewGuid():N}@exemplo.invalid", papel, DateTimeOffset.UtcNow);
-        usuario.DefinirSenha(HashDeSenha.Gerar(Senha), DateTimeOffset.UtcNow);
-        db.Usuarios.Add(usuario);
-        await db.SaveChangesAsync();
-        return usuario;
-    }
-
-    public async Task<Guid> CriarOrdemAsync(Guid? responsavel)
-    {
-        var id = Guid.NewGuid();
-        var cliente = Guid.NewGuid();
-        await using var conexao = new NpgsqlConnection(Conexao);
-        await conexao.OpenAsync();
-        await using var comando = new NpgsqlCommand("""
-            INSERT INTO retirada.cliente (id, nome, tipo_pessoa) VALUES (@cliente, 'CLIENTE TESTE ACESSO', 'PF');
-            INSERT INTO retirada.ordem (id, chave_importacao, tipo_os, cliente_id, logradouro, bairro, cidade, uf, status, carencia_ate, responsavel_id)
-            VALUES (@id, @chave, 'REMOÇÃO EQUIP FTTH', @cliente, 'RUA', 'CENTRO', 'CIDADE', 'MG', 'atribuida', now(), @responsavel);
-            """, conexao);
-        comando.Parameters.AddWithValue("id", id);
-        comando.Parameters.AddWithValue("cliente", cliente);
-        comando.Parameters.AddWithValue("chave", $"acesso-{id:N}");
-        comando.Parameters.AddWithValue("responsavel", (object?)responsavel ?? DBNull.Value);
-        await comando.ExecuteNonQueryAsync();
-        return id;
-    }
-}
-
-/// <summary>
-/// Uma API de teste para todas as classes que usam o banco: elas rodam em sequência
-/// e as migrações são aplicadas uma vez só (em paralelo, duas aplicações colidiam).
-/// </summary>
-[CollectionDefinition(Nome)]
-public sealed class ColecaoDaApi : ICollectionFixture<ApiDeTeste>
-{
-    public const string Nome = "API com banco";
-}
+namespace Retirada.Api.Testes;
 
 [Collection(ColecaoDaApi.Nome)]
 public class FluxoDeAcessoTestes(ApiDeTeste api)
 {
-    private static async Task<string> EtapaAsync(HttpResponseMessage resposta) =>
-        (await resposta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("etapa").GetString()!;
+    private static Task<string> EtapaAsync(HttpResponseMessage resposta) => ApiDeTeste.EtapaAsync(resposta);
 
     private static Task<HttpResponseMessage> EntrarAsync(HttpClient cliente, string email, string senha = ApiDeTeste.Senha) =>
-        cliente.PostAsJsonAsync("/api/acesso/entrar", new { email, senha });
+        ApiDeTeste.EntrarAsync(cliente, email, senha);
 
-    /// <summary>Gestor e financeiro: senha, QR code e primeiro código do aplicativo.</summary>
-    private async Task<HttpClient> EntrarCom2FAAsync(Usuario usuario)
-    {
-        var cliente = api.NovoCliente();
-        var resposta = await EntrarAsync(cliente, usuario.Email);
-        (await EtapaAsync(resposta)).ShouldBe("configurar");
-
-        var qr = await (await cliente.PostAsync("/api/acesso/2fa/iniciar", null)).Content.ReadFromJsonAsync<JsonElement>();
-        var codigo = new Totp(Base32Encoding.ToBytes(qr.GetProperty("segredo").GetString())).ComputeTotp();
-        var confirmado = await cliente.PostAsJsonAsync("/api/acesso/2fa/confirmar", new { codigo });
-        confirmado.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await EtapaAsync(confirmado)).ShouldBe("pronto");
-        return cliente;
-    }
+    private Task<HttpClient> EntrarCom2FAAsync(Usuario usuario) => api.EntrarCom2FAAsync(usuario);
 
     [FatoComBanco]
     public async Task Sem_login_a_API_responde_401()
