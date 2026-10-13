@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Retirada.Acesso.Testes" />
+    <InternalsVisibleTo Include="Retirada.Api.Testes" />
   </ItemGroup>
 
 </Project>

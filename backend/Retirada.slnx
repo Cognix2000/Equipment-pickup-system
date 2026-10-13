@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Retirada.Acesso.Testes/Retirada.Acesso.Testes.csproj" />
+    <Project Path="tests/Retirada.Api.Testes/Retirada.Api.Testes.csproj" />
     <Project Path="tests/Retirada.Arquitetura.Testes/Retirada.Arquitetura.Testes.csproj" />
     <Project Path="tests/Retirada.Ordens.Testes/Retirada.Ordens.Testes.csproj" />
     <Project Path="tests/Retirada.Ordens.TestesBanco/Retirada.Ordens.TestesBanco.csproj" />
