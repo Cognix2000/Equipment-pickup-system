@@ -364,7 +364,7 @@
         "tags": [
           "Ordens"
         ],
-        "summary": "Lista ordens, com filtro por status e bairro (RF06)",
+        "summary": "Lista ordens, com filtro por status, bairro e busca por protocolo, n\u00BA da OS ou s\u00E9rie (RF06, UC06)",
         "parameters": [
           {
             "name": "status",
@@ -375,6 +375,13 @@
           },
           {
             "name": "bairro",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
             "in": "query",
             "schema": {
               "type": "string"

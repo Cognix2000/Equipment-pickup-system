@@ -17,6 +17,8 @@ export const comandos = {
   registrarRetirada: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], gps: Gps, chave: string) =>
     comando(id, 'retirada', { itens, gps }, chave),
   registrarVisita: (id: string, motivo: MotivoDaVisita, gps: Gps, chave: string) => comando(id, 'visita-sem-sucesso', { motivo, gps }, chave),
+  conferir: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], chave: string) => comando(id, 'conferencia', { itens }, chave),
+  registrarDevolucaoNaLoja: (id: string, chave: string) => comando(id, 'devolucao-na-loja', {}, chave),
 }
 
 /** Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. */

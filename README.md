@@ -181,4 +181,3 @@ docker compose --profile observabilidade up --build
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
 - Rotinas automáticas: liberar a ordem quando a carência de 48 h vence (RN03) e encerrar após 10 dias sem resposta (RN09).
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.
-- Tela de conferência no estoque (RF14, RF15), seguindo o protótipo do canvas.
