@@ -149,3 +149,55 @@ test('importação recusa .sql com orientação', async ({ page }) => {
   await page.getByLabel(/Escolher arquivo/).setInputFiles({ name: 'backup.sql', mimeType: 'application/sql', buffer: Buffer.from('SELECT 1') })
   await expect(page.getByRole('alert')).toContainText('exporte a consulta como .csv ou .json')
 })
+
+const previaFicticia = {
+  importacaoId: '0192f000-0000-7000-8000-0000000000a1',
+  arquivo: 'retiradas_outubro.csv',
+  formato: 'csv',
+  totalDeLinhas: 5,
+  resumo: { novas: 3, atualizacoes: 0, repetidas: 0, duplicadas: 0, pendencias: 1, erros: 1, ordensNovas: 2, ordensAtualizadas: 0 },
+  colunasReconhecidas: ['nome_razaosocial', 'tipo_ordem_servico', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'telefone_primario', 'id_ordem_servico'],
+  colunasDescartadas: ['CPF/CNPJ', 'Plano'],
+  avisos: ['O arquivo não traz latitude e longitude: as ordens novas aparecem só na lista, até o mapa ser ligado.'],
+  linhas: [
+    { numero: 2, resultado: 'nova', cliente: 'MARIA EXEMPLO SILVA', endereco: 'RUA DOS IPÊS, 120', bairro: 'CENTRO', tipoOs: 'REMOÇÃO EQUIP FTTH', detalhes: [] },
+    { numero: 3, resultado: 'nova', cliente: 'MARIA EXEMPLO SILVA', endereco: 'RUA DOS IPÊS, 120', bairro: 'CENTRO', tipoOs: 'REMOÇÃO EQUIP FTTH', detalhes: ['mais um equipamento da OS da linha 2'] },
+    { numero: 4, resultado: 'nova', cliente: 'MERCADO MODELO LTDA', endereco: 'RUA SABIÁ, 78', bairro: 'BELA VISTA', tipoOs: 'REMOÇÃO EQUIP FTTH', detalhes: ['alerta: telefone fora do padrão: (00) 9123'] },
+    { numero: 5, resultado: 'pendencia', cliente: 'CARLOS SIMULADO LIMA', endereco: 'RUA DAS ACÁCIAS', bairro: 'BELA VISTA', tipoOs: 'REMOÇÃO EQUIP BLOQUEIO TEMPORARIO', detalhes: ['bloqueio temporário'] },
+    { numero: 6, resultado: 'erro', cliente: 'RITA EXEMPLO MOURA', endereco: 'RUA DO CAMPO, 10', bairro: null, tipoOs: 'REMOÇÃO EQUIP FTTH', detalhes: ['falta o bairro'] },
+  ],
+}
+
+test('importação mostra a prévia do servidor e grava só depois de confirmar', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  let gravou = false
+  await page.route('**/api/importacoes/previa', async (rota) => {
+    expect(rota.request().headers()['x-retirada']).toBe('1')
+    await rota.fulfill({ json: previaFicticia })
+  })
+  await page.route('**/api/importacoes/*/confirmar', async (rota) => {
+    gravou = true
+    await rota.fulfill({
+      json: { importacaoId: previaFicticia.importacaoId, resumo: previaFicticia.resumo, ordensCriadas: 2, ordensAtualizadas: 0, pendenciasRegistradas: 1, pendenciasResolvidas: 0 },
+    })
+  })
+
+  await page.goto('/financeiro/importar')
+  await page.getByLabel(/Escolher arquivo/).setInputFiles({ name: 'retiradas_outubro.csv', mimeType: 'text/csv', buffer: Buffer.from('a;b\n1;2') })
+  await page.getByRole('button', { name: 'Ver a prévia' }).click()
+
+  await expect(page.getByText('Ordens novas', { exact: true })).toBeVisible()
+  await expect(page.getByText('2 colunas descartadas e nunca gravadas: CPF/CNPJ, Plano.', { exact: false })).toBeVisible()
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await expect(page).toHaveScreenshot('importar-previa.png', { fullPage: true })
+  expect(gravou).toBe(false) // nada é gravado antes da confirmação (RF03)
+
+  await page.getByRole('button', { name: 'Erros · 1' }).click()
+  await expect(page.getByText('falta o bairro').filter({ visible: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Gravar 2 ordens' }).click()
+  await expect(page.getByText('Importação gravada')).toBeVisible()
+  expect(gravou).toBe(true)
+})
