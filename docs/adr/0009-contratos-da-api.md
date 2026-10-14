@@ -22,3 +22,5 @@ O PWA, os testes e no futuro o app das lojas dependem da API; o celular pode ree
 ## Consequências
 
 - Respostas tipadas (`TypedResults`) em todos os casos, para o OpenAPI sair completo.
+- Todo comando da ordem exige o cabeçalho `Idempotency-Key` (UUID gerado pelo aparelho a cada ação). A chave fica gravada no evento da ordem: reenviar a mesma chave devolve a ordem como está, sem repetir a ação; a mesma chave em outra ordem dá 422.
+- Duas ações ao mesmo tempo na mesma ordem: a versão da ordem deixa só uma passar; a outra recebe 409 e o app atualiza a tela.

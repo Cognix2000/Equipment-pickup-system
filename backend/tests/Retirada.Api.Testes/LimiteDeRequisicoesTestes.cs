@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Retirada.Comum;
 using Shouldly;
 
-namespace Retirada.Acesso.Testes;
+namespace Retirada.Api.Testes;
 
 /// <summary>Limite geral da API: por usuário com sessão, por IP sem sessão.</summary>
 [Collection(ColecaoDaApi.Nome)]
