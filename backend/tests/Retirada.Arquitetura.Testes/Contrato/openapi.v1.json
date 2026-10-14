@@ -1326,6 +1326,43 @@
           }
         }
       },
+      "EventoDto": {
+        "required": [
+          "tipo",
+          "ocorridoEm",
+          "motivo",
+          "statusPara",
+          "atorPapel"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "ocorridoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "statusPara": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "atorPapel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "FormatoDoArquivo": {
         "enum": [
           "xlsx",
@@ -1636,6 +1673,24 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EquipamentoDto"
+            }
+          },
+          "telefones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TelefoneDto"
+            }
+          },
+          "historico": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EventoDto"
             }
           }
         }
@@ -2055,6 +2110,25 @@
           "devolvida_na_loja",
           "encerrada_sem_retirada"
         ]
+      },
+      "TelefoneDto": {
+        "required": [
+          "numero",
+          "tipo",
+          "formatoValido"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "formatoValido": {
+            "type": "boolean"
+          }
+        }
       },
       "TipoEquipamento": {
         "enum": [
