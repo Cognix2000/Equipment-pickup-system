@@ -18,14 +18,9 @@ internal static class ObterOrdem
 
     private static async Task<Results<Ok<OrdemDto>, NotFound>> ExecutarAsync(OrdensDbContext db, ClaimsPrincipal usuario, Guid id, CancellationToken ct)
     {
-        var linha = await db.Ordens.AsNoTracking()
-            .Where(o => o.Id == id)
-            .Join(db.Clientes, o => o.ClienteId, c => c.Id, (o, c) => new { Ordem = o, Cliente = c.Nome })
-            .SingleOrDefaultAsync(ct);
+        var ordem = await Projecoes.CarregarOrdemAsync(db, id, ct);
         // RNF04: ordem de outro técnico responde como inexistente, sem revelar que existe.
-        if (linha is null || (usuario.EhTecnico() && linha.Ordem.ResponsavelId != usuario.Id())) return TypedResults.NotFound();
-
-        var equipamentos = await Projecoes.CarregarEquipamentosAsync(db, [id], ct);
-        return TypedResults.Ok(OrdemDto.De(linha.Ordem, linha.Cliente, equipamentos[id]));
+        if (ordem is null || (usuario.EhTecnico() && ordem.ResponsavelId != usuario.Id())) return TypedResults.NotFound();
+        return TypedResults.Ok(ordem);
     }
 }

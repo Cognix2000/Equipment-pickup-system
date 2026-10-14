@@ -37,6 +37,15 @@ public static class Politicas
     public const string LoginParcial = "login_parcial";
     public const string Gestao = "gestao";
     public const string LerOrdens = "ler_ordens";
+
+    /// <summary>Liberar, cancelar e marcar baixa (RN03, RF09, RF19): financeiro ou gestor.</summary>
+    public const string Financeiro = "financeiro";
+
+    /// <summary>Retirada e visita sem sucesso (RF12, RF13): só o técnico, e só na ordem dele.</summary>
+    public const string Campo = "campo";
+
+    /// <summary>Conferência e devolução na loja (RF14, RF15): estoque ou gestor.</summary>
+    public const string Estoque = "estoque";
 }
 
 public static class UsuarioAtual

@@ -63,7 +63,10 @@ public static class ModuloAcesso
             .SetFallbackPolicy(Completo().Build())
             .AddPolicy(Politicas.LoginParcial, p => p.RequireAuthenticatedUser())
             .AddPolicy(Politicas.Gestao, p => Completo(p).RequireRole(Papeis.Gestor))
-            .AddPolicy(Politicas.LerOrdens, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico, Papeis.Estoque));
+            .AddPolicy(Politicas.LerOrdens, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico, Papeis.Estoque))
+            .AddPolicy(Politicas.Financeiro, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro))
+            .AddPolicy(Politicas.Campo, p => Completo(p).RequireRole(Papeis.Tecnico))
+            .AddPolicy(Politicas.Estoque, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Estoque));
 
         // Sem sessão o limite é por IP, e a equipe inteira pode entrar pela mesma rede do escritório
         // no começo do turno (um IP só). Os valores comportam uns 30 técnicos logando no mesmo minuto;

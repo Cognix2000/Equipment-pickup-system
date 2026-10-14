@@ -16,6 +16,7 @@ public sealed class OrdensDbContext(DbContextOptions<OrdensDbContext> options) :
 
     public DbSet<Ordem> Ordens => Set<Ordem>();
     public DbSet<ClienteLeitura> Clientes => Set<ClienteLeitura>();
+    public DbSet<UsuarioLeitura> Usuarios => Set<UsuarioLeitura>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,15 @@ public sealed class OrdensDbContext(DbContextOptions<OrdensDbContext> options) :
             c.Property(x => x.Id).HasColumnName("id");
             c.Property(x => x.Nome).HasColumnName("nome");
             c.Property(x => x.CodigoHubsoft).HasColumnName("codigo_hubsoft");
+        });
+
+        modelBuilder.Entity<UsuarioLeitura>(u =>
+        {
+            u.ToTable("usuario");
+            u.HasKey(x => x.Id);
+            u.Property(x => x.Id).HasColumnName("id");
+            u.Property(x => x.Papel).HasColumnName("papel");
+            u.Property(x => x.Situacao).HasColumnName("situacao");
         });
     }
 
@@ -111,4 +121,12 @@ public sealed class ClienteLeitura
     public Guid Id { get; private set; }
     public string Nome { get; private set; } = string.Empty;
     public int? CodigoHubsoft { get; private set; }
+}
+
+/// <summary>Leitura do usuário para validar quem recebe a ordem. Quem grava usuário é o módulo Acesso.</summary>
+public sealed class UsuarioLeitura
+{
+    public Guid Id { get; private set; }
+    public string Papel { get; private set; } = string.Empty;
+    public string Situacao { get; private set; } = string.Empty;
 }
