@@ -68,9 +68,12 @@ public static class ModuloAcesso
             .AddPolicy(Politicas.Campo, p => Completo(p).RequireRole(Papeis.Tecnico))
             .AddPolicy(Politicas.Estoque, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Estoque));
 
-        var tentativasPorMinuto = config.GetValue("Acesso:TentativasPorMinuto", 10);
+        // Sem sessão o limite é por IP, e a equipe inteira pode entrar pela mesma rede do escritório
+        // no começo do turno (um IP só). Os valores comportam uns 30 técnicos logando no mesmo minuto;
+        // contra força bruta, quem protege cada conta é o bloqueio de 15 min após 5 erros.
+        var tentativasPorMinuto = config.GetValue("Acesso:TentativasPorMinuto", 30);
         var requisicoesPorMinuto = config.GetValue("Acesso:RequisicoesPorMinuto", 300);
-        var requisicoesAnonimasPorMinuto = config.GetValue("Acesso:RequisicoesAnonimasPorMinuto", 60);
+        var requisicoesAnonimasPorMinuto = config.GetValue("Acesso:RequisicoesAnonimasPorMinuto", 120);
         services.AddRateLimiter(o =>
         {
             o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
