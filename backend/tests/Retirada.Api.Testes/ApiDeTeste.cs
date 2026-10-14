@@ -40,6 +40,7 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Acesso:RequisicoesPorMinuto", "10000");
         builder.UseSetting("Acesso:RequisicoesAnonimasPorMinuto", "10000");
         builder.UseSetting("Importacao:ModoSimulacao", "true"); // telefones fictícios com DDD 00
+        builder.UseSetting("Ordens:Rotinas:Ativas", "false");  // os testes rodam as rotinas na mão, com o relógio que quiserem
         builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
     }
 
