@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 // Componente no padrão shadcn/ui: o código fica no projeto e segue os tokens da Netwise.
 const variantesBotao = cva(
-  'inline-flex items-center justify-center gap-2 rounded-[10px] font-texto font-semibold whitespace-nowrap transition-colors disabled:pointer-events-none disabled:bg-desabilitado disabled:text-[#3b4652] disabled:border-transparent [&_svg]:size-5 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 rounded-[10px] font-texto font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none disabled:pointer-events-none disabled:bg-desabilitado disabled:text-[#3b4652] disabled:border-transparent [&_svg]:size-5 [&_svg]:shrink-0',
   {
     variants: {
       variante: {
