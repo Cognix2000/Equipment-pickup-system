@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
 
-type Papel = 'tecnico' | 'financeiro' | 'admin' | null
+type Papel = 'tecnico' | 'financeiro' | 'admin' | 'estoque' | null
 
 const usuarios = [
   { id: '0192f000-0000-7000-8000-000000000004', nome: 'Gestor Demonstração', email: 'gestor.demo@exemplo.invalid', papel: 'admin', situacao: 'ativo', doisFatores: true, ultimoLoginEm: '2026-10-08T12:00:00-03:00' },
@@ -27,7 +27,11 @@ async function simularApi(page: Page, papel: Papel) {
       return ordem ? rota.fulfill({ json: ordem }) : rota.fulfill({ status: 404, json: { title: 'Ordem não encontrada.' } })
     }
     const status = url.searchParams.get('status')
-    return rota.fulfill({ json: status ? todasAsOrdens.filter((o) => o.status === status) : todasAsOrdens })
+    const busca = url.searchParams.get('busca')?.replace(/\s+/g, '').toUpperCase()
+    const encontradas = todasAsOrdens
+      .filter((o) => !status || o.status === status)
+      .filter((o) => !busca || String(o.numeroOs) === busca || o.equipamentos.some((e) => e.numeroSerie === busca))
+    return rota.fulfill({ json: encontradas })
   })
 }
 
@@ -41,6 +45,7 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'ordens-do-financeiro', rota: '/financeiro/ordens', pronto: 'MARIA EXEMPLO SILVA', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
+  { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou série de um item', papel: 'estoque' },
 ]
 
 for (const tela of telas) {
@@ -301,4 +306,64 @@ test('ligar só aparece na janela de contato (RN10)', async ({ page }) => {
   await page.reload()
   await expect(page.getByText('Contato só de segunda a sábado, das 8h às 18h.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
+})
+
+test('estoque acha a ordem pela série, confere e registra a divergência (UC06)', async ({ page }) => {
+  await simularApi(page, 'estoque')
+  const entregue = { ...ordemMaria, status: 'concluida' }
+  await page.route('**/api/ordens?busca=*', (rota) => rota.fulfill({ json: [entregue] }))
+  const recebido = await simularComando(page, 'conferencia', {
+    ...entregue,
+    equipamentos: entregue.equipamentos.map((e, i) => ({ ...e, situacao: i === 1 ? 'divergente' : 'conferido' })),
+  })
+
+  await page.goto('/estoque/conferir')
+  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('HWTC1A2B3C4D')
+  await page.getByRole('button', { name: 'Buscar' }).click()
+  await expect(page.getByRole('button', { name: 'Falta ler 2 itens' })).toBeDisabled()
+
+  const series = page.getByLabel(/Série lida/)
+  await series.nth(0).fill('hwtc1a2b3c4d')
+  await expect(page.getByText('Confere', { exact: true })).toBeVisible()
+  await page.getByLabel(/Não veio/).nth(1).check()
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await expect(page).toHaveScreenshot('conferir-ordem.png', { fullPage: true })
+
+  await page.getByRole('button', { name: 'Registrar 1 divergência' }).click()
+  await expect(page.getByText('Divergência registrada: a ordem continua aberta.')).toBeVisible()
+  expect(recebido.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(recebido.corpo).toEqual({
+    itens: [
+      { equipamentoId: entregue.equipamentos[0].id, numeroSerie: 'hwtc1a2b3c4d' },
+      { equipamentoId: entregue.equipamentos[1].id, numeroSerie: null },
+      { equipamentoId: entregue.equipamentos[2].id, numeroSerie: null },
+    ],
+  })
+})
+
+test('estoque registra devolução na loja com confirmação (RF15)', async ({ page }) => {
+  await simularApi(page, 'estoque')
+  const recebido = await simularComando(page, 'devolucao-na-loja', { ...ordemMaria, status: 'devolvida_na_loja' })
+
+  await page.goto('/estoque/conferir')
+  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('5101')
+  await page.getByRole('button', { name: 'Buscar' }).click()
+  await page.getByRole('button', { name: 'Registrar devolução' }).click()
+  await page.getByRole('button', { name: 'Confirmar devolução' }).click()
+
+  await expect(page.getByText('Devolução na loja registrada.', { exact: false })).toBeVisible()
+  expect(recebido.chave).toBeDefined()
+})
+
+test('estoque entra direto na conferência e técnico não abre o estoque', async ({ page }) => {
+  await simularApi(page, 'estoque')
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/estoque\/conferir/)
+
+  await simularApi(page, 'tecnico')
+  await page.goto('/estoque/conferir')
+  await expect(page).toHaveURL(/\/tecnico\/ordens/)
 })

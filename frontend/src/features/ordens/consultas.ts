@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { buscarJson } from '@/lib/api'
 import { listaDeOrdens, ordem, type StatusOrdem } from './tipos'
 
-export type FiltroDeOrdens = { status?: StatusOrdem; bairro?: string }
+export type FiltroDeOrdens = { status?: StatusOrdem; bairro?: string; busca?: string }
 
 export const ordensQuery = (filtro: FiltroDeOrdens = {}) =>
   queryOptions({
@@ -11,6 +11,7 @@ export const ordensQuery = (filtro: FiltroDeOrdens = {}) =>
       const busca = new URLSearchParams()
       if (filtro.status) busca.set('status', filtro.status)
       if (filtro.bairro) busca.set('bairro', filtro.bairro)
+      if (filtro.busca) busca.set('busca', filtro.busca)
       const sufixo = busca.size > 0 ? `?${busca}` : ''
       return buscarJson(`/api/ordens${sufixo}`, listaDeOrdens, signal)
     },

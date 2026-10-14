@@ -123,6 +123,23 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
     }
 
     [FatoComBanco]
+    public async Task Estoque_acha_a_ordem_pela_serie_pelo_protocolo_ou_pela_OS() // UC06
+    {
+        var (estoque, _) = await api.EntrarComoAsync(Papeis.Estoque);
+        var protocolo = string.Concat(Enumerable.Range(0, 20).Select(_ => Random.Shared.Next(10)));
+        var ordem = await api.ImportarOrdemAsync();
+        await api.EscalarAsync<object>("UPDATE retirada.ordem SET protocolo = @p WHERE id = @id", ("p", protocolo), ("id", ordem.Id));
+
+        async Task<List<Guid>> BuscarAsync(string busca) =>
+            [.. (await OkAsync(estoque.GetAsync($"/api/ordens?busca={Uri.EscapeDataString(busca)}"))).EnumerateArray().Select(o => o.GetProperty("id").GetGuid())];
+
+        (await BuscarAsync($" {ordem.SerieDaOnu.ToLowerInvariant()} ")).ShouldBe([ordem.Id]); // série digitada em minúscula, com espaço
+        (await BuscarAsync(protocolo)).ShouldBe([ordem.Id]);
+        (await BuscarAsync("7001")).ShouldContain(ordem.Id); // nº da OS fictício, repetido entre testes
+        (await BuscarAsync("SERIEQUENAOEXISTE")).ShouldBeEmpty();
+    }
+
+    [FatoComBanco]
     public async Task Sem_chave_de_idempotencia_o_comando_e_recusado()
     {
         var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);

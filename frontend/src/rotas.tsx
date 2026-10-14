@@ -7,6 +7,7 @@ import { Importar } from '@/paginas/painel/Importar'
 import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
 import { OrdensFinanceiro } from '@/paginas/painel/OrdensFinanceiro'
 import { Usuarios } from '@/paginas/painel/Usuarios'
+import { Conferir } from '@/paginas/estoque/Conferir'
 import { DetalheOrdem } from '@/paginas/tecnico/DetalheOrdem'
 import { RegistrarRetirada } from '@/paginas/tecnico/RegistrarRetirada'
 import { VisitaSemSucesso } from '@/paginas/tecnico/VisitaSemSucesso'
@@ -46,6 +47,15 @@ export const rotas = createBrowserRouter([
       { path: 'ordens', element: <OrdensFinanceiro /> },
       { path: 'importar', element: <Importar /> },
     ],
+  },
+  {
+    path: '/estoque',
+    element: (
+      <RotaProtegida papeis={['estoque', 'admin']}>
+        <LayoutPainel />
+      </RotaProtegida>
+    ),
+    children: [{ path: 'conferir', element: <Conferir /> }],
   },
   {
     path: '/gestao',

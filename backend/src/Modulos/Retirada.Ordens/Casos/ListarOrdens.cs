@@ -14,10 +14,10 @@ namespace Retirada.Ordens.Casos;
 internal static class ListarOrdens
 {
     public static void Mapear(IEndpointRouteBuilder grupo) =>
-        grupo.MapGet("/", ExecutarAsync).WithSummary("Lista ordens, com filtro por status e bairro (RF06)");
+        grupo.MapGet("/", ExecutarAsync).WithSummary("Lista ordens, com filtro por status, bairro e busca por protocolo, nº da OS ou série (RF06, UC06)");
 
     private static async Task<Results<Ok<List<OrdemDto>>, ValidationProblem>> ExecutarAsync(
-        OrdensDbContext db, ClaimsPrincipal usuario, string? status, string? bairro, CancellationToken ct)
+        OrdensDbContext db, ClaimsPrincipal usuario, string? status, string? bairro, string? busca, CancellationToken ct)
     {
         var consulta = db.Ordens.AsNoTracking();
         if (usuario.EhTecnico())
@@ -34,6 +34,17 @@ internal static class ListarOrdens
             consulta = consulta.Where(o => o.Status == filtro);
         }
         if (!string.IsNullOrWhiteSpace(bairro)) consulta = consulta.Where(o => o.Endereco.Bairro == bairro.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(busca))
+        {
+            // UC06: o estoque acha a ordem pelo protocolo, pelo nº da OS ou pela série de qualquer item.
+            var texto = busca.Trim();
+            var numero = int.TryParse(texto, out var n) ? n : (int?)null;
+            NumeroSerie? serie = null;
+            try { serie = NumeroSerie.Criar(texto); } catch (RegraDeNegocioException) { }
+            consulta = consulta.Where(o => o.Protocolo == texto
+                || (numero != null && o.NumeroOs == numero)
+                || (serie != null && o.Equipamentos.Any(e => e.NumeroSerie == serie)));
+        }
 
         var linhas = await consulta
             .OrderBy(o => o.CarenciaAte)
