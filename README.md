@@ -63,6 +63,14 @@ Em **Importar**, o financeiro envia o arquivo e vê a prévia linha a linha ante
 
 A prévia guarda só o resumo e o hash do arquivo. Na confirmação, o PWA manda o mesmo arquivo de novo, e o servidor confere o hash antes de gravar. Assim, nenhum dado pessoal fica parado entre a prévia e a confirmação.
 
+### Rotinas automáticas
+
+A API roda sozinha, a cada 5 minutos, o que não depende de ninguém clicar:
+
+- **Fim da carência (RN03):** a ordem Nova cujas 48 h venceram fica Disponível. O histórico mostra "Fim da carência, ficou disponível automaticamente".
+
+Com mais de uma instância da API, cada ordem é liberada uma vez só: a rotina trava as linhas que pega e pula as que outra ação está mudando. Para ajustar, use `Ordens__Rotinas__IntervaloMinutos` (padrão 5) ou desligue com `Ordens__Rotinas__Ativas=false`.
+
 ### Chaves da sessão (fazer backup)
 
 O volume `chaves` guarda as chaves do ASP.NET Data Protection, que assinam o cookie de sessão e cifram os segredos do 2FA. Se ele se perder, todos saem da sessão e **gestor e financeiro precisam configurar o 2FA de novo** (um gestor zera o 2FA na tela de usuários). Faça backup dele junto com o banco.
@@ -179,5 +187,5 @@ docker compose --profile observabilidade up --build
 ## O que falta no incremento 1
 
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
-- Rotinas automáticas: liberar a ordem quando a carência de 48 h vence (RN03) e encerrar após 10 dias sem resposta (RN09).
+- Encerrar a ordem após 10 dias sem resposta (`limite_dias_sem_resposta`): depende do registro das tentativas de contato, que ainda não existe.
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.

@@ -20,6 +20,8 @@ export default defineConfig({
     baseURL: 'http://localhost:4174',
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
+    // Sem transições: o axe e as capturas não pegam uma cor no meio da troca (ex.: botão saindo de desabilitado).
+    reducedMotion: 'reduce',
     // O service worker do PWA não pode atender no lugar da API simulada.
     serviceWorkers: 'block',
     launchOptions: {
