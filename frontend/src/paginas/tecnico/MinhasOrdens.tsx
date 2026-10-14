@@ -104,7 +104,7 @@ function Filtro({ ativo, onClick, children }: { ativo: boolean; onClick: () => v
       aria-pressed={ativo}
       onClick={onClick}
       className={cn(
-        'min-h-11 shrink-0 rounded-full px-4 text-sm font-medium transition-colors',
+        'min-h-11 shrink-0 rounded-full px-4 text-sm font-medium transition-colors motion-reduce:transition-none',
         ativo ? 'bg-azul text-white' : 'border border-[#c5cdd6] bg-superficie text-texto hover:bg-fundo',
       )}
     >

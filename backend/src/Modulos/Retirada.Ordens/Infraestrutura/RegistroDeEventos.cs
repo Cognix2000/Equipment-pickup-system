@@ -6,8 +6,12 @@ using Retirada.Ordens.Dominio;
 
 namespace Retirada.Ordens.Infraestrutura;
 
-/// <summary>Quem fez a ação e de onde (GPS do aparelho, quando houver).</summary>
-internal sealed record AutorDoEvento(Guid UsuarioId, string Papel, double? Latitude = null, double? Longitude = null, double? PrecisaoM = null);
+/// <summary>Quem fez a ação e de onde (GPS do aparelho, quando houver). Sem usuário, foi o próprio sistema.</summary>
+internal sealed record AutorDoEvento(Guid? UsuarioId, string Papel, double? Latitude = null, double? Longitude = null, double? PrecisaoM = null)
+{
+    /// <summary>Rotina automática: evento_ordem.ator_id fica NULL.</summary>
+    public static readonly AutorDoEvento Sistema = new(null, "sistema");
+}
 
 /// <summary>
 /// Grava um evento em <c>evento_ordem</c> (RN12: só acréscimo). Roda dentro da transação de quem chama,
@@ -41,7 +45,7 @@ internal static class RegistroDeEventos
                 new NpgsqlParameter("de", NpgsqlDbType.Text) { Value = statusDe is null ? DBNull.Value : OrdensDbContext.ParaSnake(statusDe.Value.ToString()) },
                 new NpgsqlParameter("para", NpgsqlDbType.Text) { Value = OrdensDbContext.ParaSnake(statusPara.ToString()) },
                 new NpgsqlParameter("motivo", NpgsqlDbType.Text) { Value = (object?)motivo ?? DBNull.Value },
-                new NpgsqlParameter("ator", NpgsqlDbType.Uuid) { Value = autor.UsuarioId },
+                new NpgsqlParameter("ator", NpgsqlDbType.Uuid) { Value = (object?)autor.UsuarioId ?? DBNull.Value },
                 new NpgsqlParameter("papel", NpgsqlDbType.Text) { Value = autor.Papel },
                 new NpgsqlParameter("ocorrido", NpgsqlDbType.TimestampTz) { Value = evento.OcorridoEm },
                 new NpgsqlParameter("lat", NpgsqlDbType.Double) { Value = (object?)autor.Latitude ?? DBNull.Value },
