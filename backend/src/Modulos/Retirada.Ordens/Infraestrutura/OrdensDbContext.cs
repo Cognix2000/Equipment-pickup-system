@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -63,6 +64,13 @@ public sealed class OrdensDbContext(DbContextOptions<OrdensDbContext> options) :
         o.Property(x => x.EncerradaEm).HasColumnName("encerrada_em");
         o.Property(x => x.BaixaHubsoftEm).HasColumnName("baixa_hubsoft_em");
         o.Property(x => x.BaixaHubsoftPor).HasColumnName("baixa_hubsoft_por");
+        o.Property(x => x.Protocolo).HasColumnName("protocolo");
+        o.Property(x => x.IdOrdemServicoHubsoft).HasColumnName("id_ordem_servico_hubsoft");
+        o.Property(x => x.IdClienteServicoHubsoft).HasColumnName("id_cliente_servico_hubsoft");
+        o.Property(x => x.DataProgramada).HasColumnName("data_programada");
+        o.Property(x => x.DataRescisao).HasColumnName("data_rescisao");
+        o.Property(x => x.Cep).HasColumnName("cep");
+        o.Property(x => x.ImportacaoId).HasColumnName("importacao_id");
 
         o.Property(x => x.Localizacao)
             .HasColumnName("localizacao")
@@ -102,6 +110,10 @@ public sealed class OrdensDbContext(DbContextOptions<OrdensDbContext> options) :
             n => n == null ? null : n.Valor,
             s => s == null ? null : NumeroSerie.Criar(s));
         e.Property(x => x.Situacao).HasColumnName("situacao").HasConversion(TextoSnake<SituacaoEquipamento>());
+        e.Property(x => x.Mac).HasColumnName("mac").HasConversion(
+            m => m == null ? null : PhysicalAddress.Parse(m),
+            p => p == null ? null : string.Join(':', p.GetAddressBytes().Select(b => b.ToString("X2"))));
+        e.Property(x => x.Valor).HasColumnName("valor");
         e.Property(x => x.ConferidoPor).HasColumnName("conferido_por");
         e.Property(x => x.ConferidoEm).HasColumnName("conferido_em");
         e.Ignore(x => x.EhPatrimonio);

@@ -60,9 +60,11 @@ export const euQuery = queryOptions({
 
 export const useEu = () => useQuery(euQuery)
 
-/** Tela inicial de cada papel. O estoque usa a lista de ordens até a tela de conferência (UC06) chegar. */
+/** Tela inicial de cada papel. */
 export function inicioDo(papel: Papel): string {
-  return papel === 'tecnico' ? '/tecnico/ordens' : '/financeiro/ordens'
+  if (papel === 'tecnico') return '/tecnico/ordens'
+  if (papel === 'estoque') return '/estoque/conferir'
+  return '/financeiro/ordens'
 }
 
 export const acesso = {
