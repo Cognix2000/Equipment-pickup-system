@@ -1,6 +1,6 @@
 import type { EventoDaOrdem } from './tipos'
 
-const papeis: Record<string, string> = { admin: 'pelo gestor', financeiro: 'pelo financeiro', tecnico: 'pelo técnico', estoque: 'pelo estoque' }
+const papeis: Record<string, string> = { admin: 'pelo gestor', financeiro: 'pelo financeiro', tecnico: 'pelo técnico', estoque: 'pelo estoque', sistema: 'automaticamente' }
 
 const motivos: Record<string, string> = {
   ausente: 'cliente ausente',

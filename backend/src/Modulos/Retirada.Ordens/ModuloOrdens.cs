@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Retirada.Comum;
 using Retirada.Ordens.Casos;
 using Retirada.Ordens.Infraestrutura;
+using Retirada.Ordens.Rotinas;
 
 namespace Retirada.Ordens;
 
@@ -21,6 +22,13 @@ public static class ModuloOrdens
             LimiteDeVisitas: config.GetValue("Ordens:LimiteDeVisitas", 3),
             CarenciaHoras: config.GetValue("Ordens:CarenciaHoras", 48),          // RN03
             ModoSimulacao: config.GetValue("Importacao:ModoSimulacao", false))); // RN05: DDD 00 só com dados fictícios
+
+        // Rotinas automáticas (RN03). A cada 5 min basta: a carência é de 48 h. Os testes desligam para controlar o relógio.
+        if (config.GetValue("Ordens:Rotinas:Ativas", true))
+        {
+            services.AddSingleton(new ParametrosDasRotinas(TimeSpan.FromMinutes(config.GetValue("Ordens:Rotinas:IntervaloMinutos", 5))));
+            services.AddHostedService<RotinasDasOrdens>();
+        }
         return services;
     }
 
