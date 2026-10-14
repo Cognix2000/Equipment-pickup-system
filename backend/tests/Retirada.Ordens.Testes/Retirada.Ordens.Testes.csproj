@@ -19,6 +19,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- As planilhas fictícias do repositório são o insumo dos testes de importação. -->
+  <ItemGroup>
+    <None Include="..\..\..\ferramentas\dados-ficticios\*.xlsx" LinkBase="Planilhas" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modulos\Retirada.Ordens\Retirada.Ordens.csproj" />
   </ItemGroup>

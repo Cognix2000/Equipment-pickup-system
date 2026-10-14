@@ -1,6 +1,7 @@
 import { Check, WifiOff } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { lazy, Suspense, useMemo, useState } from 'react'
+import { useLocation } from 'react-router'
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { useOrdens } from '@/features/ordens/consultas'
 import { OrdemCard } from '@/features/ordens/OrdemCard'
@@ -17,6 +18,8 @@ export function MinhasOrdens() {
   const [bairro, setBairro] = useState<string | null>(null)
   const conectado = useConectado()
   const reduzirMovimento = useReducedMotion()
+  // Aviso de quem acabou de registrar uma retirada ou visita.
+  const aviso = (useLocation().state as { aviso?: string } | null)?.aviso
 
   const bairros = useMemo(() => {
     const contagem = new Map<string, number>()
@@ -61,6 +64,12 @@ export function MinhasOrdens() {
       )}
 
       <main className="flex flex-1 flex-col gap-3 p-4">
+        {aviso && (
+          <p role="status" className="flex items-start gap-2 rounded-[10px] bg-sucesso-fundo px-3.5 py-2.5 text-sm font-medium text-sucesso">
+            <Check aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {aviso}
+          </p>
+        )}
         {isPending && <Carregando rotulo="Carregando ordens" />}
         {isError && <FalhaAoCarregar erro={error} tentarDeNovo={() => void refetch()} />}
         {!isPending && !isError && visiveis.length === 0 && (

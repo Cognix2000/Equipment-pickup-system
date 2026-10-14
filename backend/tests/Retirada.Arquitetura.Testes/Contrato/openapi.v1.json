@@ -364,7 +364,7 @@
         "tags": [
           "Ordens"
         ],
-        "summary": "Lista ordens, com filtro por status e bairro (RF06)",
+        "summary": "Lista ordens, com filtro por status, bairro e busca por protocolo, n\u00BA da OS ou s\u00E9rie (RF06, UC06)",
         "parameters": [
           {
             "name": "status",
@@ -375,6 +375,13 @@
           },
           {
             "name": "bairro",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
             "in": "query",
             "schema": {
               "type": "string"
@@ -1075,6 +1082,163 @@
           }
         }
       }
+    },
+    "/api/importacoes/previa": {
+      "post": {
+        "tags": [
+          "Importa\u00E7\u00E3o"
+        ],
+        "summary": "Pr\u00E9via da importa\u00E7\u00E3o, sem gravar (RF03\u2013RF05)",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "arquivo"
+                ],
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/importacoes/{id}/confirmar": {
+      "post": {
+        "tags": [
+          "Importa\u00E7\u00E3o"
+        ],
+        "summary": "Confirmar e gravar a importa\u00E7\u00E3o (UC01)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "arquivo"
+                ],
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatorioDaImportacaoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/importacoes/{id}/descartar": {
+      "post": {
+        "tags": [
+          "Importa\u00E7\u00E3o"
+        ],
+        "summary": "Descartar a pr\u00E9via",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1169,6 +1333,53 @@
           }
         }
       },
+      "EventoDto": {
+        "required": [
+          "tipo",
+          "ocorridoEm",
+          "motivo",
+          "statusPara",
+          "atorPapel"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "ocorridoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "statusPara": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "atorPapel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FormatoDoArquivo": {
+        "enum": [
+          "xlsx",
+          "xls",
+          "ods",
+          "csv",
+          "json",
+          "xml"
+        ]
+      },
       "Gps": {
         "required": [
           "latitude",
@@ -1251,6 +1462,10 @@
           }
         }
       },
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
+      },
       "ItemLido": {
         "required": [
           "equipamentoId",
@@ -1267,6 +1482,61 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "LinhaDaPreviaDto": {
+        "required": [
+          "numero",
+          "resultado",
+          "cliente",
+          "endereco",
+          "bairro",
+          "tipoOs",
+          "detalhes"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "resultado": {
+            "$ref": "#/components/schemas/ResultadoDaLinha"
+          },
+          "cliente": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "endereco": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bairro": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoOs": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detalhes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -1411,6 +1681,24 @@
             "items": {
               "$ref": "#/components/schemas/EquipamentoDto"
             }
+          },
+          "telefones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TelefoneDto"
+            }
+          },
+          "historico": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EventoDto"
+            }
           }
         }
       },
@@ -1529,6 +1817,67 @@
           }
         }
       },
+      "PreviaDto": {
+        "required": [
+          "importacaoId",
+          "arquivo",
+          "formato",
+          "totalDeLinhas",
+          "resumo",
+          "colunasReconhecidas",
+          "colunasDescartadas",
+          "avisos",
+          "linhas"
+        ],
+        "type": "object",
+        "properties": {
+          "importacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "arquivo": {
+            "type": "string"
+          },
+          "formato": {
+            "$ref": "#/components/schemas/FormatoDoArquivo"
+          },
+          "totalDeLinhas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "resumo": {
+            "$ref": "#/components/schemas/ResumoDaImportacaoDto"
+          },
+          "colunasReconhecidas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "colunasDescartadas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "linhas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaPreviaDto"
+            }
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1564,6 +1913,58 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RelatorioDaImportacaoDto": {
+        "required": [
+          "importacaoId",
+          "resumo",
+          "ordensCriadas",
+          "ordensAtualizadas",
+          "pendenciasRegistradas",
+          "pendenciasResolvidas"
+        ],
+        "type": "object",
+        "properties": {
+          "importacaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resumo": {
+            "$ref": "#/components/schemas/ResumoDaImportacaoDto"
+          },
+          "ordensCriadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordensAtualizadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendenciasRegistradas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendenciasResolvidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1604,6 +2005,95 @@
           }
         }
       },
+      "ResultadoDaLinha": {
+        "enum": [
+          "nova",
+          "atualizacao",
+          "repetida",
+          "duplicada",
+          "pendencia",
+          "erro"
+        ]
+      },
+      "ResumoDaImportacaoDto": {
+        "required": [
+          "novas",
+          "atualizacoes",
+          "repetidas",
+          "duplicadas",
+          "pendencias",
+          "erros",
+          "ordensNovas",
+          "ordensAtualizadas"
+        ],
+        "type": "object",
+        "properties": {
+          "novas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "atualizacoes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "repetidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "erros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordensNovas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ordensAtualizadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "SituacaoEquipamento": {
         "enum": [
           "pendente",
@@ -1627,6 +2117,25 @@
           "devolvida_na_loja",
           "encerrada_sem_retirada"
         ]
+      },
+      "TelefoneDto": {
+        "required": [
+          "numero",
+          "tipo",
+          "formatoValido"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "formatoValido": {
+            "type": "boolean"
+          }
+        }
       },
       "TipoEquipamento": {
         "enum": [
@@ -1712,6 +2221,9 @@
     },
     {
       "name": "Ordens"
+    },
+    {
+      "name": "Importa\u00E7\u00E3o"
     }
   ]
 }

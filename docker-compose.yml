@@ -45,6 +45,8 @@ services:
       # ADR-008: vazio = não exporta. Com o perfil "observabilidade", use http://observabilidade:4317.
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_ENDPOINT:-}
       DataProtection__Pasta: /chaves
+      # Homologação usa só dados fictícios: telefones com DDD 00 valem (RN05). Em produção, deixe false.
+      Importacao__ModoSimulacao: ${IMPORTACAO_MODO_SIMULACAO:-true}
     volumes:
       # ADR-010: chaves que cifram a sessão e o 2FA. Perder este volume derruba sessões e todo 2FA: entra no backup.
       - chaves:/chaves

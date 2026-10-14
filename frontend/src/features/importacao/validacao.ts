@@ -35,6 +35,7 @@ export type FormularioDeImportacao = z.infer<typeof formularioDeImportacao>
 const formatoTamanho = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
 
 export function descreverTamanho(bytes: number) {
+  if (bytes < 1024) return 'menos de 1 KB'
   if (bytes < 1024 * 1024) return `${formatoTamanho.format(bytes / 1024)} KB`
   return `${formatoTamanho.format(bytes / 1024 / 1024)} MB`
 }

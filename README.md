@@ -52,6 +52,17 @@ docker compose run --rm migrador convidar-gestor --nome "Nome do Gestor" --email
 
 O comando mostra o link (vale 48 h, uma vez só). A partir daí, o gestor cadastra os outros usuários pela tela de gestão.
 
+### Importar a planilha
+
+Em **Importar**, o financeiro envia o arquivo e vê a prévia linha a linha antes de gravar: ordens novas, atualizações, pendências, linhas com erro e colunas descartadas. Nada entra sem a confirmação.
+
+- **Formatos:** `.xlsx`, `.xls`, `.ods`, `.csv`, `.txt`, `.json` e `.xml`, até 10 MB. O formato é reconhecido pelo conteúdo; `.sql` e PDF são recusados.
+- **Colunas:** reconhecidas pelo nome, tanto as do HubSoft (`nome_razaosocial`, `tipo_ordem_servico`...) quanto as da planilha do financeiro ("Cliente", "Telefone 1"...). CPF/CNPJ, e-mail, plano, PPPoE e afins são descartados e nunca gravados (RN04).
+- **Reenviar o mesmo arquivo não duplica:** a chave é o id da OS, o protocolo ou, sem os dois, uma chave provisória. Uma planilha nova só atualiza o que mudou.
+- **Para testar em homologação:** `ferramentas/dados-ficticios/planilha_retiradas_ficticia.xlsx` (formato do financeiro) e `modelo_exportacao_financeiro.xlsx` (formato do HubSoft, uma linha por equipamento).
+
+A prévia guarda só o resumo e o hash do arquivo. Na confirmação, o PWA manda o mesmo arquivo de novo, e o servidor confere o hash antes de gravar. Assim, nenhum dado pessoal fica parado entre a prévia e a confirmação.
+
 ### Chaves da sessão (fazer backup)
 
 O volume `chaves` guarda as chaves do ASP.NET Data Protection, que assinam o cookie de sessão e cifram os segredos do 2FA. Se ele se perder, todos saem da sessão e **gestor e financeiro precisam configurar o 2FA de novo** (um gestor zera o 2FA na tela de usuários). Faça backup dele junto com o banco.
@@ -167,9 +178,6 @@ docker compose --profile observabilidade up --build
 
 ## O que falta no incremento 1
 
-- Importação com prévia no servidor (RF03–RF05). A tela já valida formato e tamanho no navegador.
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
 - Rotinas automáticas: liberar a ordem quando a carência de 48 h vence (RN03) e encerrar após 10 dias sem resposta (RN09).
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.
-- Telefones no detalhe da ordem, com o botão de ligar e a janela das 8h às 18h (RN10).
-- Telas de registro da retirada e de conferência no estoque, seguindo os protótipos do canvas.

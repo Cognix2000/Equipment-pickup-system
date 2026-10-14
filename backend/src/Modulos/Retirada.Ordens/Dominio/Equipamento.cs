@@ -9,6 +9,8 @@ public sealed class Equipamento : Entidade
     // Stryker disable once String : valor inicial só para o EF Core; a fábrica sempre preenche
     public string Modelo { get; private set; } = string.Empty;
     public NumeroSerie? NumeroSerie { get; private set; }
+    public string? Mac { get; private set; }
+    public decimal? Valor { get; private set; } // valor do termo ou da OS de instalação (cl. 15.1)
     public SituacaoEquipamento Situacao { get; private set; } = SituacaoEquipamento.Pendente;
     public Guid? ConferidoPor { get; private set; }
     public DateTimeOffset? ConferidoEm { get; private set; }
@@ -17,14 +19,16 @@ public sealed class Equipamento : Entidade
 
     private Equipamento() { } // EF Core
 
-    public static Equipamento Criar(TipoEquipamento tipo, string modelo, NumeroSerie? numeroSerie)
+    public static Equipamento Criar(TipoEquipamento tipo, string modelo, NumeroSerie? numeroSerie, string? mac = null, decimal? valor = null)
     {
+        if (valor is < 0)
+            throw new RegraDeNegocioException("VALOR", "O valor do equipamento não pode ser negativo.");
         if (tipo != TipoEquipamento.Fonte && numeroSerie is null)
             throw new RegraDeNegocioException("SERIE", $"{tipo} precisa de número de série.");
         if (string.IsNullOrWhiteSpace(modelo))
             throw new RegraDeNegocioException("MODELO", "Informe marca e modelo do equipamento.");
 
-        return new Equipamento { Tipo = tipo, Modelo = modelo.Trim(), NumeroSerie = numeroSerie };
+        return new Equipamento { Tipo = tipo, Modelo = modelo.Trim(), NumeroSerie = numeroSerie, Mac = mac, Valor = valor };
     }
 
     /// <summary>Série diferente fica como divergência para o estoque (UC04), sem impedir a retirada.</summary>

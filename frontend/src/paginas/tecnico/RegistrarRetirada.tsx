@@ -1,0 +1,215 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CircleCheck, MapPin, TriangleAlert } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { comandos, normalizarSerie, novaChave } from '@/features/ordens/comandos'
+import { ordemQuery } from '@/features/ordens/consultas'
+import { GpsIndisponivel, obterGps } from '@/features/ordens/gps'
+import { enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
+import { ErroDaApi } from '@/lib/api'
+import { CabecalhoDaAcao } from './CabecalhoDaAcao'
+
+const horario = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+
+/**
+ * UC04 e RF12: o técnico confere a série de cada item e confirma; GPS e hora entram sozinhos.
+ * RN07: ao abrir, a tela busca a ordem de novo no servidor; cancelada, a retirada fica bloqueada.
+ */
+export function RegistrarRetirada() {
+  const { id = '' } = useParams()
+  const consulta = useQuery({ ...ordemQuery(id), staleTime: 0, refetchOnMount: 'always' })
+  const { data: ordem, isPending, isError, error, refetch, dataUpdatedAt } = consulta
+
+  return (
+    <>
+      <CabecalhoDaAcao
+        titulo="Registrar retirada"
+        subtitulo={ordem ? `OS ${ordem.numeroOs ?? 's/ nº'} · ${enderecoCurto(ordem)}` : undefined}
+        voltarPara={`/tecnico/ordens/${id}`}
+      />
+      <main className="flex flex-1 flex-col gap-3 p-4">
+        {isPending && <Carregando linhas={3} rotulo="Conferindo a ordem no servidor" />}
+        {isError && <FalhaAoCarregar erro={error} tentarDeNovo={() => void refetch()} />}
+        {ordem && ordem.status === 'cancelada' && (
+          <Bloqueio texto="Esta ordem foi cancelada: a retirada está bloqueada. Não recolha os equipamentos." voltarPara="/tecnico/ordens" />
+        )}
+        {ordem && ordem.status !== 'cancelada' && ordem.status !== 'atribuida' && ordem.status !== 'em_rota' && (
+          <Bloqueio texto="Esta ordem não está mais aguardando retirada com você." voltarPara="/tecnico/ordens" />
+        )}
+        {ordem && (ordem.status === 'atribuida' || ordem.status === 'em_rota') && (
+          <FormularioDaRetirada ordem={ordem} conferidaAs={horario.format(dataUpdatedAt)} />
+        )}
+      </main>
+    </>
+  )
+}
+
+function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaAs: string }) {
+  const navegar = useNavigate()
+  const clienteDeConsultas = useQueryClient()
+  const [chave] = useState(novaChave) // a mesma chave em todas as tentativas desta retirada
+  const [series, setSeries] = useState<Record<string, string>>({})
+  const [recolhidos, setRecolhidos] = useState<Record<string, boolean>>({})
+
+  const temSerie = (e: Equipamento) => e.numeroSerie !== null
+  const resolvido = (e: Equipamento) => (temSerie(e) ? (series[e.id] ?? '').trim().length > 0 : recolhidos[e.id] === true)
+  const faltando = ordem.equipamentos.filter((e) => !resolvido(e)).length
+
+  const registrar = useMutation({
+    mutationFn: async () => {
+      const gps = await obterGps()
+      const itens = ordem.equipamentos.map((e) => ({ equipamentoId: e.id, numeroSerie: temSerie(e) ? (series[e.id] ?? null) : null }))
+      return comandos.registrarRetirada(ordem.id, itens, gps, chave)
+    },
+    onSuccess: async () => {
+      await clienteDeConsultas.invalidateQueries({ queryKey: ['ordens'] })
+      navegar('/tecnico/ordens', {
+        replace: true,
+        state: { aviso: 'Retirada registrada. Leve os equipamentos ao estoque até o fim do dia útil seguinte.' },
+      })
+    },
+  })
+
+  const falha = registrar.error
+  const mensagemDeFalha =
+    falha instanceof GpsIndisponivel || falha instanceof ErroDaApi ? falha.message : falha ? 'Sem resposta do servidor. Confira o sinal e tente de novo.' : null
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault()
+        registrar.mutate()
+      }}
+      className="flex flex-col gap-3"
+    >
+      <p className="flex items-center gap-2 rounded-[10px] bg-sucesso-fundo px-3.5 py-2.5 text-sm font-medium text-sucesso">
+        <CircleCheck aria-hidden className="size-5 shrink-0" />
+        <span>
+          Ordem confirmada ativa às <span data-teste="hora">{conferidaAs}</span>
+        </span>
+      </p>
+
+      {ordem.equipamentos.length === 0 && (
+        <p className="rounded-[10px] bg-alerta-fundo px-3.5 py-2.5 text-sm text-alerta">
+          A planilha não trouxe os equipamentos desta ordem. Avise o financeiro antes de recolher.
+        </p>
+      )}
+
+      {ordem.equipamentos.map((e, i) => (
+        <ItemDaRetirada
+          key={e.id}
+          posicao={i + 1}
+          equipamento={e}
+          serie={series[e.id] ?? ''}
+          recolhido={recolhidos[e.id] === true}
+          aoMudarSerie={(valor) => setSeries((s) => ({ ...s, [e.id]: valor }))}
+          aoMarcar={(valor) => setRecolhidos((r) => ({ ...r, [e.id]: valor }))}
+        />
+      ))}
+
+      <p className="flex items-center gap-2 text-[13px] text-texto-suave">
+        <MapPin aria-hidden className="size-4 shrink-0" />
+        GPS e hora entram sozinhos ao confirmar.
+      </p>
+
+      {mensagemDeFalha && (
+        <p role="alert" className="rounded-[10px] bg-erro-fundo px-3.5 py-2.5 text-sm text-erro">
+          {mensagemDeFalha}
+        </p>
+      )}
+
+      <div className="sticky bottom-16 flex flex-col gap-2 bg-gradient-to-t from-fundo from-70% pt-4 pb-3">
+        <Button type="submit" tamanho="grande" disabled={faltando > 0 || registrar.isPending}>
+          {registrar.isPending
+            ? 'Registrando'
+            : faltando > 0
+              ? `Confirmar retirada · ${faltando === 1 ? 'falta 1 item' : `faltam ${faltando} itens`}`
+              : 'Confirmar retirada'}
+        </Button>
+        <Button asChild variante="fantasma" tamanho="compacto">
+          <Link to={`/tecnico/ordens/${ordem.id}/visita`}>Visita sem sucesso</Link>
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function ItemDaRetirada({
+  posicao,
+  equipamento: e,
+  serie,
+  recolhido,
+  aoMudarSerie,
+  aoMarcar,
+}: {
+  posicao: number
+  equipamento: Equipamento
+  serie: string
+  recolhido: boolean
+  aoMudarSerie: (v: string) => void
+  aoMarcar: (v: boolean) => void
+}) {
+  const idCampo = useId()
+  const lida = normalizarSerie(serie)
+  const confere = e.numeroSerie !== null && lida.length > 0 && lida === normalizarSerie(e.numeroSerie)
+
+  return (
+    <Card className="gap-3">
+      <p className="font-semibold">
+        {posicao} · {rotuloDoTipo[e.tipo]} · {e.modelo}
+      </p>
+      {e.numeroSerie !== null ? (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={idCampo} className="text-sm font-medium">
+            Série da etiqueta <span className="font-normal text-texto-suave">(esperada: {e.numeroSerie})</span>
+          </label>
+          <input
+            id={idCampo}
+            value={serie}
+            onChange={(ev) => aoMudarSerie(ev.target.value)}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            className="min-h-12 w-full rounded-[10px] border border-borda-forte bg-superficie px-3 font-titulo text-base tracking-wide uppercase"
+            aria-describedby={lida ? `${idCampo}-situacao` : undefined}
+          />
+          {lida.length > 0 && (
+            <p id={`${idCampo}-situacao`} className={confere ? 'text-sm font-medium text-sucesso' : 'flex gap-1.5 text-sm font-medium text-alerta'}>
+              {confere ? (
+                'Série confere'
+              ) : (
+                <>
+                  <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  Série diferente da cadastrada: vai registrada como divergência para o estoque.
+                </>
+              )}
+            </p>
+          )}
+        </div>
+      ) : (
+        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" checked={recolhido} onChange={(ev) => aoMarcar(ev.target.checked)} className="size-6 accent-azul" />
+          Recolhida
+        </label>
+      )}
+    </Card>
+  )
+}
+
+export function Bloqueio({ texto, voltarPara }: { texto: string; voltarPara: string }) {
+  return (
+    <div role="alert" className="flex flex-col items-start gap-3 rounded-xl bg-erro-fundo p-4 text-erro">
+      <p className="flex items-start gap-2 font-medium">
+        <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
+        {texto}
+      </p>
+      <Button asChild variante="neutro" tamanho="compacto">
+        <Link to={voltarPara}>Voltar para as ordens</Link>
+      </Button>
+    </div>
+  )
+}

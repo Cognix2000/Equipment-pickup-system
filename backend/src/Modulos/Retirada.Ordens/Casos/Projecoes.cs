@@ -17,7 +17,17 @@ internal static class Projecoes
         if (linha is null) return null;
 
         var equipamentos = await CarregarEquipamentosAsync(db, [id], ct);
-        return OrdemDto.De(linha.Ordem, linha.Cliente, equipamentos[id]);
+        // RF07: o detalhe traz os telefones do cliente e o histórico; a lista não, para ficar leve.
+        var telefones = await db.Database.SqlQuery<TelefoneDto>($"""
+            SELECT numero_e164 AS "Numero", tipo AS "Tipo", formato_valido AS "FormatoValido"
+            FROM retirada.telefone_cliente WHERE cliente_id = {linha.Ordem.ClienteId}
+            ORDER BY formato_valido DESC, tipo = 'celular' DESC, numero_e164
+            """).ToListAsync(ct);
+        var historico = await db.Database.SqlQuery<EventoDto>($"""
+            SELECT tipo AS "Tipo", ocorrido_em AS "OcorridoEm", motivo AS "Motivo", status_para AS "StatusPara", ator_papel AS "AtorPapel"
+            FROM retirada.evento_ordem WHERE ordem_id = {id} ORDER BY seq DESC
+            """).ToListAsync(ct);
+        return OrdemDto.De(linha.Ordem, linha.Cliente, equipamentos[id]) with { Telefones = telefones, Historico = historico };
     }
 
     public static async Task<ILookup<Guid, Equipamento>> CarregarEquipamentosAsync(
@@ -30,6 +40,12 @@ internal static class Projecoes
         return itens.ToLookup(x => x.OrdemId, x => x.Item);
     }
 }
+
+/// <summary>RN05: telefone já em E.164. O fora do padrão vem marcado, para a tela não oferecer a ligação.</summary>
+internal sealed record TelefoneDto(string Numero, string Tipo, bool FormatoValido);
+
+/// <summary>RF07 e RF16: uma linha do histórico. Quem fez aparece só pelo papel.</summary>
+internal sealed record EventoDto(string Tipo, DateTimeOffset OcorridoEm, string? Motivo, string? StatusPara, string? AtorPapel);
 
 internal sealed record EquipamentoDto(Guid Id, TipoEquipamento Tipo, string Modelo, string? NumeroSerie, SituacaoEquipamento Situacao);
 
@@ -46,7 +62,9 @@ internal sealed record OrdemDto(
     Guid? ResponsavelId,
     short VisitasSemSucesso,
     bool AguardaBaixaNoHubsoft,
-    IReadOnlyList<EquipamentoDto> Equipamentos)
+    IReadOnlyList<EquipamentoDto> Equipamentos,
+    IReadOnlyList<TelefoneDto>? Telefones = null,
+    IReadOnlyList<EventoDto>? Historico = null)
 {
     public static OrdemDto De(Ordem o, string cliente, IEnumerable<Equipamento> equipamentos) => new(
         o.Id, o.NumeroOs, o.TipoOs, o.Status, cliente, o.Endereco, o.Localizacao, o.Observacao,
