@@ -4,14 +4,12 @@ global using RespostaDeComando = Microsoft.AspNetCore.Http.HttpResults.Results<
     Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>;
 
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using NpgsqlTypes;
 using Retirada.Comum;
 using Retirada.Ordens.Dominio;
 using Retirada.Ordens.Infraestrutura;
@@ -19,7 +17,8 @@ using Retirada.Ordens.Infraestrutura;
 namespace Retirada.Ordens.Casos;
 
 /// <summary>Parâmetros das regras que o gestor ajusta sem mexer no código (RF18).</summary>
-internal sealed record ParametrosDasOrdens(int LimiteDeVisitas);
+/// <param name="ModoSimulacao">Homologação com dados fictícios: aceita o DDD 00 (RN05).</param>
+internal sealed record ParametrosDasOrdens(int LimiteDeVisitas, int CarenciaHoras = 48, bool ModoSimulacao = false);
 
 /// <summary>O que todo comando recebe: a ordem da rota, a chave de idempotência e o contexto da requisição.</summary>
 internal sealed record PedidoDeComando(
@@ -84,7 +83,8 @@ internal static class ComandoDaOrdem
         try
         {
             await p.Db.SaveChangesAsync(p.Ct);
-            await GravarEventoAsync(p, ordem, evento, statusDe, chave, usuarioId, gps, dados);
+            var autor = new AutorDoEvento(usuarioId, p.Usuario.Papel(), gps?.Latitude, gps?.Longitude, gps?.PrecisaoM);
+            await RegistroDeEventos.GravarAsync(p.Db, ordem.Id, evento, statusDe, ordem.Status, autor, chave, dados, p.Ct);
             await transacao.CommitAsync(p.Ct);
         }
         catch (DbUpdateConcurrencyException)
@@ -128,43 +128,6 @@ internal static class ComandoDaOrdem
         return await p.Db.Database
             .SqlQuery<bool>($"SELECT EXISTS (SELECT 1 FROM retirada.evento_ordem WHERE ordem_id = {ordem.Id} AND tipo = 'designada' AND dados ->> 'tecnicoId' = {tecnico}) AS \"Value\"")
             .SingleAsync(p.Ct);
-    }
-
-    private static async Task GravarEventoAsync(
-        PedidoDeComando p, Ordem ordem, EventoDaOrdem evento, StatusOrdem statusDe, Guid chave, Guid usuarioId, Gps? gps, object? dados)
-    {
-        // O agregado nomeia o evento como "tipo:Motivo" (ex.: visita_sem_sucesso:NaoAchou).
-        var partes = evento.Tipo.Split(':', 2);
-        var motivo = partes.Length > 1 ? OrdensDbContext.ParaSnake(partes[1]) : null;
-
-        // seq é o próximo número dentro da ordem. A linha da ordem já está travada pelo UPDATE desta
-        // transação, então outra ação na mesma ordem espera e depois falha na versão.
-        await p.Db.Database.ExecuteSqlRawAsync("""
-            INSERT INTO retirada.evento_ordem
-                (ordem_id, seq, tipo, status_de, status_para, motivo, ator_id, ator_papel,
-                 ocorrido_em, local, precisao_m, chave_idempotencia, dados)
-            SELECT @ordem, COALESCE(MAX(seq), 0) + 1, @tipo, @de, @para, @motivo, @ator, @papel,
-                   @ocorrido,
-                   CASE WHEN @lat IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint(@lon, @lat), 4326)::geography END,
-                   @precisao, @chave, @dados
-            FROM retirada.evento_ordem WHERE ordem_id = @ordem
-            """,
-            [
-                new NpgsqlParameter("ordem", NpgsqlDbType.Uuid) { Value = ordem.Id },
-                new NpgsqlParameter("tipo", NpgsqlDbType.Text) { Value = partes[0] },
-                new NpgsqlParameter("de", NpgsqlDbType.Text) { Value = OrdensDbContext.ParaSnake(statusDe.ToString()) },
-                new NpgsqlParameter("para", NpgsqlDbType.Text) { Value = OrdensDbContext.ParaSnake(ordem.Status.ToString()) },
-                new NpgsqlParameter("motivo", NpgsqlDbType.Text) { Value = (object?)motivo ?? DBNull.Value },
-                new NpgsqlParameter("ator", NpgsqlDbType.Uuid) { Value = usuarioId },
-                new NpgsqlParameter("papel", NpgsqlDbType.Text) { Value = p.Usuario.Papel() },
-                new NpgsqlParameter("ocorrido", NpgsqlDbType.TimestampTz) { Value = evento.OcorridoEm },
-                new NpgsqlParameter("lat", NpgsqlDbType.Double) { Value = (object?)gps?.Latitude ?? DBNull.Value },
-                new NpgsqlParameter("lon", NpgsqlDbType.Double) { Value = (object?)gps?.Longitude ?? DBNull.Value },
-                new NpgsqlParameter("precisao", NpgsqlDbType.Real) { Value = (object?)(float?)gps?.PrecisaoM ?? DBNull.Value },
-                new NpgsqlParameter("chave", NpgsqlDbType.Uuid) { Value = chave },
-                new NpgsqlParameter("dados", NpgsqlDbType.Jsonb) { Value = JsonSerializer.Serialize(dados ?? new { }) },
-            ],
-            p.Ct);
     }
 
     private static ProblemHttpResult Conflito() => Problema(StatusCodes.Status409Conflict, "CONFLITO",

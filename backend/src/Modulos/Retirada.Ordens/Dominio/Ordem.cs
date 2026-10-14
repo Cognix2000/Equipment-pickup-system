@@ -36,6 +36,15 @@ public sealed class Ordem : Entidade
     public DateTimeOffset? BaixaHubsoftEm { get; private set; }
     public Guid? BaixaHubsoftPor { get; private set; }
 
+    // Referências da exportação do HubSoft (vazias enquanto a planilha não trouxer).
+    public string? Protocolo { get; private set; }
+    public int? IdOrdemServicoHubsoft { get; private set; }
+    public int? IdClienteServicoHubsoft { get; private set; }
+    public DateTimeOffset? DataProgramada { get; private set; }
+    public DateOnly? DataRescisao { get; private set; }
+    public string? Cep { get; private set; }
+    public Guid? ImportacaoId { get; private set; }
+
     public IReadOnlyList<Equipamento> Equipamentos => _equipamentos;
 
     /// <summary>Eventos gerados nesta sessão, para gravar em evento_ordem (só acréscimo, RN12).</summary>
@@ -58,7 +67,8 @@ public sealed class Ordem : Entidade
         string? observacao,
         IEnumerable<Equipamento> equipamentos,
         DateTimeOffset agora,
-        TimeSpan carencia)
+        TimeSpan carencia,
+        ReferenciasDaImportacao? referencias = null)
     {
         if (string.IsNullOrWhiteSpace(chaveImportacao))
             throw new RegraDeNegocioException("RN01", "A ordem precisa de uma chave de importação.");
@@ -76,10 +86,56 @@ public sealed class Ordem : Entidade
             CarenciaAte = agora + carencia,
             CriadoEm = agora,
             AtualizadoEm = agora,
+            Protocolo = referencias?.Protocolo,
+            IdOrdemServicoHubsoft = referencias?.IdOrdemServico,
+            IdClienteServicoHubsoft = referencias?.IdClienteServico,
+            DataProgramada = referencias?.DataProgramada,
+            DataRescisao = referencias?.DataRescisao,
+            Cep = referencias?.Cep,
+            ImportacaoId = referencias?.ImportacaoId,
         };
         ordem._equipamentos.AddRange(equipamentos);
         ordem.Registrar("importada", agora);
         return ordem;
+    }
+
+    /// <summary>
+    /// RN01: o que a planilha nova mudou nesta ordem (nomes dos campos), sem alterar nada.
+    /// A prévia mostra a lista; a confirmação aplica com <see cref="AtualizarPelaImportacao"/>.
+    /// </summary>
+    public IReadOnlyList<string> MudancasDaImportacao(DadosDaImportacao novos)
+    {
+        var mudancas = new List<string>();
+        if (novos.Endereco != Endereco) mudancas.Add("endereço");
+        if (novos.Cep is not null && novos.Cep != Cep) mudancas.Add("CEP");
+        if (novos.Observacao != Observacao) mudancas.Add("observação");
+        if (novos.NumeroOs is not null && novos.NumeroOs != NumeroOs) mudancas.Add("nº da OS");
+        if (novos.DataProgramada is not null && novos.DataProgramada != DataProgramada) mudancas.Add("data programada");
+        if (novos.DataRescisao is not null && novos.DataRescisao != DataRescisao) mudancas.Add("data da rescisão");
+        if (novos.Localizacao is not null && novos.Localizacao != Localizacao) mudancas.Add("localização");
+        return mudancas;
+    }
+
+    /// <summary>Só ordem que ainda não terminou recebe atualização da planilha; a encerrada fica como está.</summary>
+    public bool AceitaAtualizacaoDaImportacao => !Encerrados.Contains(Status);
+
+    /// <summary>RN01: reimportar não duplica, só atualiza o que mudou. Sem mudança, nada acontece.</summary>
+    public IReadOnlyList<string> AtualizarPelaImportacao(DadosDaImportacao novos, DateTimeOffset agora)
+    {
+        Exigir(AceitaAtualizacaoDaImportacao, "RN01", "Ordem encerrada não é atualizada pela importação.");
+        var mudancas = MudancasDaImportacao(novos);
+        if (mudancas.Count == 0) return mudancas;
+
+        Endereco = novos.Endereco;
+        Cep = novos.Cep ?? Cep;
+        Observacao = novos.Observacao;
+        NumeroOs = novos.NumeroOs ?? NumeroOs;
+        DataProgramada = novos.DataProgramada ?? DataProgramada;
+        DataRescisao = novos.DataRescisao ?? DataRescisao;
+        Localizacao = novos.Localizacao ?? Localizacao;
+        Tocar(agora);
+        Registrar("atualizada_pela_importacao", agora);
+        return mudancas;
     }
 
     /// <summary>O financeiro libera antes do fim da carência (RN03).</summary>
@@ -223,5 +279,25 @@ public sealed class Ordem : Entidade
 }
 
 public sealed record EventoDaOrdem(string Tipo, DateTimeOffset OcorridoEm);
+
+/// <summary>Identificadores e datas que a exportação do HubSoft traz junto com a OS.</summary>
+public sealed record ReferenciasDaImportacao(
+    string? Protocolo = null,
+    int? IdOrdemServico = null,
+    int? IdClienteServico = null,
+    DateTimeOffset? DataProgramada = null,
+    DateOnly? DataRescisao = null,
+    string? Cep = null,
+    Guid? ImportacaoId = null);
+
+/// <summary>O que uma reimportação pode atualizar numa ordem que já existe (RN01).</summary>
+public sealed record DadosDaImportacao(
+    Endereco Endereco,
+    string? Cep,
+    string? Observacao,
+    int? NumeroOs,
+    DateTimeOffset? DataProgramada,
+    DateOnly? DataRescisao,
+    Localizacao? Localizacao);
 
 public sealed record ResultadoConferencia(bool Fechou, IReadOnlyList<Equipamento> Divergentes);

@@ -17,7 +17,10 @@ public static class ModuloOrdens
     {
         services.AddDbContext<OrdensDbContext>(o => o.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite()));
         // RN09: 3 visitas sem sucesso encerram a ordem. Ajustável sem mexer no código (RF18).
-        services.AddSingleton(new ParametrosDasOrdens(LimiteDeVisitas: config.GetValue("Ordens:LimiteDeVisitas", 3)));
+        services.AddSingleton(new ParametrosDasOrdens(
+            LimiteDeVisitas: config.GetValue("Ordens:LimiteDeVisitas", 3),
+            CarenciaHoras: config.GetValue("Ordens:CarenciaHoras", 48),          // RN03
+            ModoSimulacao: config.GetValue("Importacao:ModoSimulacao", false))); // RN05: DDD 00 só com dados fictícios
         return services;
     }
 
@@ -37,6 +40,12 @@ public static class ModuloOrdens
         Cancelar.Mapear(grupo);
         RegistrarDevolucaoNaLoja.Mapear(grupo);
         MarcarBaixaFeita.Mapear(grupo);
+
+        // Importação (RF03–RF05): prévia, confirmação e descarte.
+        var importacoes = app.MapGroup("/api/importacoes").WithTags("Importação").RequireAuthorization(Politicas.Financeiro);
+        PreverImportacao.Mapear(importacoes);
+        ConfirmarImportacao.Mapear(importacoes);
+        DescartarImportacao.Mapear(importacoes);
 
         return app;
     }

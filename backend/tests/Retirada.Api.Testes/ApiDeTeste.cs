@@ -39,6 +39,7 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Acesso:TentativasPorMinuto", "10000");
         builder.UseSetting("Acesso:RequisicoesPorMinuto", "10000");
         builder.UseSetting("Acesso:RequisicoesAnonimasPorMinuto", "10000");
+        builder.UseSetting("Importacao:ModoSimulacao", "true"); // telefones fictícios com DDD 00
         builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
     }
 
@@ -149,6 +150,17 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
             eventos.Add((leitor.GetInt32(0), leitor.GetString(1), leitor.IsDBNull(2) ? null : leitor.GetString(2),
                 leitor.IsDBNull(3) ? null : leitor.GetGuid(3), leitor.GetBoolean(4)));
         return eventos;
+    }
+
+    /// <summary>Primeira coluna da primeira linha de uma consulta ao banco de teste.</summary>
+    public async Task<T?> EscalarAsync<T>(string sql, params (string Nome, object Valor)[] parametros)
+    {
+        await using var conexao = new NpgsqlConnection(Conexao);
+        await conexao.OpenAsync();
+        await using var comando = new NpgsqlCommand(sql, conexao);
+        foreach (var (nome, valor) in parametros) comando.Parameters.AddWithValue(nome, valor);
+        var resultado = await comando.ExecuteScalarAsync();
+        return resultado is null or DBNull ? default : (T)resultado;
     }
 
     public async Task<Guid> CriarOrdemAsync(Guid? responsavel)
