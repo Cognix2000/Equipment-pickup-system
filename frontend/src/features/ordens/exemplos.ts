@@ -23,6 +23,15 @@ export const ordemMaria: Ordem = {
     { id: '0192f000-0000-7000-8000-000000051012', tipo: 'roteador', modelo: 'TP-Link Archer C6', numeroSerie: '22361A2B3C4D5', situacao: 'pendente' },
     { id: '0192f000-0000-7000-8000-000000051013', tipo: 'fonte', modelo: 'Fonte 12V', numeroSerie: null, situacao: 'pendente' },
   ],
+  telefones: [
+    { numero: '+5500912345678', tipo: 'celular', formatoValido: true },
+    { numero: '+55009123', tipo: 'desconhecido', formatoValido: false },
+  ],
+  historico: [
+    { tipo: 'designada', ocorridoEm: '2026-09-16T11:02:00Z', motivo: null, statusPara: 'atribuida', atorPapel: 'admin' },
+    { tipo: 'carencia_vencida', ocorridoEm: '2026-09-15T13:15:00Z', motivo: null, statusPara: 'disponivel', atorPapel: null },
+    { tipo: 'importada', ocorridoEm: '2026-09-13T13:15:00Z', motivo: null, statusPara: 'nova', atorPapel: 'financeiro' },
+  ],
 }
 
 export const ordemJoao: Ordem = {

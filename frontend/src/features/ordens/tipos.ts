@@ -27,6 +27,18 @@ const equipamento = z.object({
   situacao: z.enum(['pendente', 'retirado', 'devolvido_na_loja', 'conferido', 'divergente', 'extraviado']),
 })
 
+const telefone = z.object({ numero: z.string(), tipo: z.enum(['celular', 'fixo', 'desconhecido']), formatoValido: z.boolean() })
+export type Telefone = z.infer<typeof telefone>
+
+const evento = z.object({
+  tipo: z.string(),
+  ocorridoEm: z.iso.datetime({ offset: true }),
+  motivo: z.string().nullable(),
+  statusPara: z.string().nullable(),
+  atorPapel: z.string().nullable(),
+})
+export type EventoDaOrdem = z.infer<typeof evento>
+
 export const ordem = z.object({
   id: z.uuid(),
   numeroOs: z.number().int().nullable(),
@@ -45,8 +57,13 @@ export const ordem = z.object({
   localizacao: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
   observacao: z.string().nullable(),
   carenciaAte: z.iso.datetime({ offset: true }),
+  responsavelId: z.uuid().nullable().optional(),
+  visitasSemSucesso: z.number().optional(),
   aguardaBaixaNoHubsoft: z.boolean(),
   equipamentos: z.array(equipamento),
+  // Só o detalhe traz (RF07); na lista vêm nulos.
+  telefones: z.array(telefone).nullish(),
+  historico: z.array(evento).nullish(),
 })
 export type Ordem = z.infer<typeof ordem>
 export type Equipamento = z.infer<typeof equipamento>

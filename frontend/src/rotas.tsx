@@ -8,6 +8,8 @@ import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
 import { OrdensFinanceiro } from '@/paginas/painel/OrdensFinanceiro'
 import { Usuarios } from '@/paginas/painel/Usuarios'
 import { DetalheOrdem } from '@/paginas/tecnico/DetalheOrdem'
+import { RegistrarRetirada } from '@/paginas/tecnico/RegistrarRetirada'
+import { VisitaSemSucesso } from '@/paginas/tecnico/VisitaSemSucesso'
 import { Envios } from '@/paginas/tecnico/Envios'
 import { LayoutTecnico } from '@/paginas/tecnico/LayoutTecnico'
 import { MinhasOrdens } from '@/paginas/tecnico/MinhasOrdens'
@@ -28,6 +30,8 @@ export const rotas = createBrowserRouter([
       { index: true, element: <Inicio /> },
       { path: 'ordens', element: <MinhasOrdens /> },
       { path: 'ordens/:id', element: <DetalheOrdem /> },
+      { path: 'ordens/:id/retirada', element: <RegistrarRetirada /> },
+      { path: 'ordens/:id/visita', element: <VisitaSemSucesso /> },
       { path: 'envios', element: <Envios /> },
     ],
   },

@@ -1,7 +1,10 @@
-import { ChevronLeft, Navigation } from 'lucide-react'
+import { ChevronLeft, Navigation, Phone } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
+import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
+import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
+import { descreverEvento, quando } from '@/features/ordens/historico'
 import { useOrdem } from '@/features/ordens/consultas'
 import { descreverPrazo } from '@/features/ordens/prazo'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
@@ -29,6 +32,18 @@ export function DetalheOrdem() {
         {isError && <FalhaAoCarregar erro={error} tentarDeNovo={() => void refetch()} />}
         {ordem && <ConteudoDaOrdem ordem={ordem} />}
       </main>
+
+      {/* Ação principal ao alcance do polegar, acima da barra de navegação (RNF02). */}
+      {ordem && (ordem.status === 'atribuida' || ordem.status === 'em_rota') && (
+        <div className="sticky bottom-16 flex flex-col gap-2 bg-gradient-to-t from-fundo from-70% px-4 pt-6 pb-3">
+          <Button asChild tamanho="grande">
+            <Link to={`/tecnico/ordens/${ordem.id}/retirada`}>Iniciar retirada</Link>
+          </Button>
+          <Button asChild variante="fantasma" tamanho="compacto">
+            <Link to={`/tecnico/ordens/${ordem.id}/visita`}>Visita sem sucesso</Link>
+          </Button>
+        </div>
+      )}
     </>
   )
 }
@@ -72,6 +87,7 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
           </a>
         </div>
         {ordem.observacao && <p className="rounded-lg bg-fundo px-2.5 py-2 text-[13px] text-texto-suave">Obs.: {ordem.observacao}</p>}
+        <Telefones ordem={ordem} />
       </Card>
 
       <Card>
@@ -89,6 +105,52 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
           ))}
         </ul>
       </Card>
+
+      {ordem.historico && ordem.historico.length > 0 && (
+        <Card>
+          <CardTitle className="text-base sm:text-base">Histórico</CardTitle>
+          <ol className="flex flex-col gap-1.5 text-[13px]">
+            {ordem.historico.map((e) => (
+              <li key={`${e.tipo}-${e.ocorridoEm}`}>
+                <span className="text-texto-suave tabular-nums">{quando(e.ocorridoEm)}</span> · {descreverEvento(e)}
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
     </>
+  )
+}
+
+/** RN05 e RN10: só oferece ligar para número no padrão e dentro da janela de contato. */
+function Telefones({ ordem }: { ordem: Ordem }) {
+  const telefones = ordem.telefones ?? []
+  if (telefones.length === 0) return <p className="text-[13px] text-texto-suave">Sem telefone cadastrado: o contato fica só pela visita.</p>
+  const janela = janelaDeContato()
+  return (
+    <div data-teste="telefones" className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2">
+        {telefones.map((t) => (
+          <li key={t.numero} className="flex min-h-11 items-center justify-between gap-3">
+            <span className={t.formatoValido ? 'font-medium tabular-nums' : 'text-texto-suave'}>
+              {formatarTelefone(t.numero)}
+              {!t.formatoValido && ' · fora do padrão'}
+            </span>
+            {t.formatoValido && janela.permitido && (
+              <a
+                href={`tel:${t.numero}`}
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] border border-azul px-3.5 text-sm font-semibold text-azul no-underline"
+              >
+                <Phone aria-hidden className="size-[18px]" />
+                Ligar
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className={janela.permitido ? 'text-[13px] text-texto-suave' : 'text-[13px] font-medium text-alerta'}>
+        {janela.permitido ? 'Contato de segunda a sábado, das 8h às 18h.' : janela.aviso}
+      </p>
+    </div>
   )
 }

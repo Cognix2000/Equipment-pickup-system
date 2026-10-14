@@ -36,6 +36,8 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'primeiro-acesso', rota: '/primeiro-acesso#t=token-ficticio', pronto: 'Crie sua senha', papel: null },
   { nome: 'minhas-ordens', rota: '/tecnico/ordens', pronto: 'Ver ordem', papel: 'tecnico' },
   { nome: 'detalhe-da-ordem', rota: `/tecnico/ordens/${ordemMaria.id}`, pronto: 'Recolher 3 itens', papel: 'tecnico' },
+  { nome: 'registrar-retirada', rota: `/tecnico/ordens/${ordemMaria.id}/retirada`, pronto: 'Série da etiqueta', papel: 'tecnico' },
+  { nome: 'visita-sem-sucesso', rota: `/tecnico/ordens/${ordemMaria.id}/visita`, pronto: 'O que aconteceu?', papel: 'tecnico' },
   { nome: 'ordens-do-financeiro', rota: '/financeiro/ordens', pronto: 'MARIA EXEMPLO SILVA', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
@@ -66,8 +68,8 @@ for (const tela of telas) {
     test('igual à captura de referência', async ({ page }) => {
       await expect(page).toHaveScreenshot(`${tela.nome}.png`, {
         fullPage: true,
-        // O mapa depende da GPU; a comparação fica para o resto da tela.
-        mask: [page.locator('.maplibregl-map')],
+        // O mapa depende da GPU, e os telefones mudam com a hora (RN10): a comparação fica para o resto da tela.
+        mask: [page.locator('.maplibregl-map'), page.locator('[data-teste="telefones"]'), page.locator('[data-teste="hora"]')],
       })
     })
   })
@@ -200,4 +202,103 @@ test('importação mostra a prévia do servidor e grava só depois de confirmar'
   await page.getByRole('button', { name: 'Gravar 2 ordens' }).click()
   await expect(page.getByText('Importação gravada')).toBeVisible()
   expect(gravou).toBe(true)
+})
+
+/** Responde aos comandos da ordem e guarda o que chegou, para o teste conferir. */
+async function simularComando(page: Page, acao: string, resposta: object) {
+  const recebido: { chave?: string; corpo?: Record<string, unknown> } = {}
+  await page.route(`**/api/ordens/*/${acao}`, async (rota) => {
+    recebido.chave = rota.request().headers()['idempotency-key']
+    recebido.corpo = rota.request().postDataJSON()
+    await rota.fulfill({ json: resposta })
+  })
+  return recebido
+}
+
+test('técnico registra a retirada com série, GPS e chave de idempotência', async ({ page, context }) => {
+  await simularApi(page, 'tecnico')
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: -21.0012, longitude: -38.9978, accuracy: 8 })
+  const recebido = await simularComando(page, 'retirada', { ...ordemMaria, status: 'concluida' })
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
+  await page.getByRole('link', { name: 'Iniciar retirada' }).click()
+  await expect(page.getByRole('button', { name: 'Confirmar retirada · faltam 3 itens' })).toBeDisabled()
+
+  const series = page.getByLabel(/Série da etiqueta/)
+  await series.nth(0).fill('hwtc 1a2b3c4d') // como o técnico digita: minúscula e espaço
+  await expect(page.getByText('Série confere')).toBeVisible()
+  await series.nth(1).fill('OUTRASERIE')
+  await expect(page.getByText('vai registrada como divergência')).toBeVisible()
+  await page.getByLabel('Recolhida').check()
+  await page.getByRole('button', { name: 'Confirmar retirada', exact: true }).click()
+
+  await expect(page.getByText('Retirada registrada.')).toBeVisible()
+  expect(recebido.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(recebido.corpo).toMatchObject({
+    gps: { latitude: -21.0012, longitude: -38.9978, precisaoM: 8 },
+    itens: [
+      { equipamentoId: ordemMaria.equipamentos[0].id, numeroSerie: 'hwtc 1a2b3c4d' },
+      { equipamentoId: ordemMaria.equipamentos[1].id, numeroSerie: 'OUTRASERIE' },
+      { equipamentoId: ordemMaria.equipamentos[2].id, numeroSerie: null },
+    ],
+  })
+})
+
+test('ordem cancelada bloqueia a retirada (RN07)', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.route(`**/api/ordens/${ordemMaria.id}`, (rota) => rota.fulfill({ json: { ...ordemMaria, status: 'cancelada' } }))
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}/retirada`)
+
+  await expect(page.getByRole('alert')).toContainText('a retirada está bloqueada')
+  await expect(page.getByRole('button', { name: /Confirmar retirada/ })).toHaveCount(0)
+})
+
+test('técnico registra visita sem sucesso com motivo e GPS', async ({ page, context }) => {
+  await simularApi(page, 'tecnico')
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: -21.0012, longitude: -38.9978, accuracy: 12 })
+  const recebido = await simularComando(page, 'visita-sem-sucesso', { ...ordemMaria, status: 'disponivel', responsavelId: null, visitasSemSucesso: 1 })
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}/visita`)
+  await expect(page.getByRole('button', { name: 'Registrar visita' })).toBeDisabled()
+  await page.getByLabel(/Endereço não encontrado/).check()
+  await page.getByRole('button', { name: 'Registrar visita' }).click()
+
+  await expect(page.getByText('A ordem voltou para a fila.')).toBeVisible()
+  expect(recebido.corpo).toMatchObject({ motivo: 'nao_achou', gps: { precisaoM: 12 } })
+})
+
+test('sem permissão de localização, a retirada não segue e explica por quê', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  // O Chromium sem tela deixa o pedido de permissão pendente; aqui a pessoa nega.
+  await page.addInitScript(() => {
+    navigator.geolocation.getCurrentPosition = (_ok, erro) =>
+      erro?.({ code: 1, message: 'negado', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError)
+  })
+  const recebido = await simularComando(page, 'retirada', ordemMaria)
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}/retirada`)
+  const series = page.getByLabel(/Série da etiqueta/)
+  await series.nth(0).fill('HWTC1A2B3C4D')
+  await series.nth(1).fill('22361A2B3C4D5')
+  await page.getByLabel('Recolhida').check()
+  await page.getByRole('button', { name: 'Confirmar retirada', exact: true }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Permita o uso da localização')
+  expect(recebido.corpo).toBeUndefined()
+})
+
+test('ligar só aparece na janela de contato (RN10)', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+
+  await page.clock.setFixedTime(new Date('2026-10-14T14:00:00Z')) // quarta, 11h em Brasília
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
+  await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(1) // só o número no padrão
+
+  await page.clock.setFixedTime(new Date('2026-10-18T14:00:00Z')) // domingo
+  await page.reload()
+  await expect(page.getByText('Contato só de segunda a sábado, das 8h às 18h.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
 })

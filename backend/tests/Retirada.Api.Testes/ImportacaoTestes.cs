@@ -136,6 +136,24 @@ public class ImportacaoTestes(ApiDeTeste api)
     }
 
     [FatoComBanco]
+    public async Task Detalhe_da_ordem_importada_traz_telefones_e_historico() // RF07
+    {
+        var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);
+        var idOs = new Ids().Os();
+        var arquivo = Csv(Linha(idOs, "ANA EXEMPLO"));
+        await ConfirmarAsync(financeiro, await PreverAsync(financeiro, arquivo), arquivo);
+
+        var detalhe = await OkAsync(await financeiro.GetAsync($"/api/ordens/{await OrdemDaOsAsync(idOs)}"));
+
+        var telefone = detalhe.GetProperty("telefones").EnumerateArray().Single();
+        (telefone.GetProperty("numero").GetString(), telefone.GetProperty("tipo").GetString(), telefone.GetProperty("formatoValido").GetBoolean())
+            .ShouldBe(("+5500912345678", "celular", true));
+        var evento = detalhe.GetProperty("historico").EnumerateArray().Single();
+        (evento.GetProperty("tipo").GetString(), evento.GetProperty("statusPara").GetString(), evento.GetProperty("atorPapel").GetString())
+            .ShouldBe(("importada", "nova", "financeiro"));
+    }
+
+    [FatoComBanco]
     public async Task Confirmar_exige_o_mesmo_arquivo_e_vale_uma_vez_so()
     {
         var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);
