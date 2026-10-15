@@ -217,6 +217,17 @@ docker compose --profile observabilidade up --build
 # Grafana em http://localhost:3000 (admin/admin), com Loki, Tempo e Prometheus já configurados
 ```
 
-## O que falta no incremento 1
+## Situação do incremento 1
 
-- Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.
+Todas as funções do incremento 1 estão prontas:
+- login com 2FA e gestão de usuários;
+- importação da planilha;
+- rotinas automáticas de carência e de dias sem resposta;
+- telas do técnico, com contato, retirada, fotos e visita;
+- painel do financeiro, com detalhe e ações;
+- conferência e devolução na loja, inteira ou parcial.
+
+Antes de chamar de versão, ainda falta:
+- **Conferir em homologação** com `docker compose up --build`, seguindo o roteiro em [docs/roteiro-de-demonstracao.md](docs/roteiro-de-demonstracao.md).
+- **Versionar as capturas de referência** das telas, geradas pelo CI no artefato `playwright`.
+- **Telemetria do navegador** (Faro), prevista no ADR-008.

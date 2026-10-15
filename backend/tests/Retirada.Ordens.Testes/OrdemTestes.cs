@@ -162,7 +162,7 @@ public class OrdemTestes
             ordem.RegistrarVisitaSemSucesso(MotivoVisitaSemSucesso.Recusou, 3, Agora);
         }
 
-        ordem.RegistrarDevolucaoNaLoja(Agora);
+        ordem.RegistrarDevolucaoNaLoja([.. ordem.Equipamentos.Select(e => e.Id)], Agora).ShouldBeTrue();
 
         ordem.Status.ShouldBe(StatusOrdem.DevolvidaNaLoja);
         ordem.Equipamentos.ShouldAllBe(e => e.Situacao == SituacaoEquipamento.DevolvidoNaLoja);

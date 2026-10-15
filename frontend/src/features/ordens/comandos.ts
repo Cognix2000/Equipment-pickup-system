@@ -38,7 +38,8 @@ export const comandos = {
   ) => comando(id, 'retirada', { itens, gps, fotos }, chave),
   registrarVisita: (id: string, motivo: MotivoDaVisita, gps: Gps, chave: string) => comando(id, 'visita-sem-sucesso', { motivo, gps }, chave),
   conferir: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], chave: string) => comando(id, 'conferencia', { itens }, chave),
-  registrarDevolucaoNaLoja: (id: string, chave: string) => comando(id, 'devolucao-na-loja', {}, chave),
+  /** RF15: só os itens que o cliente levou à loja; com todos, a ordem encerra. */
+  registrarDevolucaoNaLoja: (id: string, itens: string[], chave: string) => comando(id, 'devolucao-na-loja', { itens }, chave),
   registrarContato: (id: string, contato: Contato, chave: string) => comando(id, 'contatos', contato, chave),
   liberar: (id: string, chave: string) => comando(id, 'liberar', {}, chave),
   designar: (id: string, tecnicoId: string, chave: string) => comando(id, 'designar', { tecnicoId }, chave),

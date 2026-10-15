@@ -115,16 +115,16 @@ public class GuardasEEventosTestes
 
     [Fact] public void Nao_cancela_depois_da_retirada() => DeveViolar(() => Concluida().Cancelar(MotivoCancelamento.Pagou, Agora), "RF09");
 
-    [Fact] public void Devolucao_na_loja_nao_vale_para_ordem_conferida() => DeveViolar(() => Conferida().RegistrarDevolucaoNaLoja(Agora), "RF15");
+    [Fact] public void Devolucao_na_loja_nao_vale_para_ordem_conferida() => DeveViolar(() => Conferida().RegistrarDevolucaoNaLoja([Guid.NewGuid()], Agora), "RF15");
 
-    [Fact] public void Devolucao_na_loja_nao_vale_para_ordem_cancelada() => DeveViolar(() => Cancelada().RegistrarDevolucaoNaLoja(Agora), "RF15");
+    [Fact] public void Devolucao_na_loja_nao_vale_para_ordem_cancelada() => DeveViolar(() => Cancelada().RegistrarDevolucaoNaLoja([Guid.NewGuid()], Agora), "RF15");
 
     [Fact]
     public void Devolucao_na_loja_tira_a_ordem_do_tecnico()
     {
         var o = Atribuida();
 
-        o.RegistrarDevolucaoNaLoja(Agora);
+        o.RegistrarDevolucaoNaLoja([.. o.Equipamentos.Select(e => e.Id)], Agora).ShouldBeTrue();
 
         o.ResponsavelId.ShouldBeNull();
         o.EncerradaEm.ShouldBe(Agora);
