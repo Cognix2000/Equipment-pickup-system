@@ -72,6 +72,8 @@ export const ordem = z.object({
   // Só o detalhe traz (RF07); na lista vêm nulos.
   telefones: z.array(telefone).nullish(),
   historico: z.array(evento).nullish(),
+  // Só na lista (RN09): passou do prazo de resposta sem nenhuma tentativa de contato.
+  semContatoNoPrazo: z.boolean().nullish(),
 })
 export type Ordem = z.infer<typeof ordem>
 export type Equipamento = z.infer<typeof equipamento>

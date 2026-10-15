@@ -75,4 +75,20 @@ export const ordemCarlos: Ordem = {
   equipamentos: [{ id: '0192f000-0000-7000-8000-000000051101', tipo: 'ont', modelo: 'Huawei EG8145V5', numeroSerie: 'HWTC7C8D9E0F', situacao: 'pendente' }],
 }
 
+/** Disponível há 12 dias sem nenhuma tentativa de contato: não encerra sozinha, o financeiro precisa agir (RN09). */
+export const ordemAna: Ordem = {
+  ...ordemMaria,
+  id: '0192f000-0000-7000-8000-000000005105',
+  numeroOs: 5105,
+  status: 'disponivel',
+  cliente: 'ANA FICTÍCIA COSTA',
+  endereco: { logradouro: 'RUA DAS PALMEIRAS', numero: '88', complemento: null, bairro: 'JARDIM', cidade: 'CIDADE SIMULADA', uf: 'MG', referencia: null },
+  localizacao: null,
+  observacao: null,
+  carenciaAte: emDias(-12),
+  responsavelId: null,
+  equipamentos: [{ id: '0192f000-0000-7000-8000-000000051051', tipo: 'onu', modelo: 'Huawei EG8010H', numeroSerie: 'HWTC7A7B7C7D', situacao: 'pendente' }],
+  semContatoNoPrazo: true,
+}
+
 export const todasAsOrdens = [ordemMaria, ordemJoao, ordemMercado, ordemCarlos]

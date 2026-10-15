@@ -33,6 +33,7 @@ const textos: Record<string, string> = {
   baixa_hubsoft: 'Baixa feita no HubSoft',
   atualizada_pela_importacao: 'Atualizada por uma planilha nova',
   contato: 'Contato com o cliente',
+  encerrada_sem_resposta: 'Encerrada sem resposta do cliente, vai para a cobrança',
 }
 
 /** Uma linha do histórico em português, sem nome de ninguém (só o papel). */

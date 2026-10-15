@@ -37,7 +37,7 @@ const colunas = coluna.columns([
     cell: (c) => (
       <span className="flex flex-wrap gap-1.5">
         <StatusBadge status={c.row.original.status} />
-        {c.row.original.aguardaBaixaNoHubsoft && <Badge tom="alerta">Dar baixa</Badge>}
+        <Alertas ordem={c.row.original} />
       </span>
     ),
   }),
@@ -48,16 +48,28 @@ const colunas = coluna.columns([
   }),
 ])
 
+/** O que pede uma ação do financeiro: dar baixa no HubSoft (RF19) ou contatar quem passou do prazo sem contato (RN09). */
+function Alertas({ ordem }: { ordem: Ordem }) {
+  return (
+    <>
+      {ordem.aguardaBaixaNoHubsoft && <Badge tom="alerta">Dar baixa</Badge>}
+      {ordem.semContatoNoPrazo && <Badge tom="erro">Sem contato</Badge>}
+    </>
+  )
+}
+
 function TextoDoPrazo({ ordem }: { ordem: Ordem }) {
   if (!statusComEquipamentoNoCliente.has(ordem.status)) return <span className="text-texto-suave">Equipamento recolhido ou ordem encerrada</span>
   const prazo = descreverPrazo(ordem.carenciaAte)
   return <span className={cn(prazo.vencido && 'font-medium text-alerta')}>{prazo.texto}</span>
 }
 
-type Recorte = 'todas' | 'baixa' | 'nova' | 'disponivel' | 'atribuida'
+type Recorte = 'todas' | 'baixa' | 'sem_contato' | 'nova' | 'disponivel' | 'atribuida'
 const recortes: { id: Recorte; texto: string; filtra: (o: Ordem) => boolean }[] = [
   { id: 'todas', texto: 'Todas', filtra: () => true },
   { id: 'baixa', texto: 'Para dar baixa', filtra: (o) => o.aguardaBaixaNoHubsoft },
+  // RN09: sem nenhuma tentativa, a ordem não encerra sozinha depois do prazo; alguém precisa ligar ou mandar o aviso.
+  { id: 'sem_contato', texto: 'Sem contato no prazo', filtra: (o) => o.semContatoNoPrazo === true },
   { id: 'nova', texto: 'Em carência', filtra: (o) => o.status === 'nova' },
   { id: 'disponivel', texto: 'Disponíveis', filtra: (o) => o.status === 'disponivel' },
   { id: 'atribuida', texto: 'Atribuídas', filtra: (o) => o.status === 'atribuida' },
@@ -121,7 +133,7 @@ export function OrdensFinanceiro() {
               </div>
               <span className="flex flex-wrap gap-1.5">
                 <StatusBadge status={o.status} />
-                {o.aguardaBaixaNoHubsoft && <Badge tom="alerta">Dar baixa</Badge>}
+                <Alertas ordem={o} />
               </span>
               <p className="text-sm text-texto-suave">
                 {caixaDeTitulo(o.endereco.bairro)} · {resumoDosItens(o)}
