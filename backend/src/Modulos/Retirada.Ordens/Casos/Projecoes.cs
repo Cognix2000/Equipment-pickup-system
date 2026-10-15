@@ -53,6 +53,8 @@ internal sealed record EventoDto(string Tipo, DateTimeOffset OcorridoEm, string?
 
 internal sealed record EquipamentoDto(Guid Id, TipoEquipamento Tipo, string Modelo, string? NumeroSerie, SituacaoEquipamento Situacao);
 
+/// <param name="SemContatoNoPrazo">Só na lista (RN09): passou do prazo de resposta sem nenhuma tentativa de
+/// contato, então não encerra sozinha e o financeiro precisa agir.</param>
 internal sealed record OrdemDto(
     Guid Id,
     int? NumeroOs,
@@ -68,7 +70,8 @@ internal sealed record OrdemDto(
     bool AguardaBaixaNoHubsoft,
     IReadOnlyList<EquipamentoDto> Equipamentos,
     IReadOnlyList<TelefoneDto>? Telefones = null,
-    IReadOnlyList<EventoDto>? Historico = null)
+    IReadOnlyList<EventoDto>? Historico = null,
+    bool? SemContatoNoPrazo = null)
 {
     public static OrdemDto De(Ordem o, string cliente, IEnumerable<Equipamento> equipamentos) => new(
         o.Id, o.NumeroOs, o.TipoOs, o.Status, cliente, o.Endereco, o.Localizacao, o.Observacao,

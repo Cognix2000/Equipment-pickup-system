@@ -76,6 +76,7 @@ Na ordem, o técnico toca em **Ligar** e, ao voltar, marca como foi: atendeu, n�
 A API roda sozinha, a cada 5 minutos, o que não depende de ninguém clicar:
 
 - **Fim da carência (RN03):** a ordem Nova cujas 48 h venceram fica Disponível. O histórico mostra "Fim da carência, ficou disponível automaticamente".
+- **Dias sem resposta (RN09):** 10 dias depois da carência, a ordem Disponível com tentativa de contato registrada e nenhuma resposta (ninguém atendeu, nenhuma mensagem respondida) encerra sem retirada e vai para a cobrança. A ordem que nunca foi contatada **não** encerra: aparece no painel do financeiro em "Sem contato no prazo", para alguém ligar ou mandar o aviso. A ordem com técnico também não encerra: quem decide é o resultado da visita. O prazo muda com `Ordens__DiasSemResposta`.
 
 Com mais de uma instância da API, cada ordem é liberada uma vez só: a rotina trava as linhas que pega e pula as que outra ação está mudando. Para ajustar, use `Ordens__Rotinas__IntervaloMinutos` (padrão 5) ou desligue com `Ordens__Rotinas__Ativas=false`.
 
@@ -195,6 +196,5 @@ docker compose --profile observabilidade up --build
 ## O que falta no incremento 1
 
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
-- Encerrar a ordem após 10 dias sem resposta (`limite_dias_sem_resposta`): as tentativas de contato já são registradas; falta a rotina que conta os dias.
 - Detalhe da ordem no painel do financeiro, com liberar, cancelar e registrar o WhatsApp.
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.

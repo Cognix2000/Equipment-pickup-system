@@ -1797,6 +1797,12 @@
             "items": {
               "$ref": "#/components/schemas/EventoDto"
             }
+          },
+          "semContatoNoPrazo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

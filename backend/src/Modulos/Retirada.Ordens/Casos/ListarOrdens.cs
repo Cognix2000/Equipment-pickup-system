@@ -10,14 +10,18 @@ using Retirada.Ordens.Infraestrutura;
 
 namespace Retirada.Ordens.Casos;
 
-/// <summary>RF06: lista ordens, com filtro por status e bairro. Consulta: lê direto do banco, sem passar pelo agregado.</summary>
+/// <summary>
+/// RF06: lista ordens, com filtro por status e bairro. Consulta: lê direto do banco; o agregado só responde
+/// se a ordem está sem contato no prazo (RN09).
+/// </summary>
 internal static class ListarOrdens
 {
     public static void Mapear(IEndpointRouteBuilder grupo) =>
         grupo.MapGet("/", ExecutarAsync).WithSummary("Lista ordens, com filtro por status, bairro e busca por protocolo, nº da OS ou série (RF06, UC06)");
 
     private static async Task<Results<Ok<List<OrdemDto>>, ValidationProblem>> ExecutarAsync(
-        OrdensDbContext db, ClaimsPrincipal usuario, string? status, string? bairro, string? busca, CancellationToken ct)
+        OrdensDbContext db, ClaimsPrincipal usuario, ParametrosDasOrdens parametros, TimeProvider relogio,
+        string? status, string? bairro, string? busca, CancellationToken ct)
     {
         var consulta = db.Ordens.AsNoTracking();
         if (usuario.EhTecnico())
@@ -52,7 +56,14 @@ internal static class ListarOrdens
             .Take(500)
             .ToListAsync(ct);
 
-        var equipamentos = await Projecoes.CarregarEquipamentosAsync(db, linhas.Select(l => l.Ordem.Id).ToList(), ct);
-        return TypedResults.Ok(linhas.Select(l => OrdemDto.De(l.Ordem, l.Cliente, equipamentos[l.Ordem.Id])).ToList());
+        var ids = linhas.Select(l => l.Ordem.Id).ToList();
+        var equipamentos = await Projecoes.CarregarEquipamentosAsync(db, ids, ct);
+        var contatos = await ContatosDaOrdem.ResumirAsync(db, ids, ct);
+        var prazo = TimeSpan.FromDays(parametros.DiasSemResposta);
+        var agora = relogio.GetUtcNow();
+        return TypedResults.Ok(linhas.Select(l => OrdemDto.De(l.Ordem, l.Cliente, equipamentos[l.Ordem.Id]) with
+        {
+            SemContatoNoPrazo = l.Ordem.SemContatoNoPrazo(contatos.De(l.Ordem.Id), prazo, agora),
+        }).ToList());
     }
 }
