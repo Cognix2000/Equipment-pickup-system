@@ -167,14 +167,20 @@ public sealed class Ordem : Entidade
         Mudar(StatusOrdem.Atribuida, "designada", agora);
     }
 
+    /// <summary>Mais que isso não ajuda o estoque e pesa no envio pelo celular.</summary>
+    public const int LimiteDeFotos = 10;
+
     /// <summary>
     /// RF12/UC04. <paramref name="seriesLidas"/> traz um item por equipamento recolhido
     /// (fonte com valor nulo). Série diferente fica como divergência para o estoque.
+    /// RN14: a retirada leva foto dos equipamentos recolhidos, e o item divergente leva foto da etiqueta,
+    /// que é a prova da série que o técnico encontrou.
     /// </summary>
     public void RegistrarRetirada(
         IReadOnlyDictionary<Guid, NumeroSerie?> seriesLidas,
         Localizacao local,
-        DateTimeOffset agora)
+        DateTimeOffset agora,
+        IReadOnlyCollection<FotoDaRetirada> fotos)
     {
         Exigir(Status != StatusOrdem.Cancelada, "RN07", "A ordem foi cancelada: a retirada está bloqueada.");
         Exigir(ComTecnico.Contains(Status), "RF12", "Só ordem atribuída a um técnico pode ser retirada.");
@@ -182,12 +188,38 @@ public sealed class Ordem : Entidade
         var faltando = _equipamentos.Where(e => !seriesLidas.ContainsKey(e.Id)).ToList();
         Exigir(faltando.Count == 0, "RF12",
             $"Faltam itens na retirada: {string.Join(", ", faltando.Select(e => e.Modelo))}.");
+        ExigirFotosDaRetirada(seriesLidas, fotos);
 
         foreach (var equipamento in _equipamentos)
             equipamento.RegistrarRetirada(seriesLidas[equipamento.Id]);
 
         Localizacao = Localizacao ?? local;
         Mudar(StatusOrdem.Concluida, "retirada", agora);
+    }
+
+    private void ExigirFotosDaRetirada(IReadOnlyDictionary<Guid, NumeroSerie?> seriesLidas, IReadOnlyCollection<FotoDaRetirada> fotos)
+    {
+        Exigir(fotos.Count <= LimiteDeFotos, "RN14", $"Envie no máximo {LimiteDeFotos} fotos.");
+        Exigir(fotos.All(f => f.Tipo is TipoDeFoto.Equipamento or TipoDeFoto.EtiquetaSerie), "RN14",
+            "Na retirada, as fotos são dos equipamentos e das etiquetas.");
+        Exigir(fotos.Any(f => f.Tipo == TipoDeFoto.Equipamento), "RN14", "Tire uma foto dos equipamentos recolhidos.");
+
+        var daOrdem = _equipamentos.ToDictionary(e => e.Id);
+        foreach (var foto in fotos)
+        {
+            if (foto.EquipamentoId is not { } id) continue;
+            Exigir(daOrdem.ContainsKey(id), "RN14", "Há foto de um item que não é desta ordem.");
+        }
+        Exigir(fotos.All(f => f.Tipo != TipoDeFoto.EtiquetaSerie
+                              || (f.EquipamentoId is { } id && daOrdem[id].EhPatrimonio)),
+            "RN14", "Foto da etiqueta precisa dizer de qual item é, e fonte não tem etiqueta de série.");
+
+        var semProva = _equipamentos
+            .Where(e => !e.Confere(seriesLidas[e.Id]))
+            .Where(e => !fotos.Any(f => f.Tipo == TipoDeFoto.EtiquetaSerie && f.EquipamentoId == e.Id))
+            .ToList();
+        Exigir(semProva.Count == 0, "RN14",
+            $"Série diferente da cadastrada: tire uma foto da etiqueta de {string.Join(", ", semProva.Select(e => e.Modelo))}.");
     }
 
     /// <summary>RF13 e RN09: no limite de visitas, encerra sem retirada; antes disso, volta para Disponível.</summary>
@@ -345,6 +377,9 @@ public sealed record DadosDaImportacao(
     DateTimeOffset? DataProgramada,
     DateOnly? DataRescisao,
     Localizacao? Localizacao);
+
+/// <summary>RN14: uma foto da retirada. A da etiqueta diz de qual item é; a dos equipamentos pode mostrar todos juntos.</summary>
+public sealed record FotoDaRetirada(TipoDeFoto Tipo, Guid? EquipamentoId = null);
 
 /// <summary>Tentativas de contato registradas para uma ordem (RN10).</summary>
 public sealed record ResumoDosContatos(int Tentativas, bool ClienteRespondeu)

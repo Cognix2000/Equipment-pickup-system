@@ -40,7 +40,7 @@ public class GuardasEEventosTestes
     private static Ordem Concluida()
     {
         var o = Atribuida();
-        o.RegistrarRetirada(Series(o), NoCliente, Agora);
+        o.RegistrarRetirada(Series(o), NoCliente, Agora, FotoDeTeste.DoConjunto);
         return o;
     }
 
@@ -77,7 +77,7 @@ public class GuardasEEventosTestes
     public void Retirada_so_com_tecnico()
     {
         var o = Disponivel();
-        DeveViolar(() => o.RegistrarRetirada(Series(o), NoCliente, Agora), "RF12");
+        DeveViolar(() => o.RegistrarRetirada(Series(o), NoCliente, Agora, FotoDeTeste.DoConjunto), "RF12");
     }
 
     [Fact]
@@ -87,10 +87,10 @@ public class GuardasEEventosTestes
         var series = Series(o);
         series.Remove(o.Equipamentos[0].Id);
 
-        DeveViolar(() => o.RegistrarRetirada(series, NoCliente, Agora), "RF12").Message.ShouldContain("Huawei EG8010H");
+        DeveViolar(() => o.RegistrarRetirada(series, NoCliente, Agora, FotoDeTeste.DoConjunto), "RF12").Message.ShouldContain("Huawei EG8010H");
     }
 
-    [Fact] public void Retirada_de_ordem_cancelada_e_RN07() => DeveViolar(() => Cancelada().RegistrarRetirada(new Dictionary<Guid, NumeroSerie?>(), NoCliente, Agora), "RN07");
+    [Fact] public void Retirada_de_ordem_cancelada_e_RN07() => DeveViolar(() => Cancelada().RegistrarRetirada(new Dictionary<Guid, NumeroSerie?>(), NoCliente, Agora, FotoDeTeste.DoConjunto), "RN07");
 
     [Fact]
     public void Visita_so_com_tecnico() =>
@@ -179,8 +179,8 @@ public class GuardasEEventosTestes
         var semPonto = Atribuida();
         var comPonto = Atribuida(new Localizacao(-21.1, -39.1));
 
-        semPonto.RegistrarRetirada(Series(semPonto), NoCliente, Agora);
-        comPonto.RegistrarRetirada(Series(comPonto), NoCliente, Agora);
+        semPonto.RegistrarRetirada(Series(semPonto), NoCliente, Agora, FotoDeTeste.DoConjunto);
+        comPonto.RegistrarRetirada(Series(comPonto), NoCliente, Agora, FotoDeTeste.DoConjunto);
 
         semPonto.Localizacao.ShouldBe(NoCliente);
         comPonto.Localizacao.ShouldBe(new Localizacao(-21.1, -39.1));
