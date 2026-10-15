@@ -63,6 +63,14 @@ Em **Importar**, o financeiro envia o arquivo e vê a prévia linha a linha ante
 
 A prévia guarda só o resumo e o hash do arquivo. Na confirmação, o PWA manda o mesmo arquivo de novo, e o servidor confere o hash antes de gravar. Assim, nenhum dado pessoal fica parado entre a prévia e a confirmação.
 
+### Contato com o cliente
+
+Na ordem, o técnico toca em **Ligar** e, ao voltar, marca como foi: atendeu, não atendeu, caixa postal ou número não existe (RN10). Cada registro vira uma tentativa de contato e uma linha no histórico. O resultado também marca o telefone: um número dado como inexistente deixa de oferecer a ligação.
+
+- O sistema não liga nem manda mensagem: quem contata é a pessoa, pelo celular ou pelo WhatsApp oficial. A API já aceita registrar o WhatsApp (`canal: whatsapp`), que o financeiro vai usar quando o painel tiver o detalhe da ordem.
+- O app só oferece ligar de segunda a sábado, das 8h às 18h (horário de Brasília). Um registro feito fora desse horário é aceito, mas fica marcado (`fora_da_janela`) para o gestor ver.
+- O histórico guarda só o id do telefone, nunca o número.
+
 ### Rotinas automáticas
 
 A API roda sozinha, a cada 5 minutos, o que não depende de ninguém clicar:
@@ -187,5 +195,6 @@ docker compose --profile observabilidade up --build
 ## O que falta no incremento 1
 
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
-- Encerrar a ordem após 10 dias sem resposta (`limite_dias_sem_resposta`): depende do registro das tentativas de contato, que ainda não existe.
+- Encerrar a ordem após 10 dias sem resposta (`limite_dias_sem_resposta`): as tentativas de contato já são registradas; falta a rotina que conta os dias.
+- Detalhe da ordem no painel do financeiro, com liberar, cancelar e registrar o WhatsApp.
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.
