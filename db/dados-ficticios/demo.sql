@@ -19,14 +19,20 @@ INSERT INTO cliente (id, codigo_hubsoft, nome, tipo_pessoa) VALUES
     ('0192f000-0000-7000-8000-000000000104', 1004, 'CARLOS SIMULADO LIMA', 'PF')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO telefone_cliente (cliente_id, numero_e164, como_veio, formato_valido)
-SELECT v.cliente_id::uuid, v.numero, v.como_veio, false
+-- DDD 00 não existe: só vale em homologação, com Importacao__ModoSimulacao (RN05). Aqui entram como celulares
+-- válidos, para a demonstração mostrar o botão Ligar e o registro de contato (RN10).
+INSERT INTO telefone_cliente (cliente_id, numero_e164, como_veio, tipo, formato_valido)
+SELECT v.cliente_id::uuid, v.numero, v.como_veio, 'celular', true
   FROM (VALUES
     ('0192f000-0000-7000-8000-000000000101', '+5500912345678', '(00) 91234-5678'),
     ('0192f000-0000-7000-8000-000000000102', '+5500923456789', '(00) 92345-6789'),
     ('0192f000-0000-7000-8000-000000000103', '+5500934567890', '(00) 93456-7890'),
     ('0192f000-0000-7000-8000-000000000104', '+5500945678901', '(00) 94567-8901')) AS v(cliente_id, numero, como_veio)
  WHERE NOT EXISTS (SELECT 1 FROM telefone_cliente t WHERE t.cliente_id = v.cliente_id::uuid);
+
+-- Homologação carregada antes desta versão: os mesmos números fictícios passam a valer.
+UPDATE telefone_cliente SET tipo = 'celular', formato_valido = true
+ WHERE numero_e164 IN ('+5500912345678', '+5500923456789', '+5500934567890', '+5500945678901') AND NOT formato_valido;
 
 INSERT INTO ordem (id, chave_importacao, numero_os, tipo_os, cliente_id, logradouro, numero, complemento, bairro, cidade, uf,
                    referencia, observacao, localizacao, status, carencia_ate, responsavel_id, encerrada_em, criado_em)

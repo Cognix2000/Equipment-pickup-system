@@ -24,3 +24,5 @@ playwright-report/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+# Capturas e rastros do ensaio da demonstração (npm run ensaio)
+ensaio-resultado/
