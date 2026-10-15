@@ -19,7 +19,8 @@ internal static class Projecoes
         var equipamentos = await CarregarEquipamentosAsync(db, [id], ct);
         // RF07: o detalhe traz os telefones do cliente e o histórico; a lista não, para ficar leve.
         var telefones = await db.Database.SqlQuery<TelefoneDto>($"""
-            SELECT numero_e164 AS "Numero", tipo AS "Tipo", formato_valido AS "FormatoValido"
+            SELECT id AS "Id", numero_e164 AS "Numero", tipo AS "Tipo", formato_valido AS "FormatoValido",
+                   linha AS "Linha", whatsapp AS "Whatsapp"
             FROM retirada.telefone_cliente WHERE cliente_id = {linha.Ordem.ClienteId}
             ORDER BY formato_valido DESC, tipo = 'celular' DESC, numero_e164
             """).ToListAsync(ct);
@@ -41,8 +42,11 @@ internal static class Projecoes
     }
 }
 
-/// <summary>RN05: telefone já em E.164. O fora do padrão vem marcado, para a tela não oferecer a ligação.</summary>
-internal sealed record TelefoneDto(string Numero, string Tipo, bool FormatoValido);
+/// <summary>
+/// RN05: telefone já em E.164. O fora do padrão vem marcado, para a tela não oferecer a ligação.
+/// Linha e WhatsApp vêm do resultado dos contatos registrados (RN10), nunca de consulta escondida.
+/// </summary>
+internal sealed record TelefoneDto(Guid Id, string Numero, string Tipo, bool FormatoValido, string Linha, string Whatsapp);
 
 /// <summary>RF07 e RF16: uma linha do histórico. Quem fez aparece só pelo papel.</summary>
 internal sealed record EventoDto(string Tipo, DateTimeOffset OcorridoEm, string? Motivo, string? StatusPara, string? AtorPapel);

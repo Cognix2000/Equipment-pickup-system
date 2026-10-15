@@ -22,3 +22,22 @@ public enum SituacaoEquipamento { Pendente, Retirado, DevolvidoNaLoja, Conferido
 public enum MotivoCancelamento { Pagou, Renegociou, Erro }
 
 public enum MotivoVisitaSemSucesso { Ausente, Recusou, NaoAchou }
+
+public enum CanalContato { Ligacao, Whatsapp }
+
+/// <summary>Os nomes batem com o CHECK de tentativa_contato.resultado.</summary>
+public enum ResultadoContato
+{
+    // ligação
+    Atendeu,
+    NaoAtendeu,
+    CaixaPostal,
+    NumeroInexistente,
+    // WhatsApp (enviado à mão pelo app oficial; o sistema não manda mensagem)
+    Enviada,
+    SemWhatsapp,
+    NaoEntregue,
+    Respondeu,
+}
+
+public enum ModeloDeMensagem { Aviso, Lembrete, Confirmacao, Ausente }

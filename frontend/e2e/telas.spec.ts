@@ -308,6 +308,48 @@ test('ligar só aparece na janela de contato (RN10)', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
 })
 
+test('depois de ligar, o técnico registra como foi e o número inexistente sai da lista (RN10)', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.clock.setFixedTime(new Date('2026-10-14T14:00:00Z')) // quarta, 11h em Brasília
+  const [celular, foraDoPadrao] = ordemMaria.telefones!
+  const depois = {
+    ...ordemMaria,
+    telefones: [{ ...celular, linha: 'inexistente' }, foraDoPadrao],
+    historico: [
+      { tipo: 'contato', ocorridoEm: '2026-10-14T14:00:00Z', motivo: 'numero_inexistente', statusPara: 'atribuida', atorPapel: 'tecnico' },
+      ...ordemMaria.historico!,
+    ],
+  }
+  const recebido = await simularComando(page, 'contatos', depois)
+  // No celular, o tel: abre o discador. No Chromium sem tela, ele abre um pedido de protocolo externo
+  // que segura os cliques seguintes; aqui o link só registra o toque, como se o discador abrisse.
+  await page.addInitScript(() =>
+    document.addEventListener('click', (e) => {
+      if ((e.target as Element).closest('a[href^="tel:"]')) e.preventDefault()
+    }),
+  )
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
+  await page.getByRole('link', { name: 'Ligar' }).click()
+  const resultado = page.getByRole('group', { name: 'Como foi a ligação para (00) 91234-5678?' })
+  await expect(resultado.getByRole('button')).toHaveText(['Atendeu', 'Não atendeu', 'Caixa postal', 'Número não existe'])
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+
+  // Depois do registro, a tela volta a buscar a ordem: o servidor já devolve o número marcado.
+  await page.route(`**/api/ordens/${ordemMaria.id}`, (rota) => rota.fulfill({ json: depois }))
+  await resultado.getByRole('button', { name: 'Número não existe' }).click()
+
+  await expect(page.getByRole('status')).toHaveText('Ligação registrada no histórico.')
+  expect(recebido.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(recebido.corpo).toEqual({ telefoneId: celular.id, canal: 'ligacao', resultado: 'numero_inexistente' })
+  await expect(page.getByText('(00) 91234-5678 · número não existe')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
+  await expect(page.getByText('Contato com o cliente: número não existe pelo técnico')).toBeVisible()
+})
+
 test('estoque acha a ordem pela série, confere e registra a divergência (UC06)', async ({ page }) => {
   await simularApi(page, 'estoque')
   const entregue = { ...ordemMaria, status: 'concluida' }
