@@ -1,18 +1,16 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, Navigation, Phone } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
-import { comandos, novaChave, type ResultadoDaLigacao } from '@/features/ordens/comandos'
 import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
-import { descreverEvento, quando } from '@/features/ordens/historico'
-import { ordemQuery, useOrdem } from '@/features/ordens/consultas'
+import { Historico } from '@/features/ordens/Historico'
+import { useOrdem } from '@/features/ordens/consultas'
 import { descreverPrazo } from '@/features/ordens/prazo'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
-import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Ordem, type Telefone } from '@/features/ordens/tipos'
-import { ErroDaApi } from '@/lib/api'
+import { RegistroDeContato } from '@/features/ordens/RegistroDeContato'
+import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Ordem } from '@/features/ordens/tipos'
 
 export function DetalheOrdem() {
   const { id = '' } = useParams()
@@ -110,18 +108,7 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
         </ul>
       </Card>
 
-      {ordem.historico && ordem.historico.length > 0 && (
-        <Card>
-          <CardTitle className="text-base sm:text-base">Histórico</CardTitle>
-          <ol className="flex flex-col gap-1.5 text-[13px]">
-            {ordem.historico.map((e) => (
-              <li key={`${e.tipo}-${e.ocorridoEm}`}>
-                <span className="text-texto-suave tabular-nums">{quando(e.ocorridoEm)}</span> · {descreverEvento(e)}
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
+      <Historico eventos={ordem.historico} />
     </>
   )
 }
@@ -167,9 +154,10 @@ function Telefones({ ordem }: { ordem: Ordem }) {
               )}
             </div>
             {ligandoPara === t.id && (
-              <ResultadoDaLigacao
+              <RegistroDeContato
                 ordemId={ordem.id}
                 telefone={t}
+                canal="ligacao"
                 aoRegistrar={() => {
                   setLigandoPara(null)
                   setRegistrada(true)
@@ -187,49 +175,6 @@ function Telefones({ ordem }: { ordem: Ordem }) {
       <p className={janela.permitido ? 'text-[13px] text-texto-suave' : 'text-[13px] font-medium text-alerta'}>
         {janela.permitido ? 'Contato de segunda a sábado, das 8h às 18h.' : janela.aviso}
       </p>
-    </div>
-  )
-}
-
-const resultados: { valor: ResultadoDaLigacao; texto: string }[] = [
-  { valor: 'atendeu', texto: 'Atendeu' },
-  { valor: 'nao_atendeu', texto: 'Não atendeu' },
-  { valor: 'caixa_postal', texto: 'Caixa postal' },
-  { valor: 'numero_inexistente', texto: 'Número não existe' },
-]
-
-function ResultadoDaLigacao({ ordemId, telefone, aoRegistrar }: { ordemId: string; telefone: Telefone; aoRegistrar: () => void }) {
-  const clienteDeConsultas = useQueryClient()
-  // Uma chave por ligação: tentar de novo depois de falha de rede não duplica o registro (ADR-009).
-  const [chave] = useState(novaChave)
-  const registrar = useMutation({
-    mutationFn: (resultado: ResultadoDaLigacao) => comandos.registrarLigacao(ordemId, telefone.id, resultado, chave),
-    onSuccess: async (atualizada) => {
-      clienteDeConsultas.setQueryData(ordemQuery(ordemId).queryKey, atualizada)
-      await clienteDeConsultas.invalidateQueries({ queryKey: ['ordens'] })
-      aoRegistrar()
-    },
-  })
-  const falha = registrar.error
-  const idTitulo = `resultado-${telefone.id}`
-
-  return (
-    <div role="group" aria-labelledby={idTitulo} className="flex flex-col gap-2 rounded-[10px] bg-fundo p-3">
-      <p id={idTitulo} className="text-sm font-semibold text-marinho">
-        Como foi a ligação para {formatarTelefone(telefone.numero)}?
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        {resultados.map((r) => (
-          <Button key={r.valor} type="button" variante="neutro" tamanho="compacto" disabled={registrar.isPending} onClick={() => registrar.mutate(r.valor)}>
-            {r.texto}
-          </Button>
-        ))}
-      </div>
-      {falha && (
-        <p role="alert" className="text-sm text-erro">
-          {falha instanceof ErroDaApi ? falha.message : 'Sem resposta do servidor. Confira o sinal e tente de novo.'}
-        </p>
-      )}
     </div>
   )
 }

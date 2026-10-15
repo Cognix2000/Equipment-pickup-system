@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -26,7 +27,15 @@ const recursos = tableFeatures({
 })
 const coluna = createColumnHelper<typeof recursos, Ordem>()
 const colunas = coluna.columns([
-  coluna.accessor((o) => o.numeroOs ?? 0, { id: 'os', header: 'OS', cell: (c) => c.getValue() || 's/ nº' }),
+  coluna.accessor((o) => o.numeroOs ?? 0, {
+    id: 'os',
+    header: 'OS',
+    cell: (c) => (
+      <Link to={`/financeiro/ordens/${c.row.original.id}`} className="font-semibold text-azul">
+        {c.getValue() || 's/ nº'}
+      </Link>
+    ),
+  }),
   coluna.accessor('cliente', { header: 'Cliente', sortFn: 'text' }),
   coluna.accessor((o) => o.endereco.bairro, { id: 'bairro', header: 'Bairro', sortFn: 'text', cell: (c) => caixaDeTitulo(c.getValue()) }),
   coluna.accessor((o) => resumoDosItens(o), { id: 'itens', header: 'Itens', enableSorting: false }),
@@ -127,9 +136,9 @@ export function OrdensFinanceiro() {
           {tabela.getRowModel().rows.map(({ original: o }) => (
             <li key={o.id} className="flex flex-col gap-1.5 rounded-xl bg-superficie p-4">
               <div className="flex items-start justify-between gap-3">
-                <p className="font-semibold text-marinho">
+                <Link to={`/financeiro/ordens/${o.id}`} className="font-semibold text-azul">
                   OS {o.numeroOs ?? 's/ nº'} · {o.cliente}
-                </p>
+                </Link>
               </div>
               <span className="flex flex-wrap gap-1.5">
                 <StatusBadge status={o.status} />

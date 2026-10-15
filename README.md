@@ -24,7 +24,7 @@ Depois de subir, os endereços são estes:
 | --- | --- |
 | Login | http://localhost:8080/entrar |
 | App do técnico | http://localhost:8080/tecnico/ordens |
-| Painel do financeiro | http://localhost:8080/financeiro/ordens |
+| Painel do financeiro | http://localhost:8080/financeiro/ordens (clique na OS para abrir a ordem) |
 | Gestão de usuários | http://localhost:8080/gestao/usuarios |
 | Saúde da API | http://localhost:8080/health |
 
@@ -67,9 +67,23 @@ A prévia guarda só o resumo e o hash do arquivo. Na confirmação, o PWA manda
 
 Na ordem, o técnico toca em **Ligar** e, ao voltar, marca como foi: atendeu, não atendeu, caixa postal ou número não existe (RN10). Cada registro vira uma tentativa de contato e uma linha no histórico. O resultado também marca o telefone: um número dado como inexistente deixa de oferecer a ligação.
 
-- O sistema não liga nem manda mensagem: quem contata é a pessoa, pelo celular ou pelo WhatsApp oficial. A API já aceita registrar o WhatsApp (`canal: whatsapp`), que o financeiro vai usar quando o painel tiver o detalhe da ordem.
+- O sistema não liga nem manda mensagem: quem contata é a pessoa, pelo celular ou pelo WhatsApp oficial. No painel, o financeiro abre a ordem e registra a ligação ou a mensagem (com o modelo enviado).
 - O app só oferece ligar de segunda a sábado, das 8h às 18h (horário de Brasília). Um registro feito fora desse horário é aceito, mas fica marcado (`fora_da_janela`) para o gestor ver.
 - O histórico guarda só o id do telefone, nunca o número.
+
+### A ordem no painel
+
+No painel, a lista de ordens leva ao detalhe de cada uma: cliente, endereço, telefones com o que já se sabe deles (linha que atende, número inexistente, tem WhatsApp), itens, histórico e **o que fazer agora**, conforme a situação e o papel:
+
+| Ação | Quem | Quando |
+| --- | --- | --- |
+| Liberar antes do fim da carência (RN03) | financeiro, gestor | ordem em carência |
+| Designar a um técnico ativo (RF08) | gestor | ordem Disponível |
+| Marcar baixa feita no HubSoft (RF19) | financeiro, gestor | retirada registrada, baixa pendente |
+| Cancelar com motivo (RF09) | financeiro, gestor | antes da retirada |
+| Registrar ligação ou WhatsApp (RN10) | financeiro, gestor | Disponível, Atribuída ou Em rota |
+
+O estoque vê a ordem, mas sem essas ações. O servidor confere tudo de novo: a tela só esconde o que não vale.
 
 ### Rotinas automáticas
 
@@ -196,5 +210,4 @@ docker compose --profile observabilidade up --build
 ## O que falta no incremento 1
 
 - Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
-- Detalhe da ordem no painel do financeiro, com liberar, cancelar e registrar o WhatsApp.
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.

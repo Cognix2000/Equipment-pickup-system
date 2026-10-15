@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { ordemAna, ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
+import { ordemAna, ordemCarlos, ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
+import type { Ordem } from '../src/features/ordens/tipos'
 
 type Papel = 'tecnico' | 'financeiro' | 'admin' | 'estoque' | null
 
@@ -43,6 +44,7 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'registrar-retirada', rota: `/tecnico/ordens/${ordemMaria.id}/retirada`, pronto: 'Série da etiqueta', papel: 'tecnico' },
   { nome: 'visita-sem-sucesso', rota: `/tecnico/ordens/${ordemMaria.id}/visita`, pronto: 'O que aconteceu?', papel: 'tecnico' },
   { nome: 'ordens-do-financeiro', rota: '/financeiro/ordens', pronto: 'MARIA EXEMPLO SILVA', papel: 'financeiro' },
+  { nome: 'ordem-no-painel', rota: `/financeiro/ordens/${ordemMaria.id}`, pronto: 'O que fazer', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
   { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou série de um item', papel: 'estoque' },
@@ -324,6 +326,88 @@ test('financeiro vê em destaque a ordem que passou do prazo sem nenhum contato 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test('financeiro abre a ordem pela lista e registra o WhatsApp que mandou (RN10)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  const [celular] = ordemMaria.telefones!
+  const depois = { ...ordemMaria, telefones: [{ ...celular, whatsapp: 'tem' }, ordemMaria.telefones![1]] }
+  const recebido = await simularComando(page, 'contatos', depois)
+
+  await page.goto('/financeiro/ordens')
+  await page.getByRole('link', { name: /OS 5101|^5101$/ }).filter({ visible: true }).click()
+  await expect(page).toHaveURL(`/financeiro/ordens/${ordemMaria.id}`)
+  await expect(page.getByRole('heading', { name: 'OS 5101' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Registrar WhatsApp' }).click()
+  const registro = page.getByRole('group', { name: 'Como foi a mensagem para (00) 91234-5678?' })
+  await registro.getByLabel('Modelo enviado').selectOption('lembrete')
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+
+  // Depois do registro, a tela volta a buscar a ordem: o servidor já devolve o telefone marcado.
+  await page.route(`**/api/ordens/${ordemMaria.id}`, (rota) => rota.fulfill({ json: depois }))
+  await registro.getByRole('button', { name: 'Enviada' }).click()
+  await expect(page.getByRole('status')).toHaveText('Contato registrado no histórico.')
+  expect(recebido.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(recebido.corpo).toEqual({ telefoneId: celular.id, canal: 'whatsapp', resultado: 'enviada', modelo: 'lembrete' })
+  await expect(page.getByText('Tem WhatsApp')).toBeVisible()
+})
+
+test('financeiro libera a ordem em carência e cancela com motivo (RN03, RF09)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  // Cada comando muda a ordem, e a tela busca de novo a ordem que o servidor acabou de devolver.
+  let atual: Ordem = ordemCarlos
+  const recebidos: Record<string, { chave?: string; corpo: unknown }> = {}
+  await page.route(`**/api/ordens/${ordemCarlos.id}`, (rota) => rota.fulfill({ json: atual }))
+  await page.route(`**/api/ordens/${ordemCarlos.id}/*`, async (rota) => {
+    const acao = new URL(rota.request().url()).pathname.split('/').pop()!
+    recebidos[acao] = { chave: rota.request().headers()['idempotency-key'], corpo: rota.request().postDataJSON() }
+    atual = { ...atual, status: acao === 'liberar' ? 'disponivel' : 'cancelada' }
+    await rota.fulfill({ json: atual })
+  })
+
+  await page.goto(`/financeiro/ordens/${ordemCarlos.id}`)
+  await expect(page.getByText(/Em carência até/).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Liberar agora' }).click()
+  await expect(page.getByRole('status')).toHaveText('Ordem liberada: já pode ser designada a um técnico.')
+  expect(recebidos.liberar.chave).toMatch(/^[0-9a-f-]{36}$/)
+  await expect(page.getByRole('button', { name: 'Liberar agora' })).toHaveCount(0) // já não está em carência
+
+  await page.getByRole('button', { name: 'Cancelar a ordem' }).click()
+  const confirmar = page.getByRole('button', { name: 'Confirmar cancelamento' })
+  await expect(confirmar).toBeDisabled() // sem motivo, não cancela
+  await page.getByLabel('Cliente pagou').check()
+  await confirmar.click()
+  await expect(page.getByRole('status')).toHaveText('Ordem cancelada.')
+  expect(recebidos.cancelar.corpo).toEqual({ motivo: 'pagou' })
+  await expect(page.getByText('Nada a fazer nesta ordem agora.')).toBeVisible()
+})
+
+test('gestor designa a ordem disponível a um técnico ativo (RF08)', async ({ page }) => {
+  await simularApi(page, 'admin')
+  const disponivel = { ...ordemCarlos, status: 'disponivel' as const }
+  const tecnicoAtivo = { ...usuarios[2], situacao: 'ativo' }
+  await page.route('**/api/usuarios', (rota) => rota.fulfill({ json: usuarios.map((u) => (u.id === tecnicoAtivo.id ? tecnicoAtivo : u)) }))
+  await page.route(`**/api/ordens/${disponivel.id}`, (rota) => rota.fulfill({ json: disponivel }))
+  const recebido = await simularComando(page, 'designar', { ...disponivel, status: 'atribuida', responsavelId: tecnicoAtivo.id })
+
+  await page.goto(`/financeiro/ordens/${disponivel.id}`)
+  const tecnico = page.getByLabel('Técnico')
+  await expect(tecnico.getByRole('option')).toHaveText(['Escolha um técnico ativo', 'Técnico Demonstração']) // revogado e pendente ficam de fora
+  await tecnico.selectOption(tecnicoAtivo.id)
+  await page.getByRole('button', { name: 'Designar' }).click()
+  await expect(page.getByRole('status')).toHaveText('Ordem designada: já aparece no app do técnico.')
+  expect(recebido.corpo).toEqual({ tecnicoId: tecnicoAtivo.id })
+})
+
+test('estoque vê a ordem no painel, mas sem ações do financeiro', async ({ page }) => {
+  await simularApi(page, 'estoque')
+  await page.goto(`/financeiro/ordens/${ordemMaria.id}`)
+  await expect(page.getByText('Nada a fazer nesta ordem agora.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Registrar/ })).toHaveCount(0)
 })
 
 test('depois de ligar, o técnico registra como foi e o número inexistente sai da lista (RN10)', async ({ page }) => {
