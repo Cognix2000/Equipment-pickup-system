@@ -36,7 +36,7 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
         JsonDocument.Parse(corpo).RootElement.GetProperty("codigo").GetString().ShouldBe(codigo);
     }
 
-    private static object Retirada(OrdemDeTeste o, string? serieDaOnu = null) => new
+    private static object Retirada(OrdemDeTeste o, string? serieDaOnu = null, params Guid[] fotosDosEquipamentos) => new
     {
         itens = new object[]
         {
@@ -44,6 +44,7 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
             new { equipamentoId = o.FonteId, numeroSerie = (string?)null },
         },
         gps = GpsNoCliente,
+        fotos = fotosDosEquipamentos.Select(id => new { id, tipo = "equipamento", capturadaEm = DateTimeOffset.UtcNow }),
     };
 
     private static object Conferencia(OrdemDeTeste o, string serieDaOnu) => new
@@ -53,7 +54,7 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
 
     private static void RetirarPeloDominio(Ordem o, OrdemDeTeste dados, DateTimeOffset agora) =>
         o.RegistrarRetirada(new Dictionary<Guid, NumeroSerie?> { [dados.OnuId] = NumeroSerie.Criar(dados.SerieDaOnu), [dados.FonteId] = null },
-            new Localizacao(-20.1, -45.5), agora);
+            new Localizacao(-20.1, -45.5), agora, FotoDeTeste.DoConjunto);
 
     [FatoComBanco]
     public async Task Fluxo_completo_da_retirada_grava_um_evento_por_acao() // RN03, RF08, RF12, RF14, RF19
@@ -72,7 +73,8 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
 
         // A série vem como o técnico digitou: com espaço e minúscula, e ainda confere.
         var digitada = $" {ordem.SerieDaOnu[..6].ToLowerInvariant()} {ordem.SerieDaOnu[6..]}";
-        var retirada = await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem, digitada)));
+        var foto = await ApiDeTeste.FotoEnviadaAsync(tecnico, ordem.Id);
+        var retirada = await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem, digitada, foto)));
         retirada.GetProperty("status").GetString().ShouldBe("concluida");
         retirada.GetProperty("aguardaBaixaNoHubsoft").GetBoolean().ShouldBeTrue(); // RF19
 
@@ -97,10 +99,12 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
         var ordem = await api.ImportarOrdemAsync((o, agora) => { o.Liberar(agora); o.Designar(tecnicoUsuario.Id, agora); });
         var chave = Guid.NewGuid();
 
-        (await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem), chave))).GetProperty("status").GetString().ShouldBe("concluida");
-        (await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem), chave))).GetProperty("status").GetString().ShouldBe("concluida");
+        var foto = await ApiDeTeste.FotoEnviadaAsync(tecnico, ordem.Id);
+        (await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem, null, foto), chave))).GetProperty("status").GetString().ShouldBe("concluida");
+        (await OkAsync(EnviarAsync(tecnico, ordem.Id, "retirada", Retirada(ordem, null, foto), chave))).GetProperty("status").GetString().ShouldBe("concluida");
 
         (await api.EventosAsync(ordem.Id)).Count(e => e.Tipo == "retirada").ShouldBe(1);
+        (await api.EscalarAsync<long>("SELECT count(*) FROM retirada.evidencia WHERE ordem_id = @id", ("id", ordem.Id))).ShouldBe(1); // RN14
     }
 
     [FatoComBanco]

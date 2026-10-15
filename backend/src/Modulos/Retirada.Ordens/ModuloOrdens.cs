@@ -3,10 +3,16 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Retirada.Comum;
 using Retirada.Ordens.Casos;
 using Retirada.Ordens.Infraestrutura;
+using Retirada.Ordens.Infraestrutura.Fotos;
+using Retirada.Ordens.Portas;
 using Retirada.Ordens.Rotinas;
 
 namespace Retirada.Ordens;
@@ -14,8 +20,11 @@ namespace Retirada.Ordens;
 /// <summary>Porta de entrada do módulo: o host só chama estes dois métodos.</summary>
 public static class ModuloOrdens
 {
-    public static IServiceCollection AddModuloOrdens(this IServiceCollection services, string connectionString, IConfiguration config)
+    public static IServiceCollection AddModuloOrdens(
+        this IServiceCollection services, string connectionString, IConfiguration config, IHostEnvironment ambiente)
     {
+        var criarArmazenamento = ArmazenamentoDeFotos(config, ambiente); // confere a configuração já na partida
+        services.AddSingleton(sp => criarArmazenamento(sp));
         services.AddDbContext<OrdensDbContext>(o => o.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite()));
         // RN09: 3 visitas sem sucesso encerram a ordem. Ajustável sem mexer no código (RF18).
         services.AddSingleton(new ParametrosDasOrdens(
@@ -44,6 +53,8 @@ public static class ModuloOrdens
         Liberar.Mapear(grupo);
         Designar.Mapear(grupo);
         RegistrarRetirada.Mapear(grupo);
+        EnviarFoto.Mapear(grupo);
+        VerFoto.Mapear(grupo);
         RegistrarVisitaSemSucesso.Mapear(grupo);
         Conferir.Mapear(grupo);
         Cancelar.Mapear(grupo);
@@ -58,5 +69,33 @@ public static class ModuloOrdens
         DescartarImportacao.Mapear(importacoes);
 
         return app;
+    }
+
+    /// <summary>
+    /// RN14: com Fotos:S3:Bucket configurado, as fotos vão para o S3 (SeaweedFS em homologação). Sem ele, só no
+    /// desenvolvimento, ficam numa pasta. Fora do desenvolvimento, faltar a configuração impede a API de subir.
+    /// </summary>
+    private static Func<IServiceProvider, IArmazenamentoDeFotos> ArmazenamentoDeFotos(IConfiguration config, IHostEnvironment ambiente)
+    {
+        var bucket = config["Fotos:S3:Bucket"];
+        if (!string.IsNullOrWhiteSpace(bucket))
+        {
+            var s3 = new AmazonS3Client(
+                new BasicAWSCredentials(config["Fotos:S3:Chave"], config["Fotos:S3:Segredo"]),
+                new AmazonS3Config
+                {
+                    ServiceURL = config["Fotos:S3:Endereco"],
+                    AuthenticationRegion = config["Fotos:S3:Regiao"] ?? "us-east-1",
+                    ForcePathStyle = true, // SeaweedFS, MinIO e a maioria dos compatíveis usam endereco/bucket/chave
+                    // Só o que o S3 exige: os serviços compatíveis nem sempre aceitam as somas de verificação novas.
+                    RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+                    ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
+                });
+            return sp => new ArmazenamentoS3(s3, bucket, sp.GetRequiredService<ILogger<ArmazenamentoS3>>());
+        }
+        if (!ambiente.IsDevelopment())
+            throw new InvalidOperationException("Configure Fotos:S3 (Endereco, Bucket, Chave e Segredo) para guardar as fotos.");
+        var pasta = config["Fotos:Pasta"] ?? Path.Combine(Path.GetTempPath(), "retirada-fotos-dev");
+        return _ => new ArmazenamentoEmPasta(pasta);
     }
 }

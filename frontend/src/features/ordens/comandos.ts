@@ -6,6 +6,9 @@ export type Gps = { latitude: number; longitude: number; precisaoM: number | nul
 
 export type MotivoDaVisita = 'ausente' | 'recusou' | 'nao_achou'
 
+/** RN14: foto já enviada, que entra na retirada pelo id que o servidor devolveu. */
+export type FotoDaRetirada = { id: string; tipo: 'equipamento' | 'etiqueta_serie'; equipamentoId: string | null; capturadaEm: string }
+
 export type MotivoDeCancelamento = 'pagou' | 'renegociou' | 'erro'
 
 /** RN10: o que aconteceu na ligação. O WhatsApp tem os próprios resultados. */
@@ -26,8 +29,13 @@ const comando = (id: string, acao: string, corpo: unknown, chave: string) =>
   enviar(`/api/ordens/${id}/${acao}`, corpo, ordem, { 'Idempotency-Key': chave })
 
 export const comandos = {
-  registrarRetirada: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], gps: Gps, chave: string) =>
-    comando(id, 'retirada', { itens, gps }, chave),
+  registrarRetirada: (
+    id: string,
+    itens: { equipamentoId: string; numeroSerie: string | null }[],
+    gps: Gps,
+    fotos: FotoDaRetirada[],
+    chave: string,
+  ) => comando(id, 'retirada', { itens, gps, fotos }, chave),
   registrarVisita: (id: string, motivo: MotivoDaVisita, gps: Gps, chave: string) => comando(id, 'visita-sem-sucesso', { motivo, gps }, chave),
   conferir: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], chave: string) => comando(id, 'conferencia', { itens }, chave),
   registrarDevolucaoNaLoja: (id: string, chave: string) => comando(id, 'devolucao-na-loja', {}, chave),

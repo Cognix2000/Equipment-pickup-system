@@ -28,7 +28,16 @@ internal static class Projecoes
             SELECT tipo AS "Tipo", ocorrido_em AS "OcorridoEm", motivo AS "Motivo", status_para AS "StatusPara", ator_papel AS "AtorPapel"
             FROM retirada.evento_ordem WHERE ordem_id = {id} ORDER BY seq DESC
             """).ToListAsync(ct);
-        return OrdemDto.De(linha.Ordem, linha.Cliente, equipamentos[id]) with { Telefones = telefones, Historico = historico };
+        var fotos = await db.Database.SqlQuery<FotoBruta>($"""
+            SELECT id AS "Id", tipo AS "Tipo", equipamento_id AS "EquipamentoId", capturada_em AS "CapturadaEm"
+            FROM retirada.evidencia WHERE ordem_id = {id} ORDER BY capturada_em, id
+            """).ToListAsync(ct);
+        return OrdemDto.De(linha.Ordem, linha.Cliente, equipamentos[id]) with
+        {
+            Telefones = telefones,
+            Historico = historico,
+            Fotos = [.. fotos.Select(f => new FotoDto(f.Id, Enum.Parse<TipoDeFoto>(f.Tipo.Replace("_", string.Empty), true), f.EquipamentoId, f.CapturadaEm))],
+        };
     }
 
     public static async Task<ILookup<Guid, Equipamento>> CarregarEquipamentosAsync(
@@ -47,6 +56,11 @@ internal static class Projecoes
 /// Linha e WhatsApp vêm do resultado dos contatos registrados (RN10), nunca de consulta escondida.
 /// </summary>
 internal sealed record TelefoneDto(Guid Id, string Numero, string Tipo, bool FormatoValido, string Linha, string Whatsapp);
+
+internal sealed record FotoBruta(Guid Id, string Tipo, Guid? EquipamentoId, DateTimeOffset CapturadaEm);
+
+/// <summary>RN14: uma foto da ordem. O arquivo sai em GET /api/ordens/{id}/fotos/{fotoId}.</summary>
+internal sealed record FotoDto(Guid Id, TipoDeFoto Tipo, Guid? EquipamentoId, DateTimeOffset CapturadaEm);
 
 /// <summary>RF07 e RF16: uma linha do histórico. Quem fez aparece só pelo papel.</summary>
 internal sealed record EventoDto(string Tipo, DateTimeOffset OcorridoEm, string? Motivo, string? StatusPara, string? AtorPapel);
@@ -71,6 +85,7 @@ internal sealed record OrdemDto(
     IReadOnlyList<EquipamentoDto> Equipamentos,
     IReadOnlyList<TelefoneDto>? Telefones = null,
     IReadOnlyList<EventoDto>? Historico = null,
+    IReadOnlyList<FotoDto>? Fotos = null,
     bool? SemContatoNoPrazo = null)
 {
     public static OrdemDto De(Ordem o, string cliente, IEnumerable<Equipamento> equipamentos) => new(

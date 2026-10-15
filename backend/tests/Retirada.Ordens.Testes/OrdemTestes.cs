@@ -69,7 +69,7 @@ public class OrdemTestes
         var ordem = Atribuida();
         ordem.Cancelar(MotivoCancelamento.Pagou, Agora);
 
-        var erro = Should.Throw<RegraDeNegocioException>(() => ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora));
+        var erro = Should.Throw<RegraDeNegocioException>(() => ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora, FotoDeTeste.DoConjunto));
 
         erro.Codigo.ShouldBe("RN07");
     }
@@ -81,7 +81,7 @@ public class OrdemTestes
         var series = SeriesCorretas(ordem);
         series.Remove(ordem.Equipamentos[0].Id);
 
-        Should.Throw<RegraDeNegocioException>(() => ordem.RegistrarRetirada(series, NoCliente, Agora));
+        Should.Throw<RegraDeNegocioException>(() => ordem.RegistrarRetirada(series, NoCliente, Agora, FotoDeTeste.DoConjunto));
     }
 
     [Fact]
@@ -91,7 +91,9 @@ public class OrdemTestes
         var series = SeriesCorretas(ordem);
         series[ordem.Equipamentos[1].Id] = NumeroSerie.Criar("22361A2B3C4D9");
 
-        ordem.RegistrarRetirada(series, NoCliente, Agora);
+        // RN14: a divergência vai com a foto da etiqueta que o técnico encontrou.
+        ordem.RegistrarRetirada(series, NoCliente, Agora,
+            [.. FotoDeTeste.DoConjunto, new FotoDaRetirada(TipoDeFoto.EtiquetaSerie, ordem.Equipamentos[1].Id)]);
 
         ordem.Status.ShouldBe(StatusOrdem.Concluida);
         ordem.Equipamentos[1].Situacao.ShouldBe(SituacaoEquipamento.Divergente);
@@ -108,7 +110,7 @@ public class OrdemTestes
     public void Conferencia_com_divergencia_nao_fecha_a_ordem() // RN08
     {
         var ordem = Atribuida();
-        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora);
+        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora, FotoDeTeste.DoConjunto);
         var lidas = SeriesCorretas(ordem);
         lidas[ordem.Equipamentos[1].Id] = NumeroSerie.Criar("22361A2B3C4D9");
 
@@ -124,7 +126,7 @@ public class OrdemTestes
     public void Conferencia_sem_divergencia_fecha_como_Conferida()
     {
         var ordem = Atribuida();
-        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora);
+        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora, FotoDeTeste.DoConjunto);
 
         var resultado = ordem.Conferir(SeriesCorretas(ordem), Guid.NewGuid(), Agora);
 
@@ -170,7 +172,7 @@ public class OrdemTestes
     public void Baixa_no_HubSoft_so_uma_vez() // RF19
     {
         var ordem = Atribuida();
-        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora);
+        ordem.RegistrarRetirada(SeriesCorretas(ordem), NoCliente, Agora, FotoDeTeste.DoConjunto);
 
         ordem.MarcarBaixaFeita(Guid.NewGuid(), Agora);
 

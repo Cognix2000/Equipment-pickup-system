@@ -86,7 +86,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 
 var conexaoDaApi = Obrigatoria(builder.Configuration, "Retirada");
 builder.Services.AddModuloAcesso(conexaoDaApi, builder.Configuration, builder.Environment);
-builder.Services.AddModuloOrdens(conexaoDaApi, builder.Configuration);
+builder.Services.AddModuloOrdens(conexaoDaApi, builder.Configuration, builder.Environment);
 builder.Services.AddHealthChecks().AddDbContextCheck<OrdensDbContext>("banco");
 
 var app = builder.Build();

@@ -51,12 +51,22 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+      # RN14: o mesmo armazenamento S3 da homologação, para testar o adaptador de verdade.
+      # Contêiner à mão (e não "services") porque precisa do arquivo de chaves e do comando "server".
+      - name: Armazenamento das fotos (SeaweedFS)
+        run: |
+          echo '{"identities":[{"name":"ci","credentials":[{"accessKey":"retirada","secretKey":"senha-de-teste"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' > "$RUNNER_TEMP/s3.json"
+          docker run -d --name fotos -p 8333:8333 -v "$RUNNER_TEMP/s3.json:/etc/s3.json:ro" \
+            chrislusf/seaweedfs:4.48 server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/s3.json
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:8333 && exit 0; sleep 1; done
+          docker logs fotos; exit 1
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
-      - name: Testes (unidade, banco, arquitetura e contrato da API)
+      - name: Testes (unidade, banco, armazenamento, arquitetura e contrato da API)
         run: dotnet test --no-build -c Release --collect:"XPlat Code Coverage"
         env:
           RETIRADA_TESTE_BANCO: Host=localhost;Database=retirada_teste;Username=retirada_dono;Password=senha_so_do_ci;GSS Encryption Mode=Disable
+          RETIRADA_TESTE_S3: http://localhost:8333
 
   frontend:
     name: PWA React
