@@ -9,6 +9,14 @@ const motivos: Record<string, string> = {
   pagou: 'cliente pagou',
   renegociou: 'dívida renegociada',
   erro: 'erro na ordem',
+  atendeu: 'cliente atendeu',
+  nao_atendeu: 'não atendeu',
+  caixa_postal: 'caixa postal',
+  numero_inexistente: 'número não existe',
+  enviada: 'mensagem enviada',
+  sem_whatsapp: 'número sem WhatsApp',
+  nao_entregue: 'mensagem não entregue',
+  respondeu: 'cliente respondeu',
 }
 
 const textos: Record<string, string> = {
@@ -24,6 +32,7 @@ const textos: Record<string, string> = {
   devolvida_na_loja: 'Devolvida na loja',
   baixa_hubsoft: 'Baixa feita no HubSoft',
   atualizada_pela_importacao: 'Atualizada por uma planilha nova',
+  contato: 'Contato com o cliente',
 }
 
 /** Uma linha do histórico em português, sem nome de ninguém (só o papel). */

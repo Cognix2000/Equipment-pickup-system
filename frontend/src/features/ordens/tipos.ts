@@ -27,7 +27,15 @@ const equipamento = z.object({
   situacao: z.enum(['pendente', 'retirado', 'devolvido_na_loja', 'conferido', 'divergente', 'extraviado']),
 })
 
-const telefone = z.object({ numero: z.string(), tipo: z.enum(['celular', 'fixo', 'desconhecido']), formatoValido: z.boolean() })
+const telefone = z.object({
+  id: z.uuid(),
+  numero: z.string(),
+  tipo: z.enum(['celular', 'fixo', 'desconhecido']),
+  formatoValido: z.boolean(),
+  // Vêm do resultado dos contatos registrados (RN10).
+  linha: z.enum(['nao_verificada', 'atende', 'inexistente']),
+  whatsapp: z.enum(['nao_verificado', 'tem', 'nao_tem', 'nao_entregue']),
+})
 export type Telefone = z.infer<typeof telefone>
 
 const evento = z.object({

@@ -48,6 +48,7 @@ public static class ModuloOrdens
         Cancelar.Mapear(grupo);
         RegistrarDevolucaoNaLoja.Mapear(grupo);
         MarcarBaixaFeita.Mapear(grupo);
+        RegistrarContato.Mapear(grupo);
 
         // Importação (RF03–RF05): prévia, confirmação e descarte.
         var importacoes = app.MapGroup("/api/importacoes").WithTags("Importação").RequireAuthorization(Politicas.Financeiro);
