@@ -6,8 +6,17 @@ export type Gps = { latitude: number; longitude: number; precisaoM: number | nul
 
 export type MotivoDaVisita = 'ausente' | 'recusou' | 'nao_achou'
 
-/** RN10: o que aconteceu na ligação. O WhatsApp tem os próprios resultados, registrados pelo financeiro. */
+export type MotivoDeCancelamento = 'pagou' | 'renegociou' | 'erro'
+
+/** RN10: o que aconteceu na ligação. O WhatsApp tem os próprios resultados. */
 export type ResultadoDaLigacao = 'atendeu' | 'nao_atendeu' | 'caixa_postal' | 'numero_inexistente'
+export type ResultadoDaMensagem = 'enviada' | 'sem_whatsapp' | 'nao_entregue' | 'respondeu'
+export type ModeloDeMensagem = 'aviso' | 'lembrete' | 'confirmacao' | 'ausente'
+
+/** O sistema não liga nem manda mensagem: só registra o que a pessoa fez pelo celular ou pelo WhatsApp oficial. */
+export type Contato =
+  | { telefoneId: string; canal: 'ligacao'; resultado: ResultadoDaLigacao }
+  | { telefoneId: string; canal: 'whatsapp'; resultado: ResultadoDaMensagem; modelo: ModeloDeMensagem }
 
 /**
  * Comandos da ordem (ADR-009). A chave de idempotência é criada uma vez por ação na tela e reaproveitada
@@ -22,8 +31,11 @@ export const comandos = {
   registrarVisita: (id: string, motivo: MotivoDaVisita, gps: Gps, chave: string) => comando(id, 'visita-sem-sucesso', { motivo, gps }, chave),
   conferir: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], chave: string) => comando(id, 'conferencia', { itens }, chave),
   registrarDevolucaoNaLoja: (id: string, chave: string) => comando(id, 'devolucao-na-loja', {}, chave),
-  registrarLigacao: (id: string, telefoneId: string, resultado: ResultadoDaLigacao, chave: string) =>
-    comando(id, 'contatos', { telefoneId, canal: 'ligacao', resultado }, chave),
+  registrarContato: (id: string, contato: Contato, chave: string) => comando(id, 'contatos', contato, chave),
+  liberar: (id: string, chave: string) => comando(id, 'liberar', {}, chave),
+  designar: (id: string, tecnicoId: string, chave: string) => comando(id, 'designar', { tecnicoId }, chave),
+  cancelar: (id: string, motivo: MotivoDeCancelamento, chave: string) => comando(id, 'cancelar', { motivo }, chave),
+  marcarBaixa: (id: string, chave: string) => comando(id, 'baixa-hubsoft', {}, chave),
 }
 
 /** Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. */

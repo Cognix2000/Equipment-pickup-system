@@ -32,6 +32,12 @@ export const usuarioNaLista = z.object({
 })
 export type UsuarioNaLista = z.infer<typeof usuarioNaLista>
 
+/** Usuários do sistema. Só o gestor lista (RF02). */
+export const usuariosQuery = queryOptions({
+  queryKey: ['usuarios'],
+  queryFn: ({ signal }) => buscarJson('/api/usuarios', z.array(usuarioNaLista), signal),
+})
+
 export const linkDeConvite = z.object({ caminho: z.string(), expiraEm: z.iso.datetime({ offset: true }) })
 export type LinkDeConvite = z.infer<typeof linkDeConvite>
 

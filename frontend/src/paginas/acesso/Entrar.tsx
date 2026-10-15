@@ -8,7 +8,8 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { acesso, euQuery, inicioDo, useEu, type Papel } from '@/features/acesso/acesso'
 import { ErroDaApi } from '@/lib/api'
-import { AvisoDeErro, Campo, LayoutDeAcesso, classeDoInput } from './LayoutDeAcesso'
+import { classeDoInput } from '@/components/ui/input'
+import { AvisoDeErro, Campo, LayoutDeAcesso } from './LayoutDeAcesso'
 
 type Etapa = 'senha' | 'codigo' | 'configurar'
 
