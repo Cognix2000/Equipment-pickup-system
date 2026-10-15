@@ -6,6 +6,9 @@ export type Gps = { latitude: number; longitude: number; precisaoM: number | nul
 
 export type MotivoDaVisita = 'ausente' | 'recusou' | 'nao_achou'
 
+/** RN10: o que aconteceu na ligação. O WhatsApp tem os próprios resultados, registrados pelo financeiro. */
+export type ResultadoDaLigacao = 'atendeu' | 'nao_atendeu' | 'caixa_postal' | 'numero_inexistente'
+
 /**
  * Comandos da ordem (ADR-009). A chave de idempotência é criada uma vez por ação na tela e reaproveitada
  * se a pessoa tentar de novo depois de uma falha de rede: o servidor não repete o que já fez.
@@ -19,6 +22,8 @@ export const comandos = {
   registrarVisita: (id: string, motivo: MotivoDaVisita, gps: Gps, chave: string) => comando(id, 'visita-sem-sucesso', { motivo, gps }, chave),
   conferir: (id: string, itens: { equipamentoId: string; numeroSerie: string | null }[], chave: string) => comando(id, 'conferencia', { itens }, chave),
   registrarDevolucaoNaLoja: (id: string, chave: string) => comando(id, 'devolucao-na-loja', {}, chave),
+  registrarLigacao: (id: string, telefoneId: string, resultado: ResultadoDaLigacao, chave: string) =>
+    comando(id, 'contatos', { telefoneId, canal: 'ligacao', resultado }, chave),
 }
 
 /** Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. */

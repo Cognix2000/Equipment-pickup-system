@@ -1,14 +1,18 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, Navigation, Phone } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
+import { comandos, novaChave, type ResultadoDaLigacao } from '@/features/ordens/comandos'
 import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
 import { descreverEvento, quando } from '@/features/ordens/historico'
-import { useOrdem } from '@/features/ordens/consultas'
+import { ordemQuery, useOrdem } from '@/features/ordens/consultas'
 import { descreverPrazo } from '@/features/ordens/prazo'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
-import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Ordem } from '@/features/ordens/tipos'
+import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Ordem, type Telefone } from '@/features/ordens/tipos'
+import { ErroDaApi } from '@/lib/api'
 
 export function DetalheOrdem() {
   const { id = '' } = useParams()
@@ -122,35 +126,110 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
   )
 }
 
-/** RN05 e RN10: só oferece ligar para número no padrão e dentro da janela de contato. */
+/** Contato só depois da carência e antes da retirada (RN10); fora disso, os telefones aparecem só para consulta. */
+const aceitaContato = (ordem: Ordem) => ordem.status === 'disponivel' || ordem.status === 'atribuida' || ordem.status === 'em_rota'
+
+/**
+ * RN05 e RN10: só oferece ligar para número no padrão, que não foi dado como inexistente, e dentro da janela de contato.
+ * Depois de tocar em Ligar, o técnico marca como foi: é o registro que conta os dias sem resposta.
+ */
 function Telefones({ ordem }: { ordem: Ordem }) {
+  const [ligandoPara, setLigandoPara] = useState<string | null>(null)
+  const [registrada, setRegistrada] = useState(false)
   const telefones = ordem.telefones ?? []
   if (telefones.length === 0) return <p className="text-[13px] text-texto-suave">Sem telefone cadastrado: o contato fica só pela visita.</p>
   const janela = janelaDeContato()
+  const podeLigar = janela.permitido && aceitaContato(ordem)
+
   return (
     <div data-teste="telefones" className="flex flex-col gap-2">
       <ul className="flex flex-col gap-2">
         {telefones.map((t) => (
-          <li key={t.numero} className="flex min-h-11 items-center justify-between gap-3">
-            <span className={t.formatoValido ? 'font-medium tabular-nums' : 'text-texto-suave'}>
-              {formatarTelefone(t.numero)}
-              {!t.formatoValido && ' · fora do padrão'}
-            </span>
-            {t.formatoValido && janela.permitido && (
-              <a
-                href={`tel:${t.numero}`}
-                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] border border-azul px-3.5 text-sm font-semibold text-azul no-underline"
-              >
-                <Phone aria-hidden className="size-[18px]" />
-                Ligar
-              </a>
+          <li key={t.id} className="flex flex-col gap-2">
+            <div className="flex min-h-11 items-center justify-between gap-3">
+              <span className={t.formatoValido && t.linha !== 'inexistente' ? 'font-medium tabular-nums' : 'text-texto-suave tabular-nums'}>
+                {formatarTelefone(t.numero)}
+                {!t.formatoValido && ' · fora do padrão'}
+                {t.linha === 'inexistente' && ' · número não existe'}
+              </span>
+              {t.formatoValido && t.linha !== 'inexistente' && podeLigar && (
+                <a
+                  href={`tel:${t.numero}`}
+                  onClick={() => {
+                    setLigandoPara(t.id)
+                    setRegistrada(false)
+                  }}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] border border-azul px-3.5 text-sm font-semibold text-azul no-underline"
+                >
+                  <Phone aria-hidden className="size-[18px]" />
+                  Ligar
+                </a>
+              )}
+            </div>
+            {ligandoPara === t.id && (
+              <ResultadoDaLigacao
+                ordemId={ordem.id}
+                telefone={t}
+                aoRegistrar={() => {
+                  setLigandoPara(null)
+                  setRegistrada(true)
+                }}
+              />
             )}
           </li>
         ))}
       </ul>
+      {registrada && (
+        <p role="status" className="rounded-[10px] bg-sucesso-fundo px-3.5 py-2.5 text-sm font-medium text-sucesso">
+          Ligação registrada no histórico.
+        </p>
+      )}
       <p className={janela.permitido ? 'text-[13px] text-texto-suave' : 'text-[13px] font-medium text-alerta'}>
         {janela.permitido ? 'Contato de segunda a sábado, das 8h às 18h.' : janela.aviso}
       </p>
+    </div>
+  )
+}
+
+const resultados: { valor: ResultadoDaLigacao; texto: string }[] = [
+  { valor: 'atendeu', texto: 'Atendeu' },
+  { valor: 'nao_atendeu', texto: 'Não atendeu' },
+  { valor: 'caixa_postal', texto: 'Caixa postal' },
+  { valor: 'numero_inexistente', texto: 'Número não existe' },
+]
+
+function ResultadoDaLigacao({ ordemId, telefone, aoRegistrar }: { ordemId: string; telefone: Telefone; aoRegistrar: () => void }) {
+  const clienteDeConsultas = useQueryClient()
+  // Uma chave por ligação: tentar de novo depois de falha de rede não duplica o registro (ADR-009).
+  const [chave] = useState(novaChave)
+  const registrar = useMutation({
+    mutationFn: (resultado: ResultadoDaLigacao) => comandos.registrarLigacao(ordemId, telefone.id, resultado, chave),
+    onSuccess: async (atualizada) => {
+      clienteDeConsultas.setQueryData(ordemQuery(ordemId).queryKey, atualizada)
+      await clienteDeConsultas.invalidateQueries({ queryKey: ['ordens'] })
+      aoRegistrar()
+    },
+  })
+  const falha = registrar.error
+  const idTitulo = `resultado-${telefone.id}`
+
+  return (
+    <div role="group" aria-labelledby={idTitulo} className="flex flex-col gap-2 rounded-[10px] bg-fundo p-3">
+      <p id={idTitulo} className="text-sm font-semibold text-marinho">
+        Como foi a ligação para {formatarTelefone(telefone.numero)}?
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {resultados.map((r) => (
+          <Button key={r.valor} type="button" variante="neutro" tamanho="compacto" disabled={registrar.isPending} onClick={() => registrar.mutate(r.valor)}>
+            {r.texto}
+          </Button>
+        ))}
+      </div>
+      {falha && (
+        <p role="alert" className="text-sm text-erro">
+          {falha instanceof ErroDaApi ? falha.message : 'Sem resposta do servidor. Confira o sinal e tente de novo.'}
+        </p>
+      )}
     </div>
   )
 }

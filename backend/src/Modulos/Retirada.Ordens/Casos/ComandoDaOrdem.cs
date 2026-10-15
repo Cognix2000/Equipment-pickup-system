@@ -51,8 +51,10 @@ internal static class ComandoDaOrdem
     public const string CabecalhoDeIdempotencia = "Idempotency-Key";
 
     /// <param name="acao">Aplica a regra no agregado e devolve o que vai para <c>evento_ordem.dados</c>.</param>
+    /// <param name="gravarJunto">O que mais o comando grava, na mesma transação da ordem e do evento.</param>
     public static async Task<RespostaDeComando> ExecutarAsync(
-        PedidoDeComando p, Func<Ordem, DateTimeOffset, Task<object?>> acao, Gps? gps = null)
+        PedidoDeComando p, Func<Ordem, DateTimeOffset, Task<object?>> acao, Gps? gps = null,
+        Func<Ordem, DateTimeOffset, Task>? gravarJunto = null)
     {
         if (p.ChaveDeIdempotencia is not Guid chave || chave == Guid.Empty)
             return Problema(StatusCodes.Status400BadRequest, "IDEMPOTENCIA",
@@ -85,6 +87,7 @@ internal static class ComandoDaOrdem
             await p.Db.SaveChangesAsync(p.Ct);
             var autor = new AutorDoEvento(usuarioId, p.Usuario.Papel(), gps?.Latitude, gps?.Longitude, gps?.PrecisaoM);
             await RegistroDeEventos.GravarAsync(p.Db, ordem.Id, evento, statusDe, ordem.Status, autor, chave, dados, p.Ct);
+            if (gravarJunto is not null) await gravarJunto(ordem, agora);
             await transacao.CommitAsync(p.Ct);
         }
         catch (DbUpdateConcurrencyException)

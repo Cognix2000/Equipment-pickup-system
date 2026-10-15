@@ -13,6 +13,12 @@ public sealed class Ordem : Entidade
 
     private static readonly StatusOrdem[] ComTecnico = [StatusOrdem.Atribuida, StatusOrdem.EmRota];
 
+    /// <summary>Depois da carência e antes da retirada: é quando se combina a visita com o cliente.</summary>
+    private static readonly StatusOrdem[] AceitamContato = [StatusOrdem.Disponivel, StatusOrdem.Atribuida, StatusOrdem.EmRota];
+
+    private static readonly ResultadoContato[] DaLigacao =
+        [ResultadoContato.Atendeu, ResultadoContato.NaoAtendeu, ResultadoContato.CaixaPostal, ResultadoContato.NumeroInexistente];
+
     private readonly List<Equipamento> _equipamentos = [];
     private readonly List<EventoDaOrdem> _eventos = [];
 
@@ -234,6 +240,26 @@ public sealed class Ordem : Entidade
         ResponsavelId = null;
         Mudar(StatusOrdem.Cancelada, $"cancelada:{motivo}", agora);
     }
+
+    /// <summary>
+    /// RN10: registra uma tentativa de contato com o cliente (ligação ou WhatsApp) e o resultado.
+    /// O registro é a base do prazo de dias sem resposta; a ordem não muda de situação.
+    /// </summary>
+    public void RegistrarContato(CanalContato canal, ResultadoContato resultado, ModeloDeMensagem? modelo, DateTimeOffset agora)
+    {
+        Exigir(AceitamContato.Contains(Status), "RN10",
+            "Contato só com ordem em andamento: depois da carência e antes da retirada.");
+        var ehLigacao = canal == CanalContato.Ligacao;
+        Exigir(DaLigacao.Contains(resultado) == ehLigacao, "RN10",
+            ehLigacao ? "Esse resultado não é de ligação." : "Esse resultado não é de mensagem de WhatsApp.");
+        Exigir(!ehLigacao || modelo is null, "RN10", "Ligação não tem modelo de mensagem.");
+        Tocar(agora);
+        Registrar($"contato:{resultado}", agora);
+    }
+
+    /// <summary>O cliente deu sinal: atendeu a ligação ou respondeu a mensagem.</summary>
+    public static bool ClienteRespondeu(ResultadoContato resultado) =>
+        resultado is ResultadoContato.Atendeu or ResultadoContato.Respondeu;
 
     /// <summary>RF15 e RN13: vale até depois de encerrada sem retirada.</summary>
     public void RegistrarDevolucaoNaLoja(DateTimeOffset agora)

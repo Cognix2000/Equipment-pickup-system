@@ -46,6 +46,9 @@ public static class Politicas
 
     /// <summary>Conferência e devolução na loja (RF14, RF15): estoque ou gestor.</summary>
     public const string Estoque = "estoque";
+
+    /// <summary>Tentativa de contato com o cliente (RN10): financeiro, gestor ou o técnico com a ordem.</summary>
+    public const string Contato = "contato";
 }
 
 public static class UsuarioAtual
