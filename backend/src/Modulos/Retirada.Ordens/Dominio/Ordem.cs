@@ -257,6 +257,26 @@ public sealed class Ordem : Entidade
         Registrar($"contato:{resultado}", agora);
     }
 
+    /// <summary>
+    /// RN09: passado o prazo depois da carência (padrão 10 dias), a ordem Disponível com tentativa de contato
+    /// e nenhuma resposta encerra sem retirada e vai para a cobrança. Sem nenhuma tentativa, não encerra:
+    /// ninguém vai para a cobrança sem ter sido procurado (ver <see cref="SemContatoNoPrazo"/>).
+    /// Com o técnico, a visita está em andamento e quem decide é o resultado dela.
+    /// </summary>
+    public bool EncerrarSeSemResposta(ResumoDosContatos contatos, TimeSpan prazo, DateTimeOffset agora)
+    {
+        if (!PrazoDeRespostaVenceu(prazo, agora) || contatos.Tentativas == 0 || contatos.ClienteRespondeu) return false;
+        Mudar(StatusOrdem.EncerradaSemRetirada, "encerrada_sem_resposta", agora);
+        return true;
+    }
+
+    /// <summary>Prazo de resposta vencido sem nenhuma tentativa de contato: o financeiro precisa agir.</summary>
+    public bool SemContatoNoPrazo(ResumoDosContatos contatos, TimeSpan prazo, DateTimeOffset agora) =>
+        PrazoDeRespostaVenceu(prazo, agora) && contatos.Tentativas == 0;
+
+    private bool PrazoDeRespostaVenceu(TimeSpan prazo, DateTimeOffset agora) =>
+        Status == StatusOrdem.Disponivel && agora >= CarenciaAte + prazo;
+
     /// <summary>O cliente deu sinal: atendeu a ligação ou respondeu a mensagem.</summary>
     public static bool ClienteRespondeu(ResultadoContato resultado) =>
         resultado is ResultadoContato.Atendeu or ResultadoContato.Respondeu;
@@ -325,5 +345,11 @@ public sealed record DadosDaImportacao(
     DateTimeOffset? DataProgramada,
     DateOnly? DataRescisao,
     Localizacao? Localizacao);
+
+/// <summary>Tentativas de contato registradas para uma ordem (RN10).</summary>
+public sealed record ResumoDosContatos(int Tentativas, bool ClienteRespondeu)
+{
+    public static readonly ResumoDosContatos Nenhum = new(0, false);
+}
 
 public sealed record ResultadoConferencia(bool Fechou, IReadOnlyList<Equipamento> Divergentes);

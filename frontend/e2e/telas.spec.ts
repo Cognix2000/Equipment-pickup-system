@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
+import { ordemAna, ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
 
 type Papel = 'tecnico' | 'financeiro' | 'admin' | 'estoque' | null
 
@@ -306,6 +306,24 @@ test('ligar só aparece na janela de contato (RN10)', async ({ page }) => {
   await page.reload()
   await expect(page.getByText('Contato só de segunda a sábado, das 8h às 18h.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ligar' })).toHaveCount(0)
+})
+
+test('financeiro vê em destaque a ordem que passou do prazo sem nenhum contato (RN09)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  await page.route('**/api/ordens', (rota) => rota.fulfill({ json: [...todasAsOrdens, ordemAna] }))
+
+  await page.goto('/financeiro/ordens')
+  const filtro = page.getByRole('button', { name: 'Sem contato no prazo · 1' })
+  await filtro.click()
+  await expect(filtro).toHaveAttribute('aria-pressed', 'true')
+  // No celular a lista é de cartões; no tablet e no computador, a tabela. Vale o que estiver à vista.
+  await expect(page.getByText(/ANA FICTÍCIA COSTA/).filter({ visible: true })).toHaveCount(1)
+  await expect(page.getByText(/MARIA EXEMPLO SILVA/)).toHaveCount(0)
+  await expect(page.getByText('Sem contato', { exact: true }).filter({ visible: true })).toHaveCount(1)
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
 test('depois de ligar, o técnico registra como foi e o número inexistente sai da lista (RN10)', async ({ page }) => {
