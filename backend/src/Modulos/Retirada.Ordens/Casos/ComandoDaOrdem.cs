@@ -53,9 +53,10 @@ internal static class ComandoDaOrdem
 
     /// <param name="acao">Aplica a regra no agregado e devolve o que vai para <c>evento_ordem.dados</c>.</param>
     /// <param name="gravarJunto">O que mais o comando grava, na mesma transação da ordem e do evento.</param>
+    /// <param name="depoisDeGravar">Arrumação depois do commit (ex.: apagar arquivo temporário). Falha aqui não desfaz o comando.</param>
     public static async Task<RespostaDeComando> ExecutarAsync(
         PedidoDeComando p, Func<Ordem, DateTimeOffset, Task<object?>> acao, Gps? gps = null,
-        Func<Ordem, DateTimeOffset, Task>? gravarJunto = null)
+        Func<Ordem, DateTimeOffset, Task>? gravarJunto = null, Func<Task>? depoisDeGravar = null)
     {
         if (p.ChaveDeIdempotencia is not Guid chave || chave == Guid.Empty)
             return Problema(StatusCodes.Status400BadRequest, "IDEMPOTENCIA",
@@ -98,6 +99,12 @@ internal static class ComandoDaOrdem
         catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UniqueViolation && e.ConstraintName == "evento_ordem_chave_idempotencia_key")
         {
             return Conflito(); // o mesmo reenvio chegou duas vezes ao mesmo tempo; o próximo cai no caminho do reenvio
+        }
+
+        if (depoisDeGravar is not null)
+        {
+            try { await depoisDeGravar(); }
+            catch (Exception) when (!p.Ct.IsCancellationRequested) { /* só arrumação: o comando já valeu */ }
         }
 
         return TypedResults.Ok((await Projecoes.CarregarOrdemAsync(p.Db, p.Id, p.Ct))!);

@@ -610,7 +610,7 @@
         "tags": [
           "Ordens"
         ],
-        "summary": "Registrar a retirada (RF12)",
+        "summary": "Registrar a retirada, com as fotos j\u00E1 enviadas (RF12, RN14)",
         "description": "Exige o cabe\u00E7alho Idempotency-Key com um UUID novo por a\u00E7\u00E3o; reenviar a mesma chave devolve a ordem sem repetir a a\u00E7\u00E3o.",
         "parameters": [
           {
@@ -684,6 +684,104 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/ordens/{id}/fotos": {
+      "post": {
+        "tags": [
+          "Ordens"
+        ],
+        "summary": "Enviar uma foto da retirada, antes de registr\u00E1-la (RN14)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "foto"
+                ],
+                "type": "object",
+                "properties": {
+                  "foto": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FotoEnviadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ordens/{id}/fotos/{fotoId}": {
+      "get": {
+        "tags": [
+          "Ordens"
+        ],
+        "summary": "Foto de uma retirada registrada (RN14)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fotoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found"
+          },
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1469,6 +1567,103 @@
           "xml"
         ]
       },
+      "FotoDaRetiradaDto": {
+        "required": [
+          "id",
+          "tipo",
+          "equipamentoId",
+          "capturadaEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeFoto"
+          },
+          "equipamentoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "capturadaEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FotoDto": {
+        "required": [
+          "id",
+          "tipo",
+          "equipamentoId",
+          "capturadaEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDeFoto"
+          },
+          "equipamentoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "capturadaEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FotoEnviadaDto": {
+        "required": [
+          "id",
+          "largura",
+          "altura",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "largura": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "altura": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Gps": {
         "required": [
           "latitude",
@@ -1798,6 +1993,15 @@
               "$ref": "#/components/schemas/EventoDto"
             }
           },
+          "fotos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FotoDto"
+            }
+          },
           "semContatoNoPrazo": {
             "type": [
               "null",
@@ -1922,7 +2126,8 @@
       "PedidoDeRetirada": {
         "required": [
           "itens",
-          "gps"
+          "gps",
+          "fotos"
         ],
         "type": "object",
         "properties": {
@@ -1934,6 +2139,15 @@
           },
           "gps": {
             "$ref": "#/components/schemas/Gps"
+          },
+          "fotos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FotoDaRetiradaDto"
+            }
           }
         }
       },
@@ -2296,6 +2510,13 @@
             "type": "string"
           }
         }
+      },
+      "TipoDeFoto": {
+        "enum": [
+          "equipamento",
+          "etiqueta_serie",
+          "comprovante_loja"
+        ]
       },
       "TipoEquipamento": {
         "enum": [

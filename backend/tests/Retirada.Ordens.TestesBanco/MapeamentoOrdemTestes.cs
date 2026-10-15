@@ -93,7 +93,7 @@ public class MapeamentoOrdemTestes(BancoDeTeste banco) : IClassFixture<BancoDeTe
         ordem.Liberar(Agora);
         ordem.Designar(tecnico, Agora);
         var series = ordem.Equipamentos.ToDictionary(e => e.Id, e => e.NumeroSerie);
-        ordem.RegistrarRetirada(series, new Localizacao(-21.0012, -38.9978), Agora);
+        ordem.RegistrarRetirada(series, new Localizacao(-21.0012, -38.9978), Agora, FotoDeTeste.DoConjunto);
         ordem.Conferir(series, tecnico, Agora).Fechou.ShouldBeTrue();
         await db.SaveChangesAsync();
 

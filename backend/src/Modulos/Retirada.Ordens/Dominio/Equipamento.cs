@@ -46,5 +46,5 @@ public sealed class Equipamento : Entidade
 
     internal void RegistrarDevolucaoNaLoja() => Situacao = SituacaoEquipamento.DevolvidoNaLoja;
 
-    private bool Confere(NumeroSerie? serieLida) => !EhPatrimonio || serieLida == NumeroSerie;
+    internal bool Confere(NumeroSerie? serieLida) => !EhPatrimonio || serieLida == NumeroSerie;
 }

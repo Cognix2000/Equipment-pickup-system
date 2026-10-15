@@ -47,12 +47,35 @@ services:
       DataProtection__Pasta: /chaves
       # Homologação usa só dados fictícios: telefones com DDD 00 valem (RN05). Em produção, deixe false.
       Importacao__ModoSimulacao: ${IMPORTACAO_MODO_SIMULACAO:-true}
+      # RN14: fotos da retirada no armazenamento S3 abaixo. O bucket nasce sozinho no primeiro envio.
+      Fotos__S3__Endereco: http://fotos:8333
+      Fotos__S3__Bucket: retirada-fotos
+      Fotos__S3__Chave: ${FOTOS_CHAVE}
+      Fotos__S3__Segredo: ${FOTOS_SEGREDO}
     volumes:
       # ADR-010: chaves que cifram a sessão e o 2FA. Perder este volume derruba sessões e todo 2FA: entra no backup.
       - chaves:/chaves
     depends_on:
       migrador:
         condition: service_completed_successfully
+      fotos:
+        condition: service_started
+
+  # RN14: armazenamento das fotos, compatível com S3 (ADR-011). Não é publicado fora da rede do Docker:
+  # quem entrega a foto é a API, depois de conferir a permissão. Trocar por outro S3 é só mudar Fotos__S3__*.
+  fotos:
+    image: chrislusf/seaweedfs:4.48
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        printf '{"identities":[{"name":"api","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$FOTOS_CHAVE" "$$FOTOS_SEGREDO" > /tmp/s3.json
+        exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+    environment:
+      FOTOS_CHAVE: ${FOTOS_CHAVE:?defina FOTOS_CHAVE no .env}
+      FOTOS_SEGREDO: ${FOTOS_SEGREDO:?defina FOTOS_SEGREDO no .env}
+    volumes:
+      # As fotos são prova da retirada (guarda de 5 anos): este volume entra no backup, junto com o banco.
+      - fotos:/data
 
   web:
     build: ./frontend
@@ -75,4 +98,5 @@ services:
 volumes:
   banco:
   chaves:
+  fotos:
   observabilidade:

@@ -63,6 +63,15 @@ Em **Importar**, o financeiro envia o arquivo e vê a prévia linha a linha ante
 
 A prévia guarda só o resumo e o hash do arquivo. Na confirmação, o PWA manda o mesmo arquivo de novo, e o servidor confere o hash antes de gravar. Assim, nenhum dado pessoal fica parado entre a prévia e a confirmação.
 
+### Fotos da retirada
+
+Na retirada, o técnico fotografa os equipamentos recolhidos (pelo menos uma foto) e, se a série de algum item for diferente da cadastrada, a etiqueta desse item (RN14). Cada foto é enviada assim que é tirada, então um sinal fraco só atrasa a foto que falhou, que fica com "Tentar de novo". O financeiro e o estoque veem as fotos no detalhe da ordem.
+
+- As fotos ficam num armazenamento compatível com S3: o serviço `fotos` do docker-compose (SeaweedFS), que não é publicado fora da rede do Docker. Quem entrega a foto é a API, depois de conferir a permissão ([ADR-011](docs/adr/0011-armazenamento-das-fotos.md)).
+- Antes de enviar, o celular reduz a foto e tira o EXIF (GPS, modelo do aparelho); o servidor tira de novo. O GPS e a hora que valem são os da retirada.
+- No desenvolvimento sem Docker, as fotos ficam numa pasta temporária (`Fotos__Pasta` muda o lugar).
+- **Backup:** o volume `fotos` guarda a prova das retiradas. Faça backup dele junto com o banco e as chaves.
+
 ### Contato com o cliente
 
 Na ordem, o técnico toca em **Ligar** e, ao voltar, marca como foi: atendeu, não atendeu, caixa postal ou número não existe (RN10). Cada registro vira uma tentativa de contato e uma linha no histórico. O resultado também marca o telefone: um número dado como inexistente deixa de oferecer a ligação.
@@ -178,6 +187,7 @@ Todas estão em [docs/adr](docs/adr/README.md). Resumo:
 | --- | --- | --- |
 | Unidade, arquitetura e contrato da API | `cd backend && dotnet test` | Todo PR |
 | Integração com o banco e a API inteira (login, limites, comandos da ordem) | `RETIRADA_TESTE_BANCO=... dotnet test` | Todo PR |
+| Adaptador S3 das fotos contra um S3 de verdade | `RETIRADA_TESTE_S3=http://localhost:8333 dotnet test` | Todo PR |
 | Telas: ponta a ponta, visual e acessibilidade | `cd frontend && npm run test:e2e` | Todo PR |
 | Mutação do domínio (mínimo 80%) | `cd backend && dotnet tool restore && dotnet stryker --config-file stryker-config.json` | Antes da versão |
 | Carga e estresse | `k6 run testes-carga/ordens.js` (`CENARIO=estresse`) | Antes da versão |
@@ -209,5 +219,4 @@ docker compose --profile observabilidade up --build
 
 ## O que falta no incremento 1
 
-- Fotos da retirada (RF12, RN14): o comando já grava séries e GPS; falta o armazenamento das evidências.
 - Devolução na loja só de parte dos itens (RF15); hoje encerra a ordem inteira.

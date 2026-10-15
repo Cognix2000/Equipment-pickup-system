@@ -47,6 +47,18 @@ const evento = z.object({
 })
 export type EventoDaOrdem = z.infer<typeof evento>
 
+export const tipoDeFoto = z.enum(['equipamento', 'etiqueta_serie', 'comprovante_loja'])
+export type TipoDeFoto = z.infer<typeof tipoDeFoto>
+
+/** RN14: foto da ordem. O arquivo sai em /api/ordens/{id}/fotos/{fotoId}, com a permissão conferida. */
+const foto = z.object({
+  id: z.uuid(),
+  tipo: tipoDeFoto,
+  equipamentoId: z.uuid().nullable(),
+  capturadaEm: z.iso.datetime({ offset: true }),
+})
+export type FotoDaOrdem = z.infer<typeof foto>
+
 export const ordem = z.object({
   id: z.uuid(),
   numeroOs: z.number().int().nullable(),
@@ -72,6 +84,7 @@ export const ordem = z.object({
   // Só o detalhe traz (RF07); na lista vêm nulos.
   telefones: z.array(telefone).nullish(),
   historico: z.array(evento).nullish(),
+  fotos: z.array(foto).nullish(),
   // Só na lista (RN09): passou do prazo de resposta sem nenhuma tentativa de contato.
   semContatoNoPrazo: z.boolean().nullish(),
 })

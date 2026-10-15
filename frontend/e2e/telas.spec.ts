@@ -1,3 +1,4 @@
+import path from 'node:path'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { ordemAna, ordemCarlos, ordemMaria, todasAsOrdens } from '../src/features/ordens/exemplos'
@@ -212,6 +213,19 @@ test('importação mostra a prévia do servidor e grava só depois de confirmar'
 })
 
 /** Responde aos comandos da ordem e guarda o que chegou, para o teste conferir. */
+const fotoFicticia = path.join(import.meta.dirname, 'arquivos', 'foto-ficticia.jpg')
+
+/** RN14: o servidor recebe cada foto e devolve um id. Guarda o que chegou para conferir o EXIF. */
+async function simularEnvioDeFotos(page: Page) {
+  const recebidas: Buffer[] = []
+  await page.route('**/api/ordens/*/fotos', async (rota) => {
+    recebidas.push(rota.request().postDataBuffer()!)
+    const id = `0192f000-0000-7000-8000-0000000f${String(recebidas.length).padStart(4, '0')}`
+    await rota.fulfill({ json: { id, largura: 1200, altura: 900, bytes: 30000 } })
+  })
+  return recebidas
+}
+
 async function simularComando(page: Page, acao: string, resposta: object) {
   const recebido: { chave?: string; corpo?: Record<string, unknown> } = {}
   await page.route(`**/api/ordens/*/${acao}`, async (rota) => {
@@ -227,6 +241,7 @@ test('técnico registra a retirada com série, GPS e chave de idempotência', as
   await context.grantPermissions(['geolocation'])
   await context.setGeolocation({ latitude: -21.0012, longitude: -38.9978, accuracy: 8 })
   const recebido = await simularComando(page, 'retirada', { ...ordemMaria, status: 'concluida' })
+  const fotos = await simularEnvioDeFotos(page)
 
   await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
   await page.getByRole('link', { name: 'Iniciar retirada' }).click()
@@ -238,6 +253,22 @@ test('técnico registra a retirada com série, GPS e chave de idempotência', as
   await series.nth(1).fill('OUTRASERIE')
   await expect(page.getByText('vai registrada como divergência')).toBeVisible()
   await page.getByLabel('Recolhida').check()
+
+  // RN14: sem foto, não confirma; com série diferente, falta também a foto da etiqueta.
+  const confirmar = page.getByRole('button', { name: /^Confirmar retirada|^Enviando fotos/ })
+  await expect(confirmar).toHaveText('Confirmar retirada · falta a foto')
+  await page.getByLabel('Tirar foto dos equipamentos').setInputFiles(fotoFicticia)
+  await expect(page.getByText('Enviada')).toHaveCount(1)
+  await expect(confirmar).toHaveText('Confirmar retirada · falta foto da etiqueta')
+  await expect(confirmar).toBeDisabled()
+  await page.getByLabel('Foto da etiqueta').setInputFiles(fotoFicticia)
+  await expect(page.getByText('Enviada')).toHaveCount(2)
+  await expect(page.getByRole('img', { name: 'Foto da etiqueta de TP-Link Archer C6' })).toBeVisible()
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+
   await page.getByRole('button', { name: 'Confirmar retirada', exact: true }).click()
 
   await expect(page.getByText('Retirada registrada.')).toBeVisible()
@@ -249,7 +280,18 @@ test('técnico registra a retirada com série, GPS e chave de idempotência', as
       { equipamentoId: ordemMaria.equipamentos[1].id, numeroSerie: 'OUTRASERIE' },
       { equipamentoId: ordemMaria.equipamentos[2].id, numeroSerie: null },
     ],
+    fotos: [
+      { id: '0192f000-0000-7000-8000-0000000f0001', tipo: 'equipamento', equipamentoId: null },
+      { id: '0192f000-0000-7000-8000-0000000f0002', tipo: 'etiqueta_serie', equipamentoId: ordemMaria.equipamentos[1].id },
+    ],
   })
+  // A foto sai do aparelho já sem EXIF (a original tem fabricante e modelo do celular) e em JPEG.
+  expect(fotos).toHaveLength(2)
+  for (const corpo of fotos) {
+    expect(corpo.includes('FABRICANTE FICTICIO')).toBe(false)
+    expect(corpo.includes('Exif')).toBe(false)
+    expect(corpo.includes('image/jpeg')).toBe(true)
+  }
 })
 
 test('ordem cancelada bloqueia a retirada (RN07)', async ({ page }) => {
@@ -285,12 +327,14 @@ test('sem permissão de localização, a retirada não segue e explica por quê'
       erro?.({ code: 1, message: 'negado', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError)
   })
   const recebido = await simularComando(page, 'retirada', ordemMaria)
+  await simularEnvioDeFotos(page)
 
   await page.goto(`/tecnico/ordens/${ordemMaria.id}/retirada`)
   const series = page.getByLabel(/Série da etiqueta/)
   await series.nth(0).fill('HWTC1A2B3C4D')
   await series.nth(1).fill('22361A2B3C4D5')
   await page.getByLabel('Recolhida').check()
+  await page.getByLabel('Tirar foto dos equipamentos').setInputFiles(fotoFicticia)
   await page.getByRole('button', { name: 'Confirmar retirada', exact: true }).click()
 
   await expect(page.getByRole('alert')).toContainText('Permita o uso da localização')
@@ -401,6 +445,31 @@ test('gestor designa a ordem disponível a um técnico ativo (RF08)', async ({ p
   await page.getByRole('button', { name: 'Designar' }).click()
   await expect(page.getByRole('status')).toHaveText('Ordem designada: já aparece no app do técnico.')
   expect(recebido.corpo).toEqual({ tecnicoId: tecnicoAtivo.id })
+})
+
+test('painel mostra as fotos da retirada servidas pela API (RN14)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  const retirada = {
+    ...ordemMaria,
+    status: 'concluida' as const,
+    aguardaBaixaNoHubsoft: true,
+    fotos: [
+      { id: '0192f000-0000-7000-8000-0000000f0001', tipo: 'equipamento' as const, equipamentoId: null, capturadaEm: '2026-10-14T14:30:00Z' },
+      { id: '0192f000-0000-7000-8000-0000000f0002', tipo: 'etiqueta_serie' as const, equipamentoId: ordemMaria.equipamentos[1].id, capturadaEm: '2026-10-14T14:31:00Z' },
+    ],
+  }
+  await page.route(`**/api/ordens/${retirada.id}`, (rota) => rota.fulfill({ json: retirada }))
+  await page.route(`**/api/ordens/${retirada.id}/fotos/*`, (rota) => rota.fulfill({ path: fotoFicticia, contentType: 'image/jpeg' }))
+
+  await page.goto(`/financeiro/ordens/${retirada.id}`)
+  const fotos = page.getByRole('heading', { name: 'Fotos da retirada' }).locator('..').getByRole('img')
+  await expect(fotos).toHaveCount(2)
+  await expect(page.getByRole('img', { name: 'Etiqueta · TP-Link Archer C6, 14/10/2026, 11:31' })).toBeVisible()
+  await expect.poll(() => fotos.first().evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+  await expect(page.getByRole('button', { name: 'Marcar baixa feita' })).toBeVisible()
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
 })
 
 test('estoque vê a ordem no painel, mas sem ações do financeiro', async ({ page }) => {

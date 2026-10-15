@@ -10,6 +10,7 @@ import { classeDoInput } from '@/components/ui/input'
 import { useEu, usuariosQuery, type Papel } from '@/features/acesso/acesso'
 import { comandos, type MotivoDeCancelamento } from '@/features/ordens/comandos'
 import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
+import { enderecoDaFoto } from '@/features/ordens/fotos'
 import { useOrdem } from '@/features/ordens/consultas'
 import { Historico } from '@/features/ordens/Historico'
 import { descreverPrazo, statusComEquipamentoNoCliente } from '@/features/ordens/prazo'
@@ -115,12 +116,45 @@ function ConteudoDaOrdem({ ordem, papel }: { ordem: Ordem; papel?: Papel }) {
             </ul>
           </Card>
 
+          <FotosDaOrdem ordem={ordem} />
+
           <Historico eventos={ordem.historico} />
         </div>
 
         <Acoes ordem={ordem} papel={papel} />
       </div>
     </>
+  )
+}
+
+/** RN14: as fotos da retirada, servidas pela API (que confere a permissão). Clique abre a foto inteira. */
+function FotosDaOrdem({ ordem }: { ordem: Ordem }) {
+  const fotos = ordem.fotos ?? []
+  if (fotos.length === 0) return null
+  const modelo = (equipamentoId: string | null) => ordem.equipamentos.find((e) => e.id === equipamentoId)?.modelo
+  return (
+    <Card>
+      <CardTitle className="text-base sm:text-lg">Fotos da retirada</CardTitle>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {fotos.map((f) => {
+          const descricao = f.tipo === 'etiqueta_serie' ? `Etiqueta · ${modelo(f.equipamentoId) ?? 'item'}` : 'Equipamentos'
+          return (
+            <li key={f.id}>
+              <a href={enderecoDaFoto(ordem.id, f.id)} target="_blank" rel="noreferrer" className="flex flex-col gap-1 no-underline">
+                <img
+                  src={enderecoDaFoto(ordem.id, f.id)}
+                  alt={`${descricao}, ${formatoData.format(new Date(f.capturadaEm))}`}
+                  loading="lazy"
+                  className="aspect-[4/3] w-full rounded-lg bg-fundo object-cover"
+                />
+                <span className="text-[13px] font-medium text-texto">{descricao}</span>
+                <span className="text-[13px] text-texto-suave tabular-nums">{formatoData.format(new Date(f.capturadaEm))}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
   )
 }
 

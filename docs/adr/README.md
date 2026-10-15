@@ -16,3 +16,4 @@ Para registrar uma decisão nova: copie `modelo.md`, use o próximo número e ab
 | [008](0008-observabilidade.md) | Observabilidade com OpenTelemetry e Grafana | Aceita |
 | [009](0009-contratos-da-api.md) | Contratos da API | Aceita |
 | [010](0010-autenticacao.md) | Autenticação e autorização | Aceita |
+| [011](0011-armazenamento-das-fotos.md) | Armazenamento das fotos da retirada | Aceita |

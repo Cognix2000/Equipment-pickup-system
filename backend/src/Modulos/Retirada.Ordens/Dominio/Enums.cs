@@ -41,3 +41,6 @@ public enum ResultadoContato
 }
 
 public enum ModeloDeMensagem { Aviso, Lembrete, Confirmacao, Ausente }
+
+/// <summary>Os nomes batem com o CHECK de evidencia.tipo.</summary>
+public enum TipoDeFoto { Equipamento, EtiquetaSerie, ComprovanteLoja }

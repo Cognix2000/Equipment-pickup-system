@@ -56,9 +56,15 @@ export async function enviar<T extends z.ZodType>(
 }
 
 /** POST de arquivo (multipart). O navegador monta o Content-Type com a fronteira do formulário. */
-export async function enviarArquivo<T extends z.ZodType>(caminho: string, arquivo: File, schema: T): Promise<z.infer<T>> {
+export async function enviarArquivo<T extends z.ZodType>(
+  caminho: string,
+  arquivo: Blob,
+  schema: T,
+  campo = 'arquivo',
+  nome = arquivo instanceof File ? arquivo.name : 'arquivo',
+): Promise<z.infer<T>> {
   const formulario = new FormData()
-  formulario.append('arquivo', arquivo)
+  formulario.append(campo, arquivo, nome)
   const resposta = await fetch(caminho, {
     method: 'POST',
     credentials: 'same-origin',
