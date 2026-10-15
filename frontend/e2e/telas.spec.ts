@@ -565,10 +565,55 @@ test('estoque registra devolução na loja com confirmação (RF15)', async ({ p
   await page.getByLabel('Protocolo, número da OS ou série de um item').fill('5101')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await page.getByRole('button', { name: 'Registrar devolução' }).click()
-  await page.getByRole('button', { name: 'Confirmar devolução' }).click()
+  await page.getByRole('button', { name: 'Confirmar e encerrar a ordem' }).click() // tudo marcado: encerra
 
   await expect(page.getByText('Devolução na loja registrada.', { exact: false })).toBeVisible()
   expect(recebido.chave).toBeDefined()
+  expect(recebido.corpo).toEqual({ itens: ordemMaria.equipamentos.map((e) => e.id) })
+})
+
+test('cliente devolve só a fonte na loja e a ordem segue com o resto (RF15)', async ({ page }) => {
+  await simularApi(page, 'estoque')
+  const [onu, roteador, fonte] = ordemMaria.equipamentos
+  const recebido = await simularComando(page, 'devolucao-na-loja', {
+    ...ordemMaria,
+    equipamentos: [onu, roteador, { ...fonte, situacao: 'devolvido_na_loja' }],
+  })
+
+  await page.goto('/estoque/conferir')
+  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('5101')
+  await page.getByRole('button', { name: 'Buscar' }).click()
+  await page.getByRole('button', { name: 'Registrar devolução' }).click()
+  const devolvidos = page.getByRole('group', { name: 'O que o cliente devolveu' })
+  await devolvidos.getByLabel(/ONU/).uncheck()
+  await devolvidos.getByLabel(/Roteador/).uncheck()
+  await expect(page.getByRole('button', { name: 'Confirmar devolução de 1 item' })).toBeVisible()
+  await devolvidos.getByLabel(/Fonte/).uncheck()
+  await expect(page.getByRole('button', { name: 'Marque o que foi devolvido' })).toBeDisabled()
+  await devolvidos.getByLabel(/Fonte/).check()
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+
+  await page.getByRole('button', { name: 'Confirmar devolução de 1 item' }).click()
+  await expect(page.getByText('Devolução de parte dos itens registrada. A ordem continua aberta com o que falta recolher: ONU + Roteador.')).toBeVisible()
+  expect(recebido.corpo).toEqual({ itens: [fonte.id] })
+})
+
+test('técnico não recolhe o que já foi devolvido na loja (RF15)', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  const [onu, roteador, fonte] = ordemMaria.equipamentos
+  const parcial = { ...ordemMaria, equipamentos: [onu, roteador, { ...fonte, situacao: 'devolvido_na_loja' as const }] }
+  await page.route(`**/api/ordens/${ordemMaria.id}`, (rota) => rota.fulfill({ json: parcial }))
+
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
+  await expect(page.getByRole('heading', { name: 'Recolher 2 itens' })).toBeVisible()
+  await expect(page.getByText('Já devolvido na loja: Fonte 12V.')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Iniciar retirada' }).click()
+  await expect(page.getByText('Já devolvido na loja, não recolha: Fonte 12V.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Confirmar retirada · faltam 2 itens' })).toBeDisabled()
+  await expect(page.getByLabel('Recolhida')).toHaveCount(0) // a fonte não aparece para marcar
 })
 
 test('estoque entra direto na conferência e técnico não abre o estoque', async ({ page }) => {

@@ -185,19 +185,23 @@ public sealed class Ordem : Entidade
         Exigir(Status != StatusOrdem.Cancelada, "RN07", "A ordem foi cancelada: a retirada está bloqueada.");
         Exigir(ComTecnico.Contains(Status), "RF12", "Só ordem atribuída a um técnico pode ser retirada.");
 
-        var faltando = _equipamentos.Where(e => !seriesLidas.ContainsKey(e.Id)).ToList();
+        // RF15: o que o cliente já devolveu na loja não entra na retirada.
+        var comOCliente = ComOCliente();
+        Exigir(seriesLidas.Keys.All(id => comOCliente.Any(e => e.Id == id)), "RF12", "Há item que não está mais com o cliente.");
+        var faltando = comOCliente.Where(e => !seriesLidas.ContainsKey(e.Id)).ToList();
         Exigir(faltando.Count == 0, "RF12",
             $"Faltam itens na retirada: {string.Join(", ", faltando.Select(e => e.Modelo))}.");
-        ExigirFotosDaRetirada(seriesLidas, fotos);
+        ExigirFotosDaRetirada(comOCliente, seriesLidas, fotos);
 
-        foreach (var equipamento in _equipamentos)
+        foreach (var equipamento in comOCliente)
             equipamento.RegistrarRetirada(seriesLidas[equipamento.Id]);
 
         Localizacao = Localizacao ?? local;
         Mudar(StatusOrdem.Concluida, "retirada", agora);
     }
 
-    private void ExigirFotosDaRetirada(IReadOnlyDictionary<Guid, NumeroSerie?> seriesLidas, IReadOnlyCollection<FotoDaRetirada> fotos)
+    private void ExigirFotosDaRetirada(
+        List<Equipamento> comOCliente, IReadOnlyDictionary<Guid, NumeroSerie?> seriesLidas, IReadOnlyCollection<FotoDaRetirada> fotos)
     {
         Exigir(fotos.Count <= LimiteDeFotos, "RN14", $"Envie no máximo {LimiteDeFotos} fotos.");
         Exigir(fotos.All(f => f.Tipo is TipoDeFoto.Equipamento or TipoDeFoto.EtiquetaSerie), "RN14",
@@ -214,7 +218,7 @@ public sealed class Ordem : Entidade
                               || (f.EquipamentoId is { } id && daOrdem[id].EhPatrimonio)),
             "RN14", "Foto da etiqueta precisa dizer de qual item é, e fonte não tem etiqueta de série.");
 
-        var semProva = _equipamentos
+        var semProva = comOCliente
             .Where(e => !e.Confere(seriesLidas[e.Id]))
             .Where(e => !fotos.Any(f => f.Tipo == TipoDeFoto.EtiquetaSerie && f.EquipamentoId == e.Id))
             .ToList();
@@ -245,7 +249,8 @@ public sealed class Ordem : Entidade
         Exigir(Status == StatusOrdem.Concluida, "RF14", "Só ordem com retirada registrada pode ser conferida.");
 
         var divergentes = new List<Equipamento>();
-        foreach (var equipamento in _equipamentos)
+        // O que o cliente devolveu na loja (RF15) não passa pela conferência da retirada.
+        foreach (var equipamento in _equipamentos.Where(e => e.Situacao != SituacaoEquipamento.DevolvidoNaLoja))
         {
             seriesLidas.TryGetValue(equipamento.Id, out var lida);
             if (!equipamento.Conferir(lida, conferidoPor, agora))
@@ -313,16 +318,35 @@ public sealed class Ordem : Entidade
     public static bool ClienteRespondeu(ResultadoContato resultado) =>
         resultado is ResultadoContato.Atendeu or ResultadoContato.Respondeu;
 
-    /// <summary>RF15 e RN13: vale até depois de encerrada sem retirada.</summary>
-    public void RegistrarDevolucaoNaLoja(DateTimeOffset agora)
+    /// <summary>
+    /// RF15 e RN13: o cliente devolveu na loja os <paramref name="itens"/> que levou; vale até depois de encerrada
+    /// sem retirada. Com tudo devolvido, a ordem encerra. Com parte, segue como está, só com o que falta recolher.
+    /// </summary>
+    /// <returns>Verdadeiro se a devolução encerrou a ordem.</returns>
+    public bool RegistrarDevolucaoNaLoja(IReadOnlyCollection<Guid> itens, DateTimeOffset agora)
     {
         Exigir(Status is not (StatusOrdem.Conferida or StatusOrdem.Cancelada or StatusOrdem.DevolvidaNaLoja),
             "RF15", "Essa ordem já foi encerrada.");
-        foreach (var equipamento in _equipamentos)
+        var comOCliente = ComOCliente();
+        Exigir(itens.Count > 0, "RF15", "Escolha os itens que o cliente devolveu.");
+        Exigir(itens.All(id => comOCliente.Any(e => e.Id == id)), "RF15", "Há item que não está mais com o cliente.");
+
+        foreach (var equipamento in comOCliente.Where(e => itens.Contains(e.Id)))
             equipamento.RegistrarDevolucaoNaLoja();
-        ResponsavelId = null;
-        Mudar(StatusOrdem.DevolvidaNaLoja, "devolvida_na_loja", agora);
+
+        if (comOCliente.All(e => e.Situacao == SituacaoEquipamento.DevolvidoNaLoja))
+        {
+            ResponsavelId = null;
+            Mudar(StatusOrdem.DevolvidaNaLoja, "devolvida_na_loja", agora);
+            return true;
+        }
+        Tocar(agora);
+        Registrar("devolucao_parcial_na_loja", agora);
+        return false;
     }
+
+    /// <summary>Itens que ainda estão com o cliente: nem retirados, nem devolvidos na loja.</summary>
+    private List<Equipamento> ComOCliente() => [.. _equipamentos.Where(e => e.Situacao == SituacaoEquipamento.Pendente)];
 
     /// <summary>RF19: o financeiro marca que deu a baixa no HubSoft.</summary>
     public void MarcarBaixaFeita(Guid usuarioId, DateTimeOffset agora)

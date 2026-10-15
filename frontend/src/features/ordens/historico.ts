@@ -30,6 +30,7 @@ const textos: Record<string, string> = {
   divergencia_na_conferencia: 'Divergência na conferência',
   cancelada: 'Cancelada',
   devolvida_na_loja: 'Devolvida na loja',
+  devolucao_parcial_na_loja: 'Parte dos itens devolvida na loja',
   baixa_hubsoft: 'Baixa feita no HubSoft',
   atualizada_pela_importacao: 'Atualizada por uma planilha nova',
   contato: 'Contato com o cliente',

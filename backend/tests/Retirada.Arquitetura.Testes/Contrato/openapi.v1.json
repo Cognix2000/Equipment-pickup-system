@@ -1040,7 +1040,7 @@
         "tags": [
           "Ordens"
         ],
-        "summary": "Registrar devolu\u00E7\u00E3o na loja (RF15)",
+        "summary": "Registrar devolu\u00E7\u00E3o na loja, de todos ou de parte dos itens (RF15)",
         "description": "Exige o cabe\u00E7alho Idempotency-Key com um UUID novo por a\u00E7\u00E3o; reenviar a mesma chave devolve a ordem sem repetir a a\u00E7\u00E3o.",
         "parameters": [
           {
@@ -1061,6 +1061,22 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PedidoDeDevolucao"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -2120,6 +2136,24 @@
           "tecnicoId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PedidoDeDevolucao": {
+        "required": [
+          "itens"
+        ],
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
