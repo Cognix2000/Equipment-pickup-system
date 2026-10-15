@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleCheck, MapPin, TriangleAlert } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Button } from '@/components/ui/button'
@@ -9,13 +9,15 @@ import { comandos, normalizarSerie, novaChave } from '@/features/ordens/comandos
 import { ordemQuery } from '@/features/ordens/consultas'
 import { GpsIndisponivel, obterGps } from '@/features/ordens/gps'
 import { enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
+import { LIMITE_DE_FOTOS, useFotosDaRetirada } from '@/features/ordens/useFotosDaRetirada'
 import { ErroDaApi } from '@/lib/api'
 import { CabecalhoDaAcao } from './CabecalhoDaAcao'
+import { BotaoDeFoto, MiniaturaDaFoto } from './FotosDaRetirada'
 
 const horario = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
 /**
- * UC04 e RF12: o técnico confere a série de cada item e confirma; GPS e hora entram sozinhos.
+ * UC04, RF12 e RN14: o técnico confere a série de cada item, fotografa e confirma; GPS e hora entram sozinhos.
  * RN07: ao abrir, a tela busca a ordem de novo no servidor; cancelada, a retirada fica bloqueada.
  */
 export function RegistrarRetirada() {
@@ -54,15 +56,23 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
   const [series, setSeries] = useState<Record<string, string>>({})
   const [recolhidos, setRecolhidos] = useState<Record<string, boolean>>({})
 
+  const fotos = useFotosDaRetirada(ordem.id)
+
   const temSerie = (e: Equipamento) => e.numeroSerie !== null
   const resolvido = (e: Equipamento) => (temSerie(e) ? (series[e.id] ?? '').trim().length > 0 : recolhidos[e.id] === true)
   const faltando = ordem.equipamentos.filter((e) => !resolvido(e)).length
+  // RN14: a retirada leva foto dos equipamentos; o item com série diferente leva foto da etiqueta.
+  const temFotoGeral = fotos.paraEnviar.some((f) => f.tipo === 'equipamento')
+  const semEtiqueta = ordem.equipamentos.filter(
+    (e) => situacaoDaSerie(e, series[e.id] ?? '') === 'diferente' && !fotos.paraEnviar.some((f) => f.tipo === 'etiqueta_serie' && f.equipamentoId === e.id),
+  )
+  const cabeMaisFoto = fotos.fotos.length < LIMITE_DE_FOTOS
 
   const registrar = useMutation({
     mutationFn: async () => {
       const gps = await obterGps()
       const itens = ordem.equipamentos.map((e) => ({ equipamentoId: e.id, numeroSerie: temSerie(e) ? (series[e.id] ?? null) : null }))
-      return comandos.registrarRetirada(ordem.id, itens, gps, chave)
+      return comandos.registrarRetirada(ordem.id, itens, gps, fotos.paraEnviar, chave)
     },
     onSuccess: async () => {
       await clienteDeConsultas.invalidateQueries({ queryKey: ['ordens'] })
@@ -99,17 +109,75 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
         </p>
       )}
 
-      {ordem.equipamentos.map((e, i) => (
-        <ItemDaRetirada
-          key={e.id}
-          posicao={i + 1}
-          equipamento={e}
-          serie={series[e.id] ?? ''}
-          recolhido={recolhidos[e.id] === true}
-          aoMudarSerie={(valor) => setSeries((s) => ({ ...s, [e.id]: valor }))}
-          aoMarcar={(valor) => setRecolhidos((r) => ({ ...r, [e.id]: valor }))}
-        />
-      ))}
+      {ordem.equipamentos.map((e, i) => {
+        const etiqueta = fotos.fotos.find((f) => f.tipo === 'etiqueta_serie' && f.equipamentoId === e.id)
+        return (
+          <ItemDaRetirada
+            key={e.id}
+            posicao={i + 1}
+            equipamento={e}
+            serie={series[e.id] ?? ''}
+            recolhido={recolhidos[e.id] === true}
+            aoMudarSerie={(valor) => setSeries((s) => ({ ...s, [e.id]: valor }))}
+            aoMarcar={(valor) => setRecolhidos((r) => ({ ...r, [e.id]: valor }))}
+          >
+            {situacaoDaSerie(e, series[e.id] ?? '') === 'diferente' && (
+              <div className="flex flex-col gap-2 rounded-[10px] bg-fundo p-3">
+                <p className="text-sm">Fotografe a etiqueta: é a prova da série que você encontrou.</p>
+                {etiqueta && (
+                  <ul className="grid w-40">
+                    <MiniaturaDaFoto
+                      foto={etiqueta}
+                      descricao={`Foto da etiqueta de ${e.modelo}`}
+                      aoRemover={() => fotos.remover(etiqueta.local)}
+                      aoTentarDeNovo={() => fotos.tentarDeNovo(etiqueta)}
+                    />
+                  </ul>
+                )}
+                <BotaoDeFoto
+                  rotulo={etiqueta ? 'Tirar outra foto da etiqueta' : 'Foto da etiqueta'}
+                  desabilitado={!etiqueta && !cabeMaisFoto}
+                  aoEscolher={(arquivo) => void fotos.adicionar(arquivo, 'etiqueta_serie', e.id)}
+                />
+              </div>
+            )}
+          </ItemDaRetirada>
+        )
+      })}
+
+      <Card className="gap-3">
+        <p className="font-semibold">Fotos dos equipamentos</p>
+        <p className="text-sm text-texto-suave">Pelo menos uma, com todos os itens recolhidos à vista.</p>
+        {fotos.fotos.some((f) => f.tipo === 'equipamento') && (
+          <ul className="grid grid-cols-2 gap-3">
+            {fotos.fotos
+              .filter((f) => f.tipo === 'equipamento')
+              .map((f, i) => (
+                <MiniaturaDaFoto
+                  key={f.local}
+                  foto={f}
+                  descricao={`Foto dos equipamentos ${i + 1}`}
+                  aoRemover={() => fotos.remover(f.local)}
+                  aoTentarDeNovo={() => fotos.tentarDeNovo(f)}
+                />
+              ))}
+          </ul>
+        )}
+        {fotos.erro && (
+          <p role="alert" className="text-sm text-erro">
+            {fotos.erro}
+          </p>
+        )}
+        {cabeMaisFoto ? (
+          <BotaoDeFoto
+            rotulo={temFotoGeral ? 'Tirar outra foto' : 'Tirar foto dos equipamentos'}
+            destaque={!temFotoGeral}
+            aoEscolher={(arquivo) => void fotos.adicionar(arquivo, 'equipamento', null)}
+          />
+        ) : (
+          <p className="text-sm text-texto-suave">Limite de {LIMITE_DE_FOTOS} fotos atingido.</p>
+        )}
+      </Card>
 
       <p className="flex items-center gap-2 text-[13px] text-texto-suave">
         <MapPin aria-hidden className="size-4 shrink-0" />
@@ -123,12 +191,22 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
       )}
 
       <div className="sticky bottom-16 flex flex-col gap-2 bg-gradient-to-t from-fundo from-70% pt-4 pb-3">
-        <Button type="submit" tamanho="grande" disabled={faltando > 0 || registrar.isPending}>
+        <Button
+          type="submit"
+          tamanho="grande"
+          disabled={faltando > 0 || !temFotoGeral || semEtiqueta.length > 0 || fotos.enviando || registrar.isPending}
+        >
           {registrar.isPending
             ? 'Registrando'
             : faltando > 0
               ? `Confirmar retirada · ${faltando === 1 ? 'falta 1 item' : `faltam ${faltando} itens`}`
-              : 'Confirmar retirada'}
+              : fotos.enviando
+                ? 'Enviando fotos'
+                : !temFotoGeral
+                  ? 'Confirmar retirada · falta a foto'
+                  : semEtiqueta.length > 0
+                    ? 'Confirmar retirada · falta foto da etiqueta'
+                    : 'Confirmar retirada'}
         </Button>
         <Button asChild variante="fantasma" tamanho="compacto">
           <Link to={`/tecnico/ordens/${ordem.id}/visita`}>Visita sem sucesso</Link>
@@ -138,6 +216,14 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
   )
 }
 
+/** Série digitada contra a cadastrada. Fonte não tem série. */
+function situacaoDaSerie(e: Equipamento, serie: string): 'sem_serie' | 'vazia' | 'confere' | 'diferente' {
+  if (e.numeroSerie === null) return 'sem_serie'
+  const lida = normalizarSerie(serie)
+  if (lida.length === 0) return 'vazia'
+  return lida === normalizarSerie(e.numeroSerie) ? 'confere' : 'diferente'
+}
+
 function ItemDaRetirada({
   posicao,
   equipamento: e,
@@ -145,6 +231,7 @@ function ItemDaRetirada({
   recolhido,
   aoMudarSerie,
   aoMarcar,
+  children,
 }: {
   posicao: number
   equipamento: Equipamento
@@ -152,10 +239,11 @@ function ItemDaRetirada({
   recolhido: boolean
   aoMudarSerie: (v: string) => void
   aoMarcar: (v: boolean) => void
+  children?: ReactNode
 }) {
   const idCampo = useId()
   const lida = normalizarSerie(serie)
-  const confere = e.numeroSerie !== null && lida.length > 0 && lida === normalizarSerie(e.numeroSerie)
+  const confere = situacaoDaSerie(e, serie) === 'confere'
 
   return (
     <Card className="gap-3">
@@ -196,6 +284,7 @@ function ItemDaRetirada({
           Recolhida
         </label>
       )}
+      {children}
     </Card>
   )
 }

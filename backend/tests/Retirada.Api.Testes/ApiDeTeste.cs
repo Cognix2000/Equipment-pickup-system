@@ -31,6 +31,26 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public static string? Conexao => Environment.GetEnvironmentVariable("RETIRADA_TESTE_BANCO");
     public const string Senha = "senha de teste bem comprida";
+    public static readonly string PastaDasFotos = Path.Combine(Path.GetTempPath(), $"retirada-fotos-testes-{Guid.NewGuid():N}");
+
+    /// <summary>RN14: envia uma foto como o app faz (multipart, campo "foto") e devolve a resposta.</summary>
+    public static Task<HttpResponseMessage> EnviarFotoAsync(HttpClient cliente, Guid ordem, byte[]? conteudo = null)
+    {
+        var formulario = new MultipartFormDataContent();
+        var arquivo = new ByteArrayContent(conteudo ?? JpegDeTeste.Montar());
+        arquivo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+        formulario.Add(arquivo, "foto", "foto.jpg");
+        return cliente.PostAsync($"/api/ordens/{ordem}/fotos", formulario);
+    }
+
+    /// <summary>Envia uma foto e devolve o id que vai na retirada.</summary>
+    public static async Task<Guid> FotoEnviadaAsync(HttpClient cliente, Guid ordem)
+    {
+        var resposta = await EnviarFotoAsync(cliente, ordem);
+        var corpo = await resposta.Content.ReadAsStringAsync();
+        resposta.StatusCode.ShouldBe(HttpStatusCode.OK, corpo);
+        return JsonDocument.Parse(corpo).RootElement.GetProperty("id").GetGuid();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -40,7 +60,8 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Acesso:RequisicoesPorMinuto", "10000");
         builder.UseSetting("Acesso:RequisicoesAnonimasPorMinuto", "10000");
         builder.UseSetting("Importacao:ModoSimulacao", "true"); // telefones fictícios com DDD 00
-        builder.UseSetting("Ordens:Rotinas:Ativas", "false");  // os testes rodam as rotinas na mão, com o relógio que quiserem
+        builder.UseSetting("Ordens:Rotinas:Ativas", "false");
+        builder.UseSetting("Fotos:Pasta", PastaDasFotos); // RN14: fotos numa pasta temporária, como no desenvolvimento  // os testes rodam as rotinas na mão, com o relógio que quiserem
         builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
     }
 
