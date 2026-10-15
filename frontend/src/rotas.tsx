@@ -3,6 +3,7 @@ import { Vazio } from '@/components/EstadoDaTela'
 import { Inicio, RotaProtegida } from '@/features/acesso/RotaProtegida'
 import { Entrar } from '@/paginas/acesso/Entrar'
 import { PrimeiroAcesso } from '@/paginas/acesso/PrimeiroAcesso'
+import { DetalheDaOrdem } from '@/paginas/painel/DetalheDaOrdem'
 import { Importar } from '@/paginas/painel/Importar'
 import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
 import { OrdensFinanceiro } from '@/paginas/painel/OrdensFinanceiro'
@@ -45,6 +46,7 @@ export const rotas = createBrowserRouter([
     ),
     children: [
       { path: 'ordens', element: <OrdensFinanceiro /> },
+      { path: 'ordens/:id', element: <DetalheDaOrdem /> },
       { path: 'importar', element: <Importar /> },
     ],
   },

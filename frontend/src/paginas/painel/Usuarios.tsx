@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -8,14 +8,10 @@ import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Badge, type TomDoSelo } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
-import { linkDeConvite, rotuloDoPapel, usuarioNaLista, type LinkDeConvite, type UsuarioNaLista } from '@/features/acesso/acesso'
-import { buscarJson, enviar, ErroDaApi } from '@/lib/api'
-import { AvisoDeErro, Campo, classeDoInput } from '@/paginas/acesso/LayoutDeAcesso'
-
-const usuariosQuery = queryOptions({
-  queryKey: ['usuarios'],
-  queryFn: ({ signal }) => buscarJson('/api/usuarios', z.array(usuarioNaLista), signal),
-})
+import { linkDeConvite, rotuloDoPapel, usuarioNaLista, usuariosQuery, type LinkDeConvite, type UsuarioNaLista } from '@/features/acesso/acesso'
+import { enviar, ErroDaApi } from '@/lib/api'
+import { classeDoInput } from '@/components/ui/input'
+import { AvisoDeErro, Campo } from '@/paginas/acesso/LayoutDeAcesso'
 
 const formulario = z.object({
   nome: z.string().trim().min(2, 'Digite o nome.'),

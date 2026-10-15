@@ -53,9 +53,6 @@ export function Campo({
   )
 }
 
-export const classeDoInput =
-  'min-h-12 w-full rounded-[10px] border border-borda-forte bg-superficie px-3 text-base text-texto placeholder:text-texto-suave/70 aria-[invalid=true]:border-erro'
-
 export function AvisoDeErro({ mensagem }: { mensagem?: string }) {
   if (!mensagem) return null
   return (
