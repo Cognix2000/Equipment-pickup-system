@@ -113,7 +113,7 @@ test('login de técnico vai direto para as ordens', async ({ page }) => {
 
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('tecnico.demo@exemplo.invalid')
-  await page.getByLabel('Senha').fill('Demo@Retirada2026')
+  await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   await expect(page.getByRole('heading', { name: 'Minhas ordens' })).toBeVisible()
@@ -125,7 +125,7 @@ test('login de financeiro pede o código do aplicativo', async ({ page }) => {
 
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('financeiro.demo@exemplo.invalid')
-  await page.getByLabel('Senha').fill('Demo@Retirada2026')
+  await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   await expect(page.getByRole('heading', { name: 'Código de verificação' })).toBeVisible()
@@ -139,10 +139,25 @@ test('senha errada mostra o aviso da API', async ({ page }) => {
 
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('alguem@exemplo.invalid')
-  await page.getByLabel('Senha').fill('errada')
+  await page.getByLabel('Senha', { exact: true }).fill('errada')
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   await expect(page.getByRole('alert')).toHaveText('E-mail ou senha incorretos.')
+})
+
+test('olho mostra e oculta a senha', async ({ page }) => {
+  await simularApi(page, null)
+  await page.goto('/entrar')
+  const senha = page.getByLabel('Senha', { exact: true })
+  await senha.fill('Demo@Retirada2026')
+  await expect(senha).toHaveAttribute('type', 'password')
+
+  await page.getByRole('button', { name: 'Mostrar senha' }).click()
+  await expect(senha).toHaveAttribute('type', 'text')
+  await expect(senha).toHaveValue('Demo@Retirada2026')
+
+  await page.getByRole('button', { name: 'Ocultar senha' }).click()
+  await expect(senha).toHaveAttribute('type', 'password')
 })
 
 test('ordem sugerida abre o detalhe', async ({ page }) => {
