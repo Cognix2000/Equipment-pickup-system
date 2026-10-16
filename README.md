@@ -14,7 +14,7 @@ Tudo roda com dados fictícios: nenhum dado real de cliente entra aqui.
 ### Tudo no Docker (homologação)
 
 ```bash
-cp .env.example .env          # em homologação, troque as senhas
+cp .env.example .env          # e troque cada "troque-…" por um valor seu
 docker compose up --build
 ```
 
@@ -114,6 +114,9 @@ cp .env.example .env
 docker compose up -d banco migrador                      # banco + migrações + dados fictícios
 
 cd backend/src/Retirada.Api
+set -a && . ../../../.env && set +a                      # senhas do .env (o appsettings não guarda senha)
+export ConnectionStrings__Retirada="Host=localhost;Database=retirada;Username=retirada_api;Password=$BANCO_SENHA_API;GSS Encryption Mode=Disable"
+export ConnectionStrings__Migracao="Host=localhost;Database=retirada;Username=retirada_dono;Password=$BANCO_SENHA_DONO;GSS Encryption Mode=Disable"
 ASPNETCORE_ENVIRONMENT=Development dotnet run --urls http://localhost:5080
 
 cd frontend
