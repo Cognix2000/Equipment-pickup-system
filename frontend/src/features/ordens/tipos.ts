@@ -93,6 +93,16 @@ export type Equipamento = z.infer<typeof equipamento>
 
 export const listaDeOrdens = z.array(ordem)
 
+/** "ONU Huawei EG8010H", mas "Fonte 12V" (sem repetir o tipo quando o modelo já diz). */
+export function nomeDoItem(e: Equipamento) {
+  const tipo = rotuloDoTipo[e.tipo]
+  return e.modelo.toLowerCase().startsWith(tipo.toLowerCase()) ? e.modelo : `${tipo} ${e.modelo}`
+}
+
+/** O que ainda está com o cliente: nem retirado, nem devolvido na loja (RF15). É o que o técnico recolhe. */
+export const comOCliente = (o: Ordem) => o.equipamentos.filter((e) => e.situacao === 'pendente')
+export const devolvidosNaLoja = (o: Ordem) => o.equipamentos.filter((e) => e.situacao === 'devolvido_na_loja')
+
 export const rotuloDoStatus: Record<StatusOrdem, { texto: string; tom: TomDoSelo }> = {
   nova: { texto: 'Em carência', tom: 'neutro' },
   disponivel: { texto: 'Disponível', tom: 'info' },

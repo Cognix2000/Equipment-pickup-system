@@ -10,7 +10,7 @@ import { useOrdem } from '@/features/ordens/consultas'
 import { descreverPrazo } from '@/features/ordens/prazo'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
 import { RegistroDeContato } from '@/features/ordens/RegistroDeContato'
-import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Ordem } from '@/features/ordens/tipos'
+import { caixaDeTitulo, comOCliente, devolvidosNaLoja, nomeDoItem, enderecoCurto, rotuloDoTipo, type Ordem } from '@/features/ordens/tipos'
 
 export function DetalheOrdem() {
   const { id = '' } = useParams()
@@ -94,10 +94,10 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
 
       <Card>
         <CardTitle className="text-base sm:text-base">
-          Recolher {ordem.equipamentos.length} {ordem.equipamentos.length === 1 ? 'item' : 'itens'}
+          Recolher {comOCliente(ordem).length} {comOCliente(ordem).length === 1 ? 'item' : 'itens'}
         </CardTitle>
         <ul className="flex flex-col divide-y divide-borda">
-          {ordem.equipamentos.map((e) => (
+          {comOCliente(ordem).map((e) => (
             <li key={e.id} className="py-2 first:pt-0 last:pb-0">
               <p className="font-semibold">
                 {rotuloDoTipo[e.tipo]} · {e.modelo}
@@ -106,6 +106,11 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
             </li>
           ))}
         </ul>
+        {devolvidosNaLoja(ordem).length > 0 && (
+          <p className="text-[13px] text-texto-suave">
+            Já devolvido na loja: {devolvidosNaLoja(ordem).map(nomeDoItem).join(', ')}.
+          </p>
+        )}
       </Card>
 
       <Historico eventos={ordem.historico} />

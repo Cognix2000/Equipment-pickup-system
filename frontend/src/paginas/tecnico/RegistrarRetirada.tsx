@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import { comandos, normalizarSerie, novaChave } from '@/features/ordens/comandos'
 import { ordemQuery } from '@/features/ordens/consultas'
 import { GpsIndisponivel, obterGps } from '@/features/ordens/gps'
-import { enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
+import { comOCliente, devolvidosNaLoja, nomeDoItem, enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
 import { LIMITE_DE_FOTOS, useFotosDaRetirada } from '@/features/ordens/useFotosDaRetirada'
 import { ErroDaApi } from '@/lib/api'
 import { CabecalhoDaAcao } from './CabecalhoDaAcao'
@@ -57,13 +57,16 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
   const [recolhidos, setRecolhidos] = useState<Record<string, boolean>>({})
 
   const fotos = useFotosDaRetirada(ordem.id)
+  // RF15: o que o cliente já devolveu na loja não entra na retirada.
+  const itens = comOCliente(ordem)
+  const devolvidos = devolvidosNaLoja(ordem)
 
   const temSerie = (e: Equipamento) => e.numeroSerie !== null
   const resolvido = (e: Equipamento) => (temSerie(e) ? (series[e.id] ?? '').trim().length > 0 : recolhidos[e.id] === true)
-  const faltando = ordem.equipamentos.filter((e) => !resolvido(e)).length
+  const faltando = itens.filter((e) => !resolvido(e)).length
   // RN14: a retirada leva foto dos equipamentos; o item com série diferente leva foto da etiqueta.
   const temFotoGeral = fotos.paraEnviar.some((f) => f.tipo === 'equipamento')
-  const semEtiqueta = ordem.equipamentos.filter(
+  const semEtiqueta = itens.filter(
     (e) => situacaoDaSerie(e, series[e.id] ?? '') === 'diferente' && !fotos.paraEnviar.some((f) => f.tipo === 'etiqueta_serie' && f.equipamentoId === e.id),
   )
   const cabeMaisFoto = fotos.fotos.length < LIMITE_DE_FOTOS
@@ -71,8 +74,8 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
   const registrar = useMutation({
     mutationFn: async () => {
       const gps = await obterGps()
-      const itens = ordem.equipamentos.map((e) => ({ equipamentoId: e.id, numeroSerie: temSerie(e) ? (series[e.id] ?? null) : null }))
-      return comandos.registrarRetirada(ordem.id, itens, gps, fotos.paraEnviar, chave)
+      const lidos = itens.map((e) => ({ equipamentoId: e.id, numeroSerie: temSerie(e) ? (series[e.id] ?? null) : null }))
+      return comandos.registrarRetirada(ordem.id, lidos, gps, fotos.paraEnviar, chave)
     },
     onSuccess: async () => {
       await clienteDeConsultas.invalidateQueries({ queryKey: ['ordens'] })
@@ -109,7 +112,13 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
         </p>
       )}
 
-      {ordem.equipamentos.map((e, i) => {
+      {devolvidos.length > 0 && (
+        <p className="rounded-[10px] bg-info-fundo px-3.5 py-2.5 text-sm text-marinho">
+          Já devolvido na loja, não recolha: {devolvidos.map(nomeDoItem).join(', ')}.
+        </p>
+      )}
+
+      {itens.map((e, i) => {
         const etiqueta = fotos.fotos.find((f) => f.tipo === 'etiqueta_serie' && f.equipamentoId === e.id)
         return (
           <ItemDaRetirada

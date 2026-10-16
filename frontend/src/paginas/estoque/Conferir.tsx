@@ -8,14 +8,20 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { comandos, normalizarSerie, novaChave } from '@/features/ordens/comandos'
 import { ordensQuery, useOrdens } from '@/features/ordens/consultas'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
-import { caixaDeTitulo, enderecoCurto, resumoDosItens, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
+import { caixaDeTitulo, comOCliente, enderecoCurto, resumoDosItens, rotuloDoTipo, type Equipamento, type Ordem } from '@/features/ordens/tipos'
 import { ErroDaApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const mensagem = (erro: unknown) => (erro instanceof ErroDaApi ? erro.message : 'Sem resposta do servidor. Confira a conexão e tente de novo.')
 
-/** Devolução na loja vale até depois de encerrada sem retirada (RN13); não vale para ordem já fechada. */
-const aceitaDevolucao = (o: Ordem) => !['conferida', 'cancelada', 'devolvida_na_loja'].includes(o.status)
+/**
+ * Devolução na loja vale até depois de encerrada sem retirada (RN13); não vale para ordem já fechada,
+ * nem quando nada está mais com o cliente.
+ */
+const aceitaDevolucao = (o: Ordem) => !['conferida', 'cancelada', 'devolvida_na_loja'].includes(o.status) && comOCliente(o).length > 0
+
+/** RF15: o que o cliente devolveu na loja não passa pela conferência da retirada. */
+const daRetirada = (o: Ordem) => o.equipamentos.filter((e) => e.situacao !== 'devolvido_na_loja')
 
 /**
  * UC06 e RF14: o estoque acha a ordem pelo protocolo, nº da OS ou série, lê a série de cada item
@@ -135,8 +141,10 @@ function PainelDaOrdem({ ordem }: { ordem: Ordem }) {
   const [chaveDaConferencia] = useState(novaChave)
   const [chaveDaDevolucao] = useState(novaChave)
   const [confirmandoDevolucao, setConfirmandoDevolucao] = useState(false)
+  const [devolvidos, setDevolvidos] = useState<string[]>(() => comOCliente(ordem).map((e) => e.id))
 
-  const patrimoniais = ordem.equipamentos.filter((e) => e.numeroSerie !== null)
+  const itensDaRetirada = daRetirada(ordem)
+  const patrimoniais = itensDaRetirada.filter((e) => e.numeroSerie !== null)
   const leitura = (e: Equipamento): Leitura => leituras[e.id] ?? { serie: '', naoVeio: false }
   const lida = (e: Equipamento) => normalizarSerie(leitura(e).serie)
   const confere = (e: Equipamento) => !leitura(e).naoVeio && lida(e) === normalizarSerie(e.numeroSerie ?? '')
@@ -148,12 +156,13 @@ function PainelDaOrdem({ ordem }: { ordem: Ordem }) {
     mutationFn: () =>
       comandos.conferir(
         ordem.id,
-        ordem.equipamentos.map((e) => ({ equipamentoId: e.id, numeroSerie: e.numeroSerie === null || leitura(e).naoVeio ? null : leitura(e).serie })),
+        itensDaRetirada.map((e) => ({ equipamentoId: e.id, numeroSerie: e.numeroSerie === null || leitura(e).naoVeio ? null : leitura(e).serie })),
         chaveDaConferencia,
       ),
     onSuccess: atualizar,
   })
-  const devolver = useMutation({ mutationFn: () => comandos.registrarDevolucaoNaLoja(ordem.id, chaveDaDevolucao), onSuccess: atualizar })
+  const devolver = useMutation({ mutationFn: () => comandos.registrarDevolucaoNaLoja(ordem.id, devolvidos, chaveDaDevolucao), onSuccess: atualizar })
+  const todosDevolvidos = devolvidos.length === comOCliente(ordem).length
 
   const conferida = conferir.data
   const devolvida = devolver.data
@@ -185,7 +194,18 @@ function PainelDaOrdem({ ordem }: { ordem: Ordem }) {
           {conferida.equipamentos.filter((e) => e.situacao === 'divergente').length === 1 ? 'ficou pendente.' : 'ficaram pendentes.'}
         </Resultado>
       )}
-      {devolvida && <Resultado tom="sucesso">Devolução na loja registrada. A ordem foi encerrada e saiu da lista de cobrança.</Resultado>}
+      {devolvida?.status === 'devolvida_na_loja' && (
+        <Resultado tom="sucesso">Devolução na loja registrada. A ordem foi encerrada e saiu da lista de cobrança.</Resultado>
+      )}
+      {devolvida && devolvida.status !== 'devolvida_na_loja' && (
+        <Resultado tom="sucesso">
+          Devolução de parte dos itens registrada. A ordem continua aberta com o que falta recolher: {resumoDosItens({
+            ...devolvida,
+            equipamentos: comOCliente(devolvida),
+          })}
+          .
+        </Resultado>
+      )}
 
       {!conferida && !devolvida && ordem.status === 'concluida' && (
         <form
@@ -196,7 +216,7 @@ function PainelDaOrdem({ ordem }: { ordem: Ordem }) {
             conferir.mutate()
           }}
         >
-          {ordem.equipamentos.map((e, i) => (
+          {itensDaRetirada.map((e, i) => (
             <ItemDaConferencia
               key={e.id}
               posicao={i + 1}
@@ -238,21 +258,49 @@ function PainelDaOrdem({ ordem }: { ordem: Ordem }) {
           <p className="flex items-center gap-2 font-semibold text-marinho">
             <Store aria-hidden className="size-5" /> Devolução na loja
           </p>
-          <p className="text-sm text-texto-suave">O cliente levou o aparelho na loja? Registre para encerrar a ordem e tirá-la da cobrança.</p>
+          <p className="text-sm text-texto-suave">
+            O cliente levou os equipamentos na loja? Marque o que ele devolveu. Com tudo devolvido, a ordem encerra e sai da cobrança; com parte, segue
+            aberta com o que falta.
+          </p>
           {devolver.isError && (
             <p role="alert" className="rounded-[10px] bg-erro-fundo px-3.5 py-2.5 text-sm text-erro">
               {mensagem(devolver.error)}
             </p>
           )}
           {confirmandoDevolucao ? (
-            <div className="flex flex-wrap gap-2">
-              <Button variante="perigo" tamanho="compacto" disabled={devolver.isPending} onClick={() => devolver.mutate()}>
-                {devolver.isPending ? 'Registrando' : 'Confirmar devolução'}
-              </Button>
-              <Button variante="neutro" tamanho="compacto" onClick={() => setConfirmandoDevolucao(false)}>
-                Cancelar
-              </Button>
-            </div>
+            <>
+              <fieldset className="flex flex-col gap-1">
+                <legend className="mb-1 text-sm font-medium">O que o cliente devolveu</legend>
+                {comOCliente(ordem).map((e) => (
+                  <label key={e.id} className="flex min-h-11 items-center gap-3 text-[15px]">
+                    <input
+                      type="checkbox"
+                      checked={devolvidos.includes(e.id)}
+                      onChange={(ev) => setDevolvidos((atual) => (ev.target.checked ? [...atual, e.id] : atual.filter((id) => id !== e.id)))}
+                      className="size-6 accent-azul"
+                    />
+                    <span>
+                      {rotuloDoTipo[e.tipo]} · {e.modelo}
+                      {e.numeroSerie && <span className="text-texto-suave"> · SN {e.numeroSerie}</span>}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="flex flex-wrap gap-2">
+                <Button variante="perigo" tamanho="compacto" disabled={devolvidos.length === 0 || devolver.isPending} onClick={() => devolver.mutate()}>
+                  {devolver.isPending
+                    ? 'Registrando'
+                    : devolvidos.length === 0
+                      ? 'Marque o que foi devolvido'
+                      : todosDevolvidos
+                        ? 'Confirmar e encerrar a ordem'
+                        : `Confirmar devolução de ${devolvidos.length} ${devolvidos.length === 1 ? 'item' : 'itens'}`}
+                </Button>
+                <Button variante="neutro" tamanho="compacto" onClick={() => setConfirmandoDevolucao(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </>
           ) : (
             <Button variante="neutro" tamanho="compacto" className="self-start" onClick={() => setConfirmandoDevolucao(true)}>
               Registrar devolução
