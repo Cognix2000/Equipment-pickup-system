@@ -49,7 +49,7 @@ async function entrar(browser: Browser, email: string, opcoes: Parameters<Browse
   const page = await contexto.newPage()
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill(email)
-  await page.getByLabel('Senha').fill(SENHA)
+  await page.getByLabel('Senha', { exact: true }).fill(SENHA)
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   const configurar = page.getByRole('heading', { name: 'Proteja sua conta' })

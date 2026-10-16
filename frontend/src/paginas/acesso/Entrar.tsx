@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { acesso, euQuery, inicioDo, useEu, type Papel } from '@/features/acesso/acesso'
 import { ErroDaApi } from '@/lib/api'
+import { CampoDeSenha } from '@/components/ui/campo-de-senha'
 import { classeDoInput } from '@/components/ui/input'
 import { AvisoDeErro, Campo, LayoutDeAcesso } from './LayoutDeAcesso'
 
@@ -83,11 +84,9 @@ function PassoSenha({ aoAvancar, aoConcluir }: { aoAvancar: (e: Etapa) => void; 
           />
         </Campo>
         <Campo id="senha" rotulo="Senha" erro={errors.senha?.message}>
-          <input
+          <CampoDeSenha
             id="senha"
-            type="password"
             autoComplete="current-password"
-            className={classeDoInput}
             aria-invalid={errors.senha ? true : undefined}
             aria-describedby={errors.senha ? 'senha-erro' : undefined}
             {...register('senha')}
