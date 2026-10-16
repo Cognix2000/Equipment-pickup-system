@@ -132,7 +132,7 @@ function FormularioDaRetirada({ ordem, conferidaAs }: { ordem: Ordem; conferidaA
           >
             {situacaoDaSerie(e, series[e.id] ?? '') === 'diferente' && (
               <div className="flex flex-col gap-2 rounded-[10px] bg-fundo p-3">
-                <p className="text-sm">Fotografe a etiqueta: é a prova da série que você encontrou.</p>
+                <p className="text-sm">Fotografe a etiqueta: é a prova do SN que você encontrou.</p>
                 {etiqueta && (
                   <ul className="grid w-40">
                     <MiniaturaDaFoto
@@ -262,8 +262,11 @@ function ItemDaRetirada({
       {e.numeroSerie !== null ? (
         <div className="flex flex-col gap-1.5">
           <label htmlFor={idCampo} className="text-sm font-medium">
-            Série da etiqueta <span className="font-normal text-texto-suave">(esperada: {e.numeroSerie})</span>
+            SN da etiqueta <span className="font-normal text-texto-suave">(esperado: {e.numeroSerie})</span>
           </label>
+          <p id={`${idCampo}-dica`} className="text-[13px] text-texto-suave">
+            O código depois de &quot;SN&quot;. Não use o MAC.
+          </p>
           <input
             id={idCampo}
             value={serie}
@@ -272,16 +275,16 @@ function ItemDaRetirada({
             autoComplete="off"
             spellCheck={false}
             className="min-h-12 w-full rounded-[10px] border border-borda-forte bg-superficie px-3 font-titulo text-base tracking-wide uppercase"
-            aria-describedby={lida ? `${idCampo}-situacao` : undefined}
+            aria-describedby={lida ? `${idCampo}-dica ${idCampo}-situacao` : `${idCampo}-dica`}
           />
           {lida.length > 0 && (
             <p id={`${idCampo}-situacao`} className={confere ? 'text-sm font-medium text-sucesso' : 'flex gap-1.5 text-sm font-medium text-alerta'}>
               {confere ? (
-                'Série confere'
+                'SN confere'
               ) : (
                 <>
                   <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-                  Série diferente da cadastrada: vai registrada como divergência para o estoque.
+                  SN diferente do cadastrado: vai registrado como divergência para o estoque.
                 </>
               )}
             </p>

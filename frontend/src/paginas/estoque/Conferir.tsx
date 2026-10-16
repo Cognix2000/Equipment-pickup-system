@@ -44,7 +44,7 @@ export function Conferir() {
     <>
       <div>
         <h1 className="text-[28px] font-bold text-marinho">Conferir no estoque</h1>
-        <p className="mt-1 text-[15px] text-texto-suave">Galpão do estoque, junto ao data center. Leia a série de cada item que chegou.</p>
+        <p className="mt-1 text-[15px] text-texto-suave">Galpão do estoque, junto ao data center. Leia o SN de cada item que chegou.</p>
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -61,7 +61,7 @@ export function Conferir() {
             >
               <div className="flex min-w-0 grow flex-col gap-1.5">
                 <label htmlFor={idBusca} className="text-sm font-medium">
-                  Protocolo, número da OS ou série de um item
+                  Protocolo, número da OS ou SN de um item
                 </label>
                 <input
                   id={idBusca}
@@ -335,7 +335,7 @@ function ItemDaConferencia({
           {posicao} · {rotuloDoTipo[e.tipo]} · {e.modelo}
         </p>
         {e.numeroSerie === null ? (
-          <Badge tom="neutro">Sem série</Badge>
+          <Badge tom="neutro">Sem SN</Badge>
         ) : leitura.naoVeio ? (
           <Badge tom="alerta">Fica pendente com o técnico</Badge>
         ) : preenchida ? (
@@ -344,11 +344,11 @@ function ItemDaConferencia({
       </div>
 
       {e.numeroSerie === null ? (
-        <p className="text-sm text-texto-suave">Acessório sem série: confira junto com o kit.</p>
+        <p className="text-sm text-texto-suave">Acessório sem SN: confira junto com o kit.</p>
       ) : (
         <>
           <label htmlFor={idCampo} className="text-sm font-medium">
-            Série lida <span className="font-normal text-texto-suave">(esperada: {e.numeroSerie})</span>
+            SN lido <span className="font-normal text-texto-suave">(esperado: {e.numeroSerie})</span>
           </label>
           <input
             id={idCampo}
@@ -362,7 +362,7 @@ function ItemDaConferencia({
           {preenchida && !confere && !leitura.naoVeio && (
             <p className="flex gap-1.5 text-sm text-erro">
               <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-              Essa série não é da ordem. Leia de novo; se confirmar, a divergência é registrada e a ordem não fecha.
+              Esse SN não é da ordem. Leia de novo; se confirmar, a divergência é registrada e a ordem não fecha.
             </p>
           )}
           <label className="flex min-h-11 items-center gap-3 text-sm">

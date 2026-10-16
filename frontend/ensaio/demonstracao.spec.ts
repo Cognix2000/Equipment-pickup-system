@@ -132,11 +132,11 @@ test('4. técnico registra a retirada com série, foto e GPS', async ({ browser 
   await capturar(page, '05-tecnico-detalhe-da-ordem')
   await page.getByRole('link', { name: 'Iniciar retirada' }).click()
 
-  // Digita a série que está na etiqueta (a esperada aparece na tela).
-  await expect(page.getByLabel(/Série da etiqueta/).first()).toBeVisible()
-  for (const campo of await page.getByLabel(/Série da etiqueta/).all()) {
+  // Digita o SN que está na etiqueta (o esperado aparece na tela).
+  await expect(page.getByLabel(/SN da etiqueta/).first()).toBeVisible()
+  for (const campo of await page.getByLabel(/SN da etiqueta/).all()) {
     const rotulo = await page.locator(`label[for="${await campo.getAttribute('id')}"]`).innerText()
-    await campo.fill(/esperada: ([^)]+)\)/.exec(rotulo)![1])
+    await campo.fill(/esperado: ([^)]+)\)/.exec(rotulo)![1])
   }
   for (const recolhida of await page.getByLabel('Recolhida').all()) await recolhida.check()
   await page.getByLabel('Tirar foto dos equipamentos').setInputFiles(FOTO)
@@ -148,12 +148,12 @@ test('4. técnico registra a retirada com série, foto e GPS', async ({ browser 
 
 test('5. estoque confere e fecha a ordem', async ({ browser }) => {
   const page = await entrar(browser, 'estoque.demo@exemplo.invalid')
-  await page.getByLabel('Protocolo, número da OS ou série de um item').fill(numeroDaOs)
+  await page.getByLabel('Protocolo, número da OS ou SN de um item').fill(numeroDaOs)
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await expect(page.getByLabel(/Série lida/).first()).toBeVisible() // espera a ordem abrir
-  for (const campo of await page.getByLabel(/Série lida/).all()) {
+  await expect(page.getByLabel(/SN lido/).first()).toBeVisible() // espera a ordem abrir
+  for (const campo of await page.getByLabel(/SN lido/).all()) {
     const rotulo = await page.locator(`label[for="${await campo.getAttribute('id')}"]`).innerText()
-    await campo.fill(/esperada: ([^)]+)\)/.exec(rotulo)![1])
+    await campo.fill(/esperado: ([^)]+)\)/.exec(rotulo)![1])
   }
   await capturar(page, '07-estoque-lendo-as-series')
   await page.getByRole('button', { name: 'Fechar como Conferida' }).click()

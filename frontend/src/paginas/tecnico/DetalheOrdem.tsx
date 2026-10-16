@@ -102,7 +102,7 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
               <p className="font-semibold">
                 {rotuloDoTipo[e.tipo]} · {e.modelo}
               </p>
-              <p className="text-[13px] text-texto-suave">{e.numeroSerie ? `SN ${e.numeroSerie}` : 'Sem série'}</p>
+              <p className="text-[13px] text-texto-suave">{e.numeroSerie ? `SN ${e.numeroSerie}` : 'Sem SN'}</p>
             </li>
           ))}
         </ul>

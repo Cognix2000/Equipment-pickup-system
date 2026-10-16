@@ -47,8 +47,16 @@ export const comandos = {
   marcarBaixa: (id: string, chave: string) => comando(id, 'baixa-hubsoft', {}, chave),
 }
 
-/** Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. */
-export const normalizarSerie = (texto: string) => texto.replace(/\s+/g, '').toUpperCase()
+/**
+ * Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. O SN GPON digitado em hexadecimal
+ * ("485754437C8D9E0F") vira a forma com as letras do fabricante ("HWTC7C8D9E0F"): as duas estão na etiqueta.
+ */
+export function normalizarSerie(texto: string) {
+  const limpo = texto.replace(/\s+/g, '').toUpperCase()
+  if (!/^[0-9A-F]{16}$/.test(limpo)) return limpo
+  const fabricante = [0, 2, 4, 6].map((i) => parseInt(limpo.slice(i, i + 2), 16))
+  return fabricante.every((b) => b >= 65 && b <= 90) ? String.fromCharCode(...fabricante) + limpo.slice(8) : limpo
+}
 
 /** Chave nova por ação. Sem contexto seguro (HTTP numa rede local), crypto.randomUUID não existe. */
 export function novaChave() {

@@ -2,7 +2,7 @@ using Retirada.Comum;
 
 namespace Retirada.Ordens.Dominio;
 
-/// <summary>Nº de série da etiqueta, normalizado para comparar sem erro de digitação de espaço ou caixa.</summary>
+/// <summary>Nº de série (SN) da etiqueta, normalizado para comparar sem erro de digitação de espaço ou caixa.</summary>
 public sealed record NumeroSerie
 {
     public string Valor { get; }
@@ -14,7 +14,21 @@ public sealed record NumeroSerie
         var limpo = string.Concat((texto ?? string.Empty).Where(c => !char.IsWhiteSpace(c))).ToUpperInvariant();
         if (limpo.Length is 0 or > 64)
             throw new RegraDeNegocioException("SERIE", "Número de série vazio ou com mais de 64 caracteres.");
-        return new NumeroSerie(limpo);
+        return new NumeroSerie(SnGponLegivel(limpo));
+    }
+
+    /// <summary>
+    /// A etiqueta da ONU/ONT GPON traz o mesmo SN de duas formas: "HWTC7C8D9E0F" e "485754437C8D9E0F", com as
+    /// 4 letras do fabricante em hexadecimal. Guarda sempre a primeira, para o técnico poder digitar qualquer uma.
+    /// Os mesmos passos estão em normalizarSerie, no frontend.
+    /// </summary>
+    private static string SnGponLegivel(string limpo)
+    {
+        if (limpo.Length != 16 || !limpo.All(char.IsAsciiHexDigit)) return limpo;
+        var fabricante = Convert.FromHexString(limpo[..8]);
+        return fabricante.All(b => b is >= (byte)'A' and <= (byte)'Z')
+            ? System.Text.Encoding.ASCII.GetString(fabricante) + limpo[8..]
+            : limpo;
     }
 
     public override string ToString() => Valor;
