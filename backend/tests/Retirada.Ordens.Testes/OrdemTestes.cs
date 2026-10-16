@@ -106,6 +106,26 @@ public class OrdemTestes
         NumeroSerie.Criar(" hwtc 1a2b3c4d ").ShouldBe(NumeroSerie.Criar("HWTC1A2B3C4D"));
     }
 
+    [Theory] // a etiqueta GPON traz o SN também com o fabricante em hexadecimal
+    [InlineData("485754437C8D9E0F", "HWTC7C8D9E0F")]
+    [InlineData(" 48575443 7c8d9e0f ", "HWTC7C8D9E0F")]
+    [InlineData("5A544547A1B2C3D4", "ZTEGA1B2C3D4")]
+    public void Sn_gpon_em_hexadecimal_e_o_mesmo_sn(string digitado, string naEtiqueta)
+    {
+        NumeroSerie.Criar(digitado).ShouldBe(NumeroSerie.Criar(naEtiqueta));
+        NumeroSerie.Criar(digitado).Valor.ShouldBe(naEtiqueta);
+    }
+
+    [Theory] // só converte quando os 4 primeiros bytes são letras de fabricante
+    [InlineData("0123456789ABCDEF")]
+    [InlineData("485754437C8D9E0")]    // 15 caracteres
+    [InlineData("485754437C8D9E0G")]   // não é hexadecimal
+    [InlineData("22361A2B3C4D5")]      // série de roteador
+    public void Outras_series_ficam_como_estao(string serie)
+    {
+        NumeroSerie.Criar(serie).Valor.ShouldBe(serie);
+    }
+
     [Fact]
     public void Conferencia_com_divergencia_nao_fecha_a_ordem() // RN08
     {

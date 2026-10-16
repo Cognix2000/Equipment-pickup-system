@@ -108,7 +108,7 @@ function ConteudoDaOrdem({ ordem, papel }: { ordem: Ordem; papel?: Papel }) {
                     <p className="font-semibold">
                       {rotuloDoTipo[e.tipo]} · {e.modelo}
                     </p>
-                    <p className="text-[13px] text-texto-suave">{e.numeroSerie ? `SN ${e.numeroSerie}` : 'Sem série'}</p>
+                    <p className="text-[13px] text-texto-suave">{e.numeroSerie ? `SN ${e.numeroSerie}` : 'Sem SN'}</p>
                   </div>
                   <Badge tom={situacaoDoItem[e.situacao].tom}>{situacaoDoItem[e.situacao].texto}</Badge>
                 </li>
