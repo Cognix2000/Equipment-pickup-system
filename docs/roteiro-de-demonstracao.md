@@ -7,7 +7,7 @@ Duração: uns 15 minutos. Este roteiro foi ensaiado de ponta a ponta contra a A
 ## 1. Preparar (na véspera)
 
 ```bash
-cp .env.example .env            # troque as senhas se a máquina for compartilhada
+cp .env.example .env            # e troque cada "troque-…" por um valor seu
 docker compose up --build       # primeira vez: alguns minutos
 ```
 

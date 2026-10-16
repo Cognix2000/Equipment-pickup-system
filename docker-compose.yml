@@ -1,5 +1,5 @@
 # Ambiente de homologação (e de desenvolvimento local), sempre com dados fictícios.
-#   cp .env.example .env   # e troque as senhas
+#   cp .env.example .env   # e troque cada "troque-…" por um valor seu
 #   docker compose up --build
 # App em http://localhost:8080 · API em http://localhost:8080/api/ordens
 name: retirada-netwise
