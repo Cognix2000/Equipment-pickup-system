@@ -80,7 +80,7 @@ services:
   web:
     build: ./frontend
     ports:
-      - "8080:80"
+      - "${WEB_PORTA:-8080}:80" # porta do app na máquina; troque no .env se a 8080 estiver ocupada
     depends_on:
       - api
 
