@@ -61,3 +61,18 @@
     }
   }
 }
+
+/* A rota da ilustração do acesso se desenha uma vez ao abrir a tela. Com movimento reduzido, já aparece pronta. */
+.ilustracao-rota {
+  stroke-dasharray: 1;
+  animation: ilustracao-desenhar 1.6s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s both;
+}
+
+@keyframes ilustracao-desenhar {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
