@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { acesso } from '@/features/acesso/acesso'
 import { ErroDaApi } from '@/lib/api'
-import { classeDoInput } from '@/components/ui/input'
+import { CampoDeSenha } from '@/components/ui/campo-de-senha'
 import { AvisoDeErro, Campo, LayoutDeAcesso } from './LayoutDeAcesso'
 
 const formulario = z
@@ -70,22 +70,18 @@ export function PrimeiroAcesso() {
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
         <AvisoDeErro mensagem={erro} />
         <Campo id="senha" rotulo="Nova senha" erro={errors.senha?.message} ajuda="Pelo menos 12 caracteres. Uma frase curta é fácil de lembrar e difícil de adivinhar.">
-          <input
+          <CampoDeSenha
             id="senha"
-            type="password"
             autoComplete="new-password"
-            className={classeDoInput}
             aria-invalid={errors.senha ? true : undefined}
             aria-describedby={errors.senha ? 'senha-erro' : 'senha-ajuda'}
             {...register('senha')}
           />
         </Campo>
         <Campo id="confirmacao" rotulo="Repita a senha" erro={errors.confirmacao?.message}>
-          <input
+          <CampoDeSenha
             id="confirmacao"
-            type="password"
             autoComplete="new-password"
-            className={classeDoInput}
             aria-invalid={errors.confirmacao ? true : undefined}
             aria-describedby={errors.confirmacao ? 'confirmacao-erro' : undefined}
             {...register('confirmacao')}
