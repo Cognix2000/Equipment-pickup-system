@@ -42,13 +42,13 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'primeiro-acesso', rota: '/primeiro-acesso#t=token-ficticio', pronto: 'Crie sua senha', papel: null },
   { nome: 'minhas-ordens', rota: '/tecnico/ordens', pronto: 'Ver ordem', papel: 'tecnico' },
   { nome: 'detalhe-da-ordem', rota: `/tecnico/ordens/${ordemMaria.id}`, pronto: 'Recolher 3 itens', papel: 'tecnico' },
-  { nome: 'registrar-retirada', rota: `/tecnico/ordens/${ordemMaria.id}/retirada`, pronto: 'Série da etiqueta', papel: 'tecnico' },
+  { nome: 'registrar-retirada', rota: `/tecnico/ordens/${ordemMaria.id}/retirada`, pronto: 'SN da etiqueta', papel: 'tecnico' },
   { nome: 'visita-sem-sucesso', rota: `/tecnico/ordens/${ordemMaria.id}/visita`, pronto: 'O que aconteceu?', papel: 'tecnico' },
   { nome: 'ordens-do-financeiro', rota: '/financeiro/ordens', pronto: 'MARIA EXEMPLO SILVA', papel: 'financeiro' },
   { nome: 'ordem-no-painel', rota: `/financeiro/ordens/${ordemMaria.id}`, pronto: 'O que fazer', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
-  { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou série de um item', papel: 'estoque' },
+  { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou SN de um item', papel: 'estoque' },
 ]
 
 for (const tela of telas) {
@@ -247,11 +247,13 @@ test('técnico registra a retirada com série, GPS e chave de idempotência', as
   await page.getByRole('link', { name: 'Iniciar retirada' }).click()
   await expect(page.getByRole('button', { name: 'Confirmar retirada · faltam 3 itens' })).toBeDisabled()
 
-  const series = page.getByLabel(/Série da etiqueta/)
+  const series = page.getByLabel(/SN da etiqueta/)
+  await series.nth(0).fill('48575443 1A2B3C4D') // o mesmo SN, na forma hexadecimal que também vem na etiqueta
+  await expect(page.getByText('SN confere')).toBeVisible()
   await series.nth(0).fill('hwtc 1a2b3c4d') // como o técnico digita: minúscula e espaço
-  await expect(page.getByText('Série confere')).toBeVisible()
+  await expect(page.getByText('SN confere')).toBeVisible()
   await series.nth(1).fill('OUTRASERIE')
-  await expect(page.getByText('vai registrada como divergência')).toBeVisible()
+  await expect(page.getByText('vai registrado como divergência')).toBeVisible()
   await page.getByLabel('Recolhida').check()
 
   // RN14: sem foto, não confirma; com série diferente, falta também a foto da etiqueta.
@@ -330,7 +332,7 @@ test('sem permissão de localização, a retirada não segue e explica por quê'
   await simularEnvioDeFotos(page)
 
   await page.goto(`/tecnico/ordens/${ordemMaria.id}/retirada`)
-  const series = page.getByLabel(/Série da etiqueta/)
+  const series = page.getByLabel(/SN da etiqueta/)
   await series.nth(0).fill('HWTC1A2B3C4D')
   await series.nth(1).fill('22361A2B3C4D5')
   await page.getByLabel('Recolhida').check()
@@ -531,11 +533,11 @@ test('estoque acha a ordem pela série, confere e registra a divergência (UC06)
   })
 
   await page.goto('/estoque/conferir')
-  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('HWTC1A2B3C4D')
+  await page.getByLabel('Protocolo, número da OS ou SN de um item').fill('HWTC1A2B3C4D')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await expect(page.getByRole('button', { name: 'Falta ler 2 itens' })).toBeDisabled()
 
-  const series = page.getByLabel(/Série lida/)
+  const series = page.getByLabel(/SN lido/)
   await series.nth(0).fill('hwtc1a2b3c4d')
   await expect(page.getByText('Confere', { exact: true })).toBeVisible()
   await page.getByLabel(/Não veio/).nth(1).check()
@@ -562,7 +564,7 @@ test('estoque registra devolução na loja com confirmação (RF15)', async ({ p
   const recebido = await simularComando(page, 'devolucao-na-loja', { ...ordemMaria, status: 'devolvida_na_loja' })
 
   await page.goto('/estoque/conferir')
-  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('5101')
+  await page.getByLabel('Protocolo, número da OS ou SN de um item').fill('5101')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await page.getByRole('button', { name: 'Registrar devolução' }).click()
   await page.getByRole('button', { name: 'Confirmar e encerrar a ordem' }).click() // tudo marcado: encerra
@@ -581,7 +583,7 @@ test('cliente devolve só a fonte na loja e a ordem segue com o resto (RF15)', a
   })
 
   await page.goto('/estoque/conferir')
-  await page.getByLabel('Protocolo, número da OS ou série de um item').fill('5101')
+  await page.getByLabel('Protocolo, número da OS ou SN de um item').fill('5101')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await page.getByRole('button', { name: 'Registrar devolução' }).click()
   const devolvidos = page.getByRole('group', { name: 'O que o cliente devolveu' })

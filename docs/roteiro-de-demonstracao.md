@@ -67,7 +67,7 @@ Entre como **gestor** (janela anônima) → **Ordens** → a mesma OS → **Desi
    - **Ligar**, que depois pergunta "Como foi a ligação?" (atendeu, não atendeu, caixa postal, número não existe);
    - o histórico.
 3. **Iniciar retirada**:
-   - **Série:** digite a da etiqueta, que aparece como "esperada". Ela confere mesmo com minúscula e espaço. Uma série diferente vira divergência e passa a **exigir a foto da etiqueta**.
+   - **SN:** digite o da etiqueta, que aparece como "esperado". Ele confere mesmo com minúscula e espaço, e também na forma hexadecimal que a etiqueta GPON traz (`48575443…` é o mesmo que `HWTC…`). Um SN diferente vira divergência e passa a **exigir a foto da etiqueta**.
    - **Fonte:** marque "Recolhida".
    - **Foto:** **Tirar foto dos equipamentos**. Ela é enviada na hora ("Enviada"), menor e sem os dados escondidos do celular (EXIF).
    - **Confirmar retirada**: GPS e hora entram sozinhos.
@@ -75,8 +75,8 @@ Entre como **gestor** (janela anônima) → **Ordens** → a mesma OS → **Desi
 
 ### Estoque: conferir (RF14, RN08)
 
-1. Entre como **estoque** → **Conferir** → busque pelo número da OS ou pela série.
-2. Leia a série e escolha **Fechar como Conferida**. Com série diferente ou item faltando, a ordem continua aberta, com a divergência registrada.
+1. Entre como **estoque** → **Conferir** → busque pelo número da OS ou pelo SN.
+2. Leia o SN e escolha **Fechar como Conferida**. Com SN diferente ou item faltando, a ordem continua aberta, com a divergência registrada.
 3. Para mostrar a **devolução na loja** (RF15), use outra ordem:
    - busque **5101** → **Registrar devolução**;
    - deixe marcada só a **Fonte 12V** → **Confirmar devolução de 1 item**;
