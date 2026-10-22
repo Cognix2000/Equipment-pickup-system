@@ -1,0 +1,67 @@
+# Produção: soma-se ao docker-compose.yml, que continua sendo a homologação.
+# As imagens vêm prontas do GHCR (workflow "Publicar imagens"): o servidor não compila nada.
+#   cp .env.producao.example .env      # e troque cada "troque-…" por um valor seu
+#   deploy/atualizar.sh                # baixa as imagens da VERSAO do .env e sobe tudo
+#
+# O que muda em relação à homologação:
+# - HTTPS no domínio do .env (Caddy, certificado automático) e HTTP redirecionado para HTTPS;
+# - sem carga de dados fictícios: o primeiro gestor entra por convite (README, "Primeiro gestor em produção");
+# - telefone com DDD 00 deixa de valer (RN05);
+# - tudo reinicia sozinho quando o servidor religa, e os logs não enchem o disco.
+
+x-logs: &logs
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  banco:
+    <<: *logs
+    restart: unless-stopped
+
+  migrador:
+    <<: *logs
+    image: ghcr.io/cognix2000/retirada-api:${VERSAO:-main}
+    command: ["migrar"]
+
+  api:
+    <<: *logs
+    image: ghcr.io/cognix2000/retirada-api:${VERSAO:-main}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Importacao__ModoSimulacao: "false"
+
+  fotos:
+    <<: *logs
+    restart: unless-stopped
+
+  web:
+    <<: *logs
+    image: ghcr.io/cognix2000/retirada-web:${VERSAO:-main}
+    restart: unless-stopped
+
+  proxy:
+    <<: *logs
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO no .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificados e conta da Let's Encrypt. Perder este volume força emitir de novo (há limite semanal).
+      - caddy_dados:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  caddy_dados:
+  caddy_config:
