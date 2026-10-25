@@ -1,0 +1,44 @@
+# Monta as imagens da API e do app e publica no GitHub Container Registry (privado, como o repositório).
+# O servidor de produção só baixa as imagens prontas: ele não tem memória para compilar o .NET nem o app.
+#   main     → ghcr.io/<dono>/retirada-api:main e :<sha curto>   (o mesmo para retirada-web)
+#   tag vX.Y.Z → ghcr.io/<dono>/retirada-api:vX.Y.Z               (a versão que vai para produção)
+name: Publicar imagens
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publicar-imagens-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: API e app no GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Entrar no GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Montar e publicar
+        run: |
+          dono="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          versao="${GITHUB_REF_NAME//\//-}"
+          curto="${GITHUB_SHA::7}"
+          origem="org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+          for nome in api web; do
+            pasta=$([ "$nome" = api ] && echo backend || echo frontend)
+            imagem="ghcr.io/$dono/retirada-$nome"
+            docker build --label "$origem" --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              -t "$imagem:$versao" -t "$imagem:$curto" "$pasta"
+            docker push --all-tags "$imagem"
+            echo "- \`$imagem:$versao\` (\`$curto\`)" >> "$GITHUB_STEP_SUMMARY"
+          done

@@ -1,0 +1,41 @@
+# Porta de entrada da produção: HTTPS automático (Let's Encrypt), redireciona HTTP para HTTPS e repassa
+# para os contêineres. O certificado sai sozinho no primeiro acesso, se o domínio apontar para o servidor e as
+# portas 80 e 443 estiverem abertas para a internet. Ele é renovado sozinho antes de vencer.
+#
+# DOMINIO vem do .env. API e WEB só mudam para testar fora do Docker.
+{$DOMINIO} {
+	encode zstd gzip
+
+	header {
+		# HSTS: o navegador passa a usar só HTTPS neste domínio. Começa em 1 dia; depois de tudo estável, 1 ano.
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), geolocation=(self), microphone=()"
+		-Server
+	}
+
+	# Barreira contra envio gigante. O limite do dia a dia é o da API (10 MB, RN15), que responde com a mensagem
+	# certa para o financeiro; por isso este fica bem acima dele.
+	request_body {
+		max_size 25MB
+	}
+
+	# A API recebe direto do Caddy: X-Forwarded-For e X-Forwarded-Proto chegam certos, então o limite de tentativas
+	# de login conta o IP real e o cookie de sessão sai marcado como Secure.
+	handle /api/* {
+		reverse_proxy {$API:api:8080}
+	}
+	handle /health {
+		reverse_proxy {$API:api:8080}
+	}
+	handle {
+		reverse_proxy {$WEB:web:80}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
