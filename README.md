@@ -42,12 +42,16 @@ Os usuários fictícios (`@exemplo.invalid`) recebem a senha `Demo@Retirada2026`
 
 Para o 2FA, use qualquer aplicativo autenticador (Google Authenticator, Microsoft Authenticator, etc.).
 
+### Produção
+
+O servidor roda com HTTPS automático (Caddy) e as imagens prontas do GHCR. O passo a passo, do servidor vazio ao primeiro gestor, está em [docs/implantacao.md](docs/implantacao.md).
+
 ### Primeiro gestor em produção
 
 Em produção não há carga fictícia. O primeiro gestor entra por convite, gerado na linha de comando:
 
 ```bash
-docker compose run --rm migrador convidar-gestor --nome "Nome do Gestor" --email gestor@empresa --url https://retirada.exemplo
+docker compose -f docker-compose.yml -f docker-compose.producao.yml run --rm migrador convidar-gestor --nome "Nome do Gestor" --email gestor@empresa --url https://retirada.exemplo
 ```
 
 O comando mostra o link (vale 48 h, uma vez só). A partir daí, o gestor cadastra os outros usuários pela tela de gestão.
