@@ -29,11 +29,15 @@ if (args.Length > 0 && args[0] is "migrar" or "convidar-gestor")
     if (args[0] == "migrar")
     {
         var dadosFicticios = Opcao("--dados-ficticios");
+        // Usuários fictícios entram com a senha de demonstração: a do README na homologação local; num servidor
+        // aberto na internet (modo demonstração), uma senha própria, vinda de Demonstracao__Senha.
+        var senha = config["Demonstracao:Senha"];
+        if (senha is { Length: < 12 })
+            throw new ArgumentException("Demonstracao:Senha precisa de pelo menos 12 caracteres.");
         await Migrador.AplicarAsync(conexao, dadosFicticios, Console.Out);
         if (dadosFicticios is not null)
         {
-            // Só homologação: usuários fictícios entram com a senha de demonstração do README.
-            var n = await ModuloAcesso.DefinirSenhasDeDemonstracaoAsync(conexao, "Demo@Retirada2026");
+            var n = await ModuloAcesso.DefinirSenhasDeDemonstracaoAsync(conexao, senha ?? "Demo@Retirada2026");
             Console.WriteLine($"Senha de demonstração definida para {n} usuário(s) fictício(s).");
         }
         return;
