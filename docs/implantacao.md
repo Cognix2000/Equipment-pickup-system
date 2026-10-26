@@ -57,6 +57,43 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
    ```
    O link vale 48 h e uma vez só. A partir daí, o gestor cadastra os outros usuários pela tela de gestão.
 
+## Modo demonstração (antes dos dados reais)
+
+Antes de entrar com dados reais, o servidor pode rodar com os **usuários de teste**, um por papel, e as **ordens fictícias**, para mostrar o produto:
+
+| Papel | E-mail | 2FA |
+| --- | --- | --- |
+| Gestor | `gestor.demo@exemplo.invalid` | sim |
+| Financeiro | `financeiro.demo@exemplo.invalid` | sim |
+| Técnico | `tecnico.demo@exemplo.invalid` | não |
+| Estoque | `estoque.demo@exemplo.invalid` | não |
+
+A senha dos quatro é a `SENHA_DEMONSTRACAO` do `.env`, e não a do README. O site está aberto na internet.
+
+1. **Ligar:**
+   ```bash
+   cd ~/retirada
+   sed -i 's/^MODO_DEMONSTRACAO=.*/MODO_DEMONSTRACAO=true/' .env
+   sed -i "s|^SENHA_DEMONSTRACAO=.*|SENHA_DEMONSTRACAO=$(openssl rand -base64 18)|" .env
+   grep '^SENHA_DEMONSTRACAO=' .env       # anote a senha no gerenciador de senhas
+   sh deploy/atualizar.sh
+   ```
+2. **Logo em seguida, entre como gestor e como financeiro e configure o 2FA dos dois.** Até isso acontecer, quem souber a senha poderia configurar o 2FA no lugar de vocês.
+3. A senha só é definida para usuário fictício que ainda não tem senha. Trocar a `SENHA_DEMONSTRACAO` depois não muda nada, a não ser que você saia do modo e ligue de novo.
+
+### Sair do modo demonstração
+
+Ordens e históricos nunca são apagados pela aplicação (RN12). Por isso, o teste é **zerado inteiro** antes do primeiro dado real. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
+
+```bash
+cd ~/retirada
+docker compose -f docker-compose.yml -f docker-compose.producao.yml -f docker-compose.demonstracao.yml down -v
+sed -i 's/^MODO_DEMONSTRACAO=.*/MODO_DEMONSTRACAO=false/; s/^SENHA_DEMONSTRACAO=.*/SENHA_DEMONSTRACAO=/' .env
+sh deploy/atualizar.sh
+```
+
+Depois, crie o primeiro gestor real, como no item 5 de "Primeira vez".
+
 ## Atualizar
 
 Depois de um merge na `main`, espere o workflow "Publicar imagens" terminar e rode no servidor:
