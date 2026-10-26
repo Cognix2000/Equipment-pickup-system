@@ -73,6 +73,8 @@ A senha dos quatro é a `SENHA_DEMONSTRACAO` do `.env`, e não a do README. O si
 1. **Ligar:**
    ```bash
    cd ~/retirada
+   grep -q '^MODO_DEMONSTRACAO=' .env || echo 'MODO_DEMONSTRACAO=false' >> .env    # .env criado antes desta opção
+   grep -q '^SENHA_DEMONSTRACAO=' .env || echo 'SENHA_DEMONSTRACAO=' >> .env
    sed -i 's/^MODO_DEMONSTRACAO=.*/MODO_DEMONSTRACAO=true/' .env
    sed -i "s|^SENHA_DEMONSTRACAO=.*|SENHA_DEMONSTRACAO=$(openssl rand -base64 18)|" .env
    grep '^SENHA_DEMONSTRACAO=' .env       # anote a senha no gerenciador de senhas
