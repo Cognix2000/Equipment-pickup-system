@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -32,6 +33,8 @@ public static class ModuloAcesso
     {
         services.AddDbContext<AcessoDbContext>(o => o.UseNpgsql(connectionString));
         services.AddSingleton<SegundoFator>();
+        services.AddSingleton<CerimoniaDaChave>();
+        services.AddSingleton<IFido2>(new Fido2(CerimoniaDaChave.Configuracao(config)));
 
         // As chaves cifram o cookie e o segredo do 2FA. Perdê-las derruba sessões e invalida todo 2FA:
         // fora do desenvolvimento, a pasta é obrigatória e precisa estar num volume com backup.
@@ -137,6 +140,7 @@ public static class ModuloAcesso
         ConfirmarCodigo.Mapear(grupo);
         IniciarConfiguracao2FA.Mapear(grupo);
         ConfirmarConfiguracao2FA.Mapear(grupo);
+        ChaveDeAcessoCasos.Mapear(grupo);
         QuemSouEu.Mapear(grupo);
         Sair.Mapear(grupo);
         AceitarConvite.Mapear(grupo);

@@ -21,6 +21,11 @@ async function simularApi(page: Page, papel: Papel) {
       : rota.fulfill({ status: 401, json: { title: 'Não autenticado' } }),
   )
   await page.route('**/api/usuarios', (rota) => rota.fulfill({ json: usuarios }))
+  await page.route('**/api/acesso/chaves', (rota) =>
+    rota.fulfill({
+      json: [{ id: '0192f000-0000-7000-8000-0000000000c1', nome: 'iPhone', criadaEm: '2026-10-20T09:15:00-03:00', ultimoUsoEm: '2026-10-27T08:02:00-03:00' }],
+    }),
+  )
   await page.route('**/api/ordens**', async (rota) => {
     const url = new URL(rota.request().url())
     const id = url.pathname.split('/api/ordens/')[1]
@@ -48,6 +53,8 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'ordem-no-painel', rota: `/financeiro/ordens/${ordemMaria.id}`, pronto: 'O que fazer', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
+  { nome: 'minha-conta', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'financeiro' },
+  { nome: 'minha-conta-no-celular', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'tecnico' },
   { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou SN de um item', papel: 'estoque' },
 ]
 
@@ -114,7 +121,7 @@ test('login de técnico vai direto para as ordens', async ({ page }) => {
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('tecnico.demo@exemplo.invalid')
   await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
-  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Minhas ordens' })).toBeVisible()
 })
@@ -126,7 +133,7 @@ test('login de financeiro pede o código do aplicativo', async ({ page }) => {
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('financeiro.demo@exemplo.invalid')
   await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
-  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Código de verificação' })).toBeVisible()
   await page.getByRole('button', { name: 'Confirmar' }).click()
@@ -140,7 +147,7 @@ test('senha errada mostra o aviso da API', async ({ page }) => {
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill('alguem@exemplo.invalid')
   await page.getByLabel('Senha', { exact: true }).fill('errada')
-  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page.getByRole('alert')).toHaveText('E-mail ou senha incorretos.')
 })

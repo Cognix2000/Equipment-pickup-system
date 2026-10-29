@@ -35,14 +35,29 @@ internal static class GestaoDeUsuarios
             MudarAsync(id, s, db, r, h, "revogar_usuario", (u, agora) => u.Revogar(s.Id(), agora), ct)).WithSummary("Revogar: corta o acesso na hora (RF02)");
         grupo.MapPost("/{id:guid}/reativar", (Guid id, ClaimsPrincipal s, AcessoDbContext db, TimeProvider r, HttpContext h, CancellationToken ct) =>
             MudarAsync(id, s, db, r, h, "reativar_usuario", (u, agora) => u.Reativar(agora), ct)).WithSummary("Reativar usuário revogado");
-        grupo.MapPost("/{id:guid}/zerar-2fa", (Guid id, ClaimsPrincipal s, AcessoDbContext db, TimeProvider r, HttpContext h, CancellationToken ct) =>
-            MudarAsync(id, s, db, r, h, "zerar_2fa", (u, agora) => u.Zerar2FA(agora), ct)).WithSummary("Zerar o 2FA de quem trocou de celular");
+        grupo.MapPost("/{id:guid}/zerar-2fa", ZerarSegundoFatorAsync)
+            .WithSummary("Zerar o 2FA de quem trocou de celular: apaga o aplicativo e as chaves de acesso");
     }
 
     private static async Task<Ok<List<UsuarioNaLista>>> ListarAsync(AcessoDbContext db, CancellationToken ct)
     {
         var usuarios = await db.Usuarios.AsNoTracking().OrderBy(u => u.Nome).ToListAsync(ct);
-        return TypedResults.Ok(usuarios.Select(NaLista).ToList());
+        var comChave = (await db.ChavesDeAcesso.Select(c => c.UsuarioId).Distinct().ToListAsync(ct)).ToHashSet();
+        return TypedResults.Ok(usuarios.Select(u => NaLista(u, comChave.Contains(u.Id))).ToList());
+    }
+
+    /// <summary>Celular perdido ou trocado: some o aplicativo e todas as chaves, e as sessões abertas caem.</summary>
+    private static async Task<Results<Ok<UsuarioNaLista>, NotFound>> ZerarSegundoFatorAsync(
+        Guid id, ClaimsPrincipal sessao, AcessoDbContext db, TimeProvider relogio, HttpContext http, CancellationToken ct)
+    {
+        var usuario = await db.Usuarios.SingleOrDefaultAsync(u => u.Id == id, ct);
+        if (usuario is null) return TypedResults.NotFound();
+
+        usuario.Zerar2FA(relogio.GetUtcNow());
+        db.ChavesDeAcesso.RemoveRange(await db.ChavesDeAcesso.Where(c => c.UsuarioId == id).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
+        await db.AuditarAsync(sessao.Id(), $"zerar_2fa:{usuario.Id}", Sessao.Ip(http), ct);
+        return TypedResults.Ok(NaLista(usuario, false));
     }
 
     private static async Task<Results<Created<Cadastrado>, ProblemHttpResult>> CadastrarAsync(
@@ -60,7 +75,7 @@ internal static class GestaoDeUsuarios
         await db.SaveChangesAsync(ct);
         await db.AuditarAsync(sessao.Id(), $"cadastrar_usuario:{usuario.Id}", Sessao.Ip(http), ct);
 
-        return TypedResults.Created($"/api/usuarios/{usuario.Id}", new Cadastrado(NaLista(usuario), LinkDeConvite.De(convite, token)));
+        return TypedResults.Created($"/api/usuarios/{usuario.Id}", new Cadastrado(NaLista(usuario, false), LinkDeConvite.De(convite, token)));
     }
 
     private static async Task<Results<Ok<LinkDeConvite>, NotFound, ProblemHttpResult>> NovoConviteAsync(
@@ -88,9 +103,10 @@ internal static class GestaoDeUsuarios
         mudanca(usuario, relogio.GetUtcNow());
         await db.SaveChangesAsync(ct);
         await db.AuditarAsync(sessao.Id(), $"{acao}:{usuario.Id}", Sessao.Ip(http), ct);
-        return TypedResults.Ok(NaLista(usuario));
+        return TypedResults.Ok(NaLista(usuario, await db.ChavesDeAcesso.AnyAsync(c => c.UsuarioId == id, ct)));
     }
 
-    private static UsuarioNaLista NaLista(Usuario u) =>
-        new(u.Id, u.Nome, u.Email, u.Papel, u.Situacao.ToString().ToLowerInvariant(), u.Tem2FA, u.UltimoLoginEm);
+    /// <summary>"DoisFatores": tem o aplicativo ou ao menos uma chave de acesso.</summary>
+    private static UsuarioNaLista NaLista(Usuario u, bool temChave) =>
+        new(u.Id, u.Nome, u.Email, u.Papel, u.Situacao.ToString().ToLowerInvariant(), u.Tem2FA || temChave, u.UltimoLoginEm);
 }

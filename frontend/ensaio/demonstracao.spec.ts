@@ -50,7 +50,7 @@ async function entrar(browser: Browser, email: string, opcoes: Parameters<Browse
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill(email)
   await page.getByLabel('Senha', { exact: true }).fill(SENHA)
-  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   const configurar = page.getByRole('heading', { name: 'Proteja sua conta' })
   const codigo = page.getByRole('heading', { name: 'Código de verificação' })
@@ -60,6 +60,9 @@ async function entrar(browser: Browser, email: string, opcoes: Parameters<Browse
     page.waitForURL((u) => !u.pathname.startsWith('/entrar')).then(() => 'dentro' as const),
   ])
   if (etapa === 'configurar') {
+    // A tela oferece primeiro a digital (chave de acesso); o ensaio usa o aplicativo, que dá para automatizar.
+    const comAplicativo = page.getByRole('button', { name: 'Usar um aplicativo autenticador' })
+    if (await comAplicativo.isVisible()) await comAplicativo.click()
     await page.getByText('Não consegue ler o QR code?').click()
     segredos[email] = (await page.locator('details p').last().innerText()).replace(/\s/g, '')
     await page.getByLabel('Código de 6 números').fill(await codigoNovo(email))
