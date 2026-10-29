@@ -3,6 +3,8 @@ import { Vazio } from '@/components/EstadoDaTela'
 import { Inicio, RotaProtegida } from '@/features/acesso/RotaProtegida'
 import { Entrar } from '@/paginas/acesso/Entrar'
 import { PrimeiroAcesso } from '@/paginas/acesso/PrimeiroAcesso'
+import { LayoutDaConta } from '@/paginas/conta/LayoutDaConta'
+import { MinhaConta } from '@/paginas/conta/MinhaConta'
 import { DetalheDaOrdem } from '@/paginas/painel/DetalheDaOrdem'
 import { Importar } from '@/paginas/painel/Importar'
 import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
@@ -67,6 +69,15 @@ export const rotas = createBrowserRouter([
       </RotaProtegida>
     ),
     children: [{ path: 'usuarios', element: <Usuarios /> }],
+  },
+  {
+    path: '/conta',
+    element: (
+      <RotaProtegida papeis={['admin', 'financeiro', 'tecnico', 'estoque']}>
+        <LayoutDaConta />
+      </RotaProtegida>
+    ),
+    children: [{ index: true, element: <MinhaConta /> }],
   },
   {
     path: '*',

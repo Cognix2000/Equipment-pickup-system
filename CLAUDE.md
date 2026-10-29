@@ -15,7 +15,7 @@ Sistema de **retirada de equipamentos de clientes inadimplentes** da Netwise, um
 
 Fluxo de status: Em carência → Disponível → Atribuída → Concluída → Conferida. Também existem Encerrada sem retirada, Cancelada e Devolvida na loja.
 
-Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). Gestor e financeiro usam 2FA obrigatório.
+Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). Gestor e financeiro usam 2FA obrigatório: a chave de acesso (passkey, digital ou rosto do aparelho) ou o código de um aplicativo autenticador (ADR-012).
 
 ## Regras que não se negociam
 
@@ -63,6 +63,7 @@ Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último 
 - **axe acusando contraste:** pode ser transição de botão no meio do teste. O Playwright usa `reducedMotion: 'reduce'` e os botões usam `motion-reduce`.
 - **Link `tel:` no Chromium headless** trava os cliques seguintes. O e2e cancela a navegação desses links.
 - **2FA no ensaio:** cada código TOTP vale uma vez só. O ensaio espera o próximo passo de 30 s.
+- **Chave de acesso (WebAuthn):** as opções e as respostas vão no JSON da própria Fido2NetLib (`ToJson`/`FromJson`), nunca no JSON da API, que troca os nomes dos enums. Teste da API com `AutenticadorDeTeste`; e2e com o autenticador virtual do Chromium (CDP `WebAuthn`). Nos testes de tela, use `{ name: 'Entrar', exact: true }`: o botão "Entrar com a digital ou o rosto" também contém "Entrar".
 - **Matar a API com `pkill -f`:** use `pkill -f "Retirada.Api.dl[l]"`, senão o comando mata o próprio shell.
 - **MinIO CE foi descontinuado.** Por isso o projeto usa SeaweedFS (ADR-011).
 
@@ -82,7 +83,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 
 | Código | O que é |
 | --- | --- |
-| RF01–RF02 | Login com 2FA; gestão de usuários com convite, revogação e zerar o 2FA |
+| RF01–RF02 | Login com 2FA (aplicativo ou chave de acesso); gestão de usuários com convite, revogação e zerar o 2FA |
 | RF03–RF05 | Importação da planilha com prévia e gravação |
 | RF06–RF07 | Lista e detalhe da ordem |
 | RF08 | Gestor designa ao técnico |

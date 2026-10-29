@@ -40,7 +40,7 @@ Os usuários fictícios (`@exemplo.invalid`) recebem a senha `Demo@Retirada2026`
 | `financeiro.demo@exemplo.invalid` | Financeiro | sim (configura no 1º login) |
 | `gestor.demo@exemplo.invalid` | Gestor | sim (configura no 1º login) |
 
-Para o 2FA, use qualquer aplicativo autenticador (Google Authenticator, Microsoft Authenticator, etc.).
+Para o 2FA, cadastre a digital ou o rosto do aparelho (chave de acesso) no primeiro login, ou use um aplicativo autenticador (Google Authenticator, Microsoft Authenticator, etc.). A chave de acesso funciona em `http://localhost:8080`; por outro endereço sem HTTPS, só o aplicativo.
 
 ### Produção
 

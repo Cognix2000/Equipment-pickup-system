@@ -1,4 +1,4 @@
-import { CloudUpload, LogOut, Map as IconeMapa } from 'lucide-react'
+import { CloudUpload, LogOut, Map as IconeMapa, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { useSair } from '@/features/acesso/useSair'
 import { cn } from '@/lib/utils'
@@ -15,9 +15,10 @@ export function LayoutTecnico() {
         <div className="flex flex-1 flex-col">
           <Outlet />
         </div>
-        <nav aria-label="Navegação principal" className="sticky bottom-0 grid h-16 grid-cols-3 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)]">
+        <nav aria-label="Navegação principal" className="sticky bottom-0 grid h-16 grid-cols-4 border-t border-borda bg-superficie pb-[env(safe-area-inset-bottom)]">
           <ItemDeNavegacao para="/tecnico/ordens" icone={<IconeMapa aria-hidden />} texto="Ordens" />
           <ItemDeNavegacao para="/tecnico/envios" icone={<CloudUpload aria-hidden />} texto="Envios" />
+          <ItemDeNavegacao para="/conta" icone={<UserRound aria-hidden />} texto="Conta" />
           <button
             type="button"
             onClick={() => void sair()}

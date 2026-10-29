@@ -116,6 +116,142 @@
         }
       }
     },
+    "/api/acesso/chave/entrar/opcoes": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Desafio para entrar com a chave de acesso (passkey)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/acesso/chave/entrar": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Entrar com a chave de acesso: vale pelos dois fatores",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeEntradaComChave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaDeLogin"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/chave/cadastro/opcoes": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Desafio para cadastrar uma chave de acesso neste aparelho",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/acesso/chave/cadastro": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Cadastrar a chave de acesso; no primeiro acesso de gestor e financeiro, conclui o login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeCadastroDeChave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaDeLogin"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/chaves": {
+      "get": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Chaves de acesso de quem est\u00E1 logado",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChaveNaLista"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/acesso/chaves/{id}/remover": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Remover uma chave de acesso pr\u00F3pria",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/acesso/eu": {
       "get": {
         "tags": [
@@ -330,7 +466,7 @@
         "tags": [
           "Usu\u00E1rios"
         ],
-        "summary": "Zerar o 2FA de quem trocou de celular",
+        "summary": "Zerar o 2FA de quem trocou de celular: apaga o aplicativo e as chaves de acesso",
         "parameters": [
           {
             "name": "id",
@@ -1461,6 +1597,35 @@
           "whatsapp"
         ]
       },
+      "ChaveNaLista": {
+        "required": [
+          "id",
+          "nome",
+          "criadaEm",
+          "ultimoUsoEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "criadaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimoUsoEm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Endereco": {
         "required": [
           "logradouro",
@@ -1785,6 +1950,7 @@
           }
         }
       },
+      "JsonElement": {},
       "LinhaDaPreviaDto": {
         "required": [
           "numero",
@@ -2060,6 +2226,24 @@
           }
         }
       },
+      "PedidoDeCadastroDeChave": {
+        "required": [
+          "credencial",
+          "nome"
+        ],
+        "type": "object",
+        "properties": {
+          "credencial": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "nome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PedidoDeCancelamento": {
         "required": [
           "motivo"
@@ -2154,6 +2338,17 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "PedidoDeEntradaComChave": {
+        "required": [
+          "credencial"
+        ],
+        "type": "object",
+        "properties": {
+          "credencial": {
+            "$ref": "#/components/schemas/JsonElement"
           }
         }
       },

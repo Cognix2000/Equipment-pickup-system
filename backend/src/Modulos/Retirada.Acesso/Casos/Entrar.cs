@@ -10,7 +10,7 @@ using Retirada.Comum;
 
 namespace Retirada.Acesso.Casos;
 
-/// <summary>RF01: e-mail e senha. Gestor e financeiro seguem para o segundo fator (RNF03).</summary>
+/// <summary>RF01: e-mail e senha. Gestor e financeiro seguem para o segundo fator (RNF03): o código do aplicativo ou a chave de acesso.</summary>
 internal static class Entrar
 {
     internal sealed record Pedido(string Email, string Senha);
@@ -56,6 +56,10 @@ internal static class Entrar
 
         if (usuario.Exige2FA)
         {
+            // Quem trocou o aplicativo pela chave de acesso confirma com ela. Não abre sessão: a chave já entra sozinha.
+            if (!usuario.Tem2FA && await db.ChavesDeAcesso.AnyAsync(c => c.UsuarioId == usuario.Id, ct))
+                return TypedResults.Ok(new RespostaDeLogin("chave", null));
+
             var etapa = usuario.Tem2FA ? EtapasDeAcesso.Codigo : EtapasDeAcesso.Configurar;
             await Sessao.AbrirAsync(http, usuario, etapa);
             return TypedResults.Ok(new RespostaDeLogin(usuario.Tem2FA ? "codigo" : "configurar", null));

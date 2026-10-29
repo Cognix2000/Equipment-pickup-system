@@ -96,6 +96,12 @@ public sealed class Usuario : Entidade
     public bool PodeEntrar(DateTimeOffset agora) =>
         Situacao == SituacaoUsuario.Ativo && SenhaHash is not null && !EstaBloqueado(agora);
 
+    /// <summary>
+    /// Com a chave de acesso, o bloqueio por senha errada não vale: ele existe contra quem tenta adivinhar a senha,
+    /// e a chave não se adivinha. Assim, um ataque à senha não tranca para fora quem tem a chave.
+    /// </summary>
+    public bool PodeEntrarComChave => Situacao == SituacaoUsuario.Ativo;
+
     /// <summary>RNF03: na quinta falha seguida, bloqueia por 15 minutos.</summary>
     public void RegistrarFalha(DateTimeOffset agora)
     {

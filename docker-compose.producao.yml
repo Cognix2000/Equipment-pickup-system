@@ -33,6 +33,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Importacao__ModoSimulacao: "false"
+      # ADR-012: a chave de acesso (passkey) fica presa a este domínio; em outro endereço, não funciona.
+      Acesso__ChaveDeAcesso__Dominio: ${DOMINIO:?defina DOMINIO no .env}
+      Acesso__ChaveDeAcesso__Origens: https://${DOMINIO}
 
   fotos:
     <<: *logs
