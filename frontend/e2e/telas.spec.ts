@@ -40,6 +40,18 @@ async function simularApi(page: Page, papel: Papel) {
       .filter((o) => !busca || String(o.numeroOs) === busca || o.equipamentos.some((e) => e.numeroSerie === busca))
     return rota.fulfill({ json: encontradas })
   })
+  // Registrada depois, atende antes da rota geral das ordens.
+  await page.route('**/api/ordens/meu-resumo', (rota) =>
+    rota.fulfill({
+      json: {
+        pendentes: 3,
+        aguardandoConferencia: 2,
+        hoje: { retiradas: 2, conferidas: 1, visitasSemSucesso: 1 },
+        semana: { retiradas: 9, conferidas: 7, visitasSemSucesso: 3 },
+        mes: { retiradas: 31, conferidas: 28, visitasSemSucesso: 8 },
+      },
+    }),
+  )
 }
 
 const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
@@ -648,4 +660,18 @@ test('estoque entra direto na conferência e técnico não abre o estoque', asyn
   await simularApi(page, 'tecnico')
   await page.goto('/estoque/conferir')
   await expect(page).toHaveURL(/\/tecnico\/ordens/)
+})
+
+test('técnico vê quantas retirou e quantas o estoque já conferiu, por período', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.goto('/tecnico/ordens')
+
+  const resumo = page.getByRole('region', { name: 'Seu resumo' })
+  await expect(resumo.getByText('Retiradas', { exact: true })).toBeVisible()
+  await expect(resumo.locator('dd')).toHaveText(['2', '1', '1'])
+  await expect(resumo.getByText('2 retiradas esperando o estoque conferir')).toBeVisible()
+
+  await resumo.getByRole('button', { name: 'Mês' }).click()
+  await expect(resumo.getByRole('button', { name: 'Mês' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(resumo.locator('dd')).toHaveText(['31', '28', '8'])
 })
