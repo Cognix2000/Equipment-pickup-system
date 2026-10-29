@@ -15,7 +15,7 @@ const eu = z.object({
 export type Eu = z.infer<typeof eu>
 
 export const respostaDeLogin = z.object({
-  etapa: z.enum(['pronto', 'codigo', 'configurar']),
+  etapa: z.enum(['pronto', 'codigo', 'configurar', 'chave']),
   usuario: z.object({ id: z.uuid(), nome: z.string(), email: z.string(), papel }).nullable(),
 })
 

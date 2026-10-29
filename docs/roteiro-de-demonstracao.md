@@ -20,7 +20,7 @@ Confira se subiu: http://localhost:8080/health deve responder `Healthy`.
 | Técnico | `tecnico.demo@exemplo.invalid` | `Demo@Retirada2026` | não |
 | Estoque | `estoque.demo@exemplo.invalid` | `Demo@Retirada2026` | não |
 
-- **Configure o 2FA antes da apresentação.** Entre uma vez como financeiro e uma como gestor, leia o QR code com o Google Authenticator (ou outro aplicativo autenticador) e guarde o celular por perto. Na hora, é só digitar o código.
+- **Configure o 2FA antes da apresentação.** Entre uma vez como financeiro e uma como gestor e cadastre a digital ou o rosto do aparelho em que vai apresentar (chave de acesso). Na hora, é só tocar em "Entrar com a digital ou o rosto". Se preferir o aplicativo autenticador, leia o QR code com ele e guarde o celular por perto.
 - **Use duas janelas:** uma normal e uma anônima. Assim dá para ficar com o financeiro numa e trocar de papel na outra, sem sair e entrar o tempo todo.
 - **App do técnico:**
   - **No celular:** abra `http://<ip-da-máquina>:8080` na mesma rede. O navegador só libera o GPS com HTTPS fora do `localhost`, e sem GPS a retirada não confirma. Para mostrar a retirada no celular, publique com HTTPS (por exemplo, o Nginx de homologação com certificado).
@@ -90,7 +90,7 @@ Entre como **gestor** (janela anônima) → **Ordens** → a mesma OS → **Desi
 ### Fechamento
 
 - O **histórico** da ordem conta tudo: quem fez (só o papel), o quê e quando. O registro é só de acréscimo; ninguém apaga.
-- **Gestão de usuários** (gestor): cadastro por convite, revogação na hora e 2FA obrigatório para gestor e financeiro.
+- **Gestão de usuários** (gestor): cadastro por convite, revogação na hora e 2FA obrigatório para gestor e financeiro, pela digital do aparelho ou por um aplicativo.
 
 ## 3. Se algo sair do roteiro
 

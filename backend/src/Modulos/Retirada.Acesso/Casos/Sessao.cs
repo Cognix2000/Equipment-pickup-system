@@ -14,7 +14,10 @@ internal sealed record UsuarioDto(Guid Id, string Nome, string Email, string Pap
     public static UsuarioDto De(Usuario u) => new(u.Id, u.Nome, u.Email, u.Papel);
 }
 
-/// <summary>"pronto" = entrou; "codigo" = falta o código do aplicativo; "configurar" = falta cadastrar o aplicativo.</summary>
+/// <summary>
+/// "pronto" = entrou; "codigo" = falta o código do aplicativo; "configurar" = falta cadastrar o aplicativo ou a chave;
+/// "chave" = a senha confere, mas gestor e financeiro com chave de acesso confirmam com ela.
+/// </summary>
 internal sealed record RespostaDeLogin(string Etapa, UsuarioDto? Usuario);
 
 /// <summary>Monta a sessão no cookie HttpOnly (ADR-010) e padroniza as respostas de recusa.</summary>

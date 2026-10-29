@@ -98,7 +98,7 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
         )}
         {u.doisFatores && (
           <Button variante="neutro" tamanho="compacto" onClick={() => acao.mutate('zerar-2fa')} disabled={acao.isPending}>
-            Zerar 2FA
+            Zerar 2FA e chaves
           </Button>
         )}
         {u.situacao === 'revogado' ? (
@@ -159,7 +159,7 @@ function CadastroDeUsuario({ aoCadastrar }: { aoCadastrar: (nome: string, link: 
         <Campo id="email-novo" rotulo="E-mail" erro={errors.email?.message}>
           <input id="email-novo" type="email" autoComplete="off" className={classeDoInput} aria-invalid={errors.email ? true : undefined} {...register('email')} />
         </Campo>
-        <Campo id="papel" rotulo="Papel" ajuda="Gestor e financeiro entram com código do celular (2FA).">
+        <Campo id="papel" rotulo="Papel" ajuda="Gestor e financeiro confirmam a entrada com a digital do aparelho ou com um aplicativo (2FA).">
           <select id="papel" className={classeDoInput} aria-describedby="papel-ajuda" {...register('papel')}>
             <option value="tecnico">Técnico</option>
             <option value="financeiro">Financeiro</option>

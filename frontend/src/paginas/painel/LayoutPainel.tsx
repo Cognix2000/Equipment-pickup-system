@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useEu, type Papel } from '@/features/acesso/acesso'
@@ -42,7 +42,20 @@ export function LayoutPainel() {
             ))}
           </nav>
           <div className="flex items-center gap-1">
-            {eu && <span className="text-sm text-texto-claro">{eu.nome}</span>}
+            {eu && (
+              <NavLink
+                to="/conta"
+                title="Minha conta"
+                className={({ isActive }) =>
+                  cn(
+                    'flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm no-underline [&_svg]:size-[18px]',
+                    isActive ? 'bg-azul font-semibold text-white' : 'text-texto-claro hover:bg-white/10',
+                  )
+                }
+              >
+                <UserRound aria-hidden /> {eu.nome}
+              </NavLink>
+            )}
             <Button variante="fantasma" tamanho="compacto" className="text-white hover:bg-white/10" onClick={() => void sair()}>
               <LogOut aria-hidden /> Sair
             </Button>
