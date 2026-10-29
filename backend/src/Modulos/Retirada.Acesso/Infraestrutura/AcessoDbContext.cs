@@ -4,11 +4,12 @@ using Retirada.Acesso.Dominio;
 
 namespace Retirada.Acesso.Infraestrutura;
 
-/// <summary>Contexto do módulo Acesso: usuários, convites e a trilha de auditoria (só acréscimo).</summary>
+/// <summary>Contexto do módulo Acesso: usuários, convites, chaves de acesso e a trilha de auditoria (só acréscimo).</summary>
 public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) : DbContext(options)
 {
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Convite> Convites => Set<Convite>();
+    public DbSet<ChaveDeAcesso> ChavesDeAcesso => Set<ChaveDeAcesso>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,7 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
             u.Property(x => x.AtualizadoEm).HasColumnName("atualizado_em");
             u.Ignore(x => x.Exige2FA);
             u.Ignore(x => x.Tem2FA);
+            u.Ignore(x => x.PodeEntrarComChave);
         });
 
         modelBuilder.Entity<Convite>(c =>
@@ -55,6 +57,21 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
             // As chaves estrangeiras declaradas fazem o EF gravar o usuário antes do convite.
             c.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId);
             c.HasOne<Usuario>().WithMany().HasForeignKey(x => x.CriadoPor).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ChaveDeAcesso>(c =>
+        {
+            c.ToTable("chave_de_acesso");
+            c.HasKey(x => x.Id);
+            c.Property(x => x.Id).HasColumnName("id");
+            c.Property(x => x.UsuarioId).HasColumnName("usuario_id");
+            c.Property(x => x.CredencialId).HasColumnName("credencial_id");
+            c.Property(x => x.ChavePublica).HasColumnName("chave_publica");
+            c.Property(x => x.Contador).HasColumnName("contador");
+            c.Property(x => x.Nome).HasColumnName("nome");
+            c.Property(x => x.CriadaEm).HasColumnName("criada_em");
+            c.Property(x => x.UltimoUsoEm).HasColumnName("ultimo_uso_em");
+            c.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId);
         });
     }
 

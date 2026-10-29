@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
+import { FingerprintPattern } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -7,12 +8,13 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { acesso, euQuery, inicioDo, useEu, type Papel } from '@/features/acesso/acesso'
+import { aparelhoAceitaChave, chaveDeAcesso, ErroDaChave } from '@/features/acesso/chaveDeAcesso'
 import { ErroDaApi } from '@/lib/api'
 import { CampoDeSenha } from '@/components/ui/campo-de-senha'
 import { classeDoInput } from '@/components/ui/input'
 import { AvisoDeErro, Campo, LayoutDeAcesso } from './LayoutDeAcesso'
 
-type Etapa = 'senha' | 'codigo' | 'configurar'
+type Etapa = 'senha' | 'codigo' | 'configurar' | 'chave'
 
 const formularioDeSenha = z.object({
   email: z.email('Digite um e-mail válido.'),
@@ -23,9 +25,13 @@ const formularioDeCodigo = z.object({
   codigo: z.string().regex(/^\d{6}$/, 'O código tem 6 números.'),
 })
 
-const mensagem = (erro: unknown) => (erro instanceof ErroDaApi ? erro.message : 'Sem resposta do servidor. Confira a conexão.')
+const mensagem = (erro: unknown) =>
+  erro instanceof ErroDaApi || erro instanceof ErroDaChave ? erro.message : 'Sem resposta do servidor. Confira a conexão.'
 
-/** RF01 e RNF03: senha; depois, para gestor e financeiro, o código do aplicativo autenticador. */
+/**
+ * RF01 e RNF03: senha ou chave de acesso (digital, rosto ou PIN do aparelho). Gestor e financeiro que entram
+ * com a senha confirmam com o código do aplicativo ou com a chave; a chave sozinha já vale pelos dois.
+ */
 export function Entrar() {
   const { data: eu } = useEu()
   const [etapaEscolhida, setEtapa] = useState<Etapa>()
@@ -45,7 +51,61 @@ export function Entrar() {
 
   if (etapa === 'codigo') return <PassoCodigo aoConcluir={concluir} />
   if (etapa === 'configurar') return <PassoConfigurar aoConcluir={concluir} />
+  if (etapa === 'chave') return <PassoChave aoConcluir={concluir} aoVoltar={() => setEtapa('senha')} />
   return <PassoSenha aoAvancar={setEtapa} aoConcluir={concluir} />
+}
+
+/**
+ * Botão da chave de acesso. Some quando o aparelho não aceita (navegador antigo ou sem HTTPS).
+ * Cancelar no aparelho não mostra erro: a pessoa só desistiu.
+ */
+function BotaoDaChave({
+  rotulo,
+  aoConcluir,
+  executar = chaveDeAcesso.entrar,
+  variante = 'contorno',
+}: {
+  rotulo: string
+  aoConcluir: (p: Papel) => Promise<void>
+  executar?: () => ReturnType<typeof chaveDeAcesso.entrar>
+  variante?: 'principal' | 'contorno'
+}) {
+  const [erro, setErro] = useState<string>()
+  const [usando, setUsando] = useState(false)
+  if (!aparelhoAceitaChave()) return null
+
+  const usar = async () => {
+    setErro(undefined)
+    setUsando(true)
+    try {
+      const resposta = await executar()
+      if (resposta.usuario) await aoConcluir(resposta.usuario.papel)
+    } catch (e) {
+      if (!(e instanceof ErroDaChave && e.cancelado)) setErro(mensagem(e))
+    } finally {
+      setUsando(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <AvisoDeErro mensagem={erro} />
+      <Button type="button" variante={variante} tamanho="grande" disabled={usando} onClick={() => void usar()}>
+        <FingerprintPattern aria-hidden />
+        {usando ? 'Esperando o aparelho' : rotulo}
+      </Button>
+    </div>
+  )
+}
+
+function Ou() {
+  return (
+    <div className="flex items-center gap-3 text-sm text-texto-suave" aria-hidden>
+      <span className="h-px flex-1 bg-borda" />
+      ou
+      <span className="h-px flex-1 bg-borda" />
+    </div>
+  )
 }
 
 function PassoSenha({ aoAvancar, aoConcluir }: { aoAvancar: (e: Etapa) => void; aoConcluir: (p: Papel) => Promise<void> }) {
@@ -61,7 +121,7 @@ function PassoSenha({ aoAvancar, aoConcluir }: { aoAvancar: (e: Etapa) => void; 
     try {
       const resposta = await acesso.entrar(email, senha)
       if (resposta.etapa === 'pronto' && resposta.usuario) await aoConcluir(resposta.usuario.papel)
-      else aoAvancar(resposta.etapa === 'codigo' ? 'codigo' : 'configurar')
+      else aoAvancar(resposta.etapa === 'pronto' ? 'senha' : resposta.etapa)
     } catch (e) {
       setErro(mensagem(e))
     }
@@ -69,6 +129,12 @@ function PassoSenha({ aoAvancar, aoConcluir }: { aoAvancar: (e: Etapa) => void; 
 
   return (
     <LayoutDeAcesso titulo="Entrar" subtitulo="Use o e-mail e a senha que você cadastrou pelo convite.">
+      {aparelhoAceitaChave() && (
+        <>
+          <BotaoDaChave rotulo="Entrar com a digital ou o rosto" aoConcluir={aoConcluir} />
+          <Ou />
+        </>
+      )}
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
         <AvisoDeErro mensagem={erro} />
         <Campo id="email" rotulo="E-mail" erro={errors.email?.message}>
@@ -150,11 +216,67 @@ function PassoCodigo({ aoConcluir }: { aoConcluir: (p: Papel) => Promise<void> }
           if (resposta.usuario) await aoConcluir(resposta.usuario.papel)
         }}
       />
+      {aparelhoAceitaChave() && (
+        <>
+          <Ou />
+          <BotaoDaChave rotulo="Usar a chave de acesso" aoConcluir={aoConcluir} />
+        </>
+      )}
     </LayoutDeAcesso>
   )
 }
 
+/** Gestor ou financeiro com chave de acesso que digitou a senha: confirma com a chave. */
+function PassoChave({ aoConcluir, aoVoltar }: { aoConcluir: (p: Papel) => Promise<void>; aoVoltar: () => void }) {
+  return (
+    <LayoutDeAcesso
+      titulo="Confirme com a chave de acesso"
+      subtitulo="Use a digital, o rosto ou o PIN do aparelho onde você cadastrou a chave. Em outro computador, escolha usar o celular e leia o QR code."
+    >
+      <BotaoDaChave rotulo="Usar a chave de acesso" variante="principal" aoConcluir={aoConcluir} />
+      {!aparelhoAceitaChave() && (
+        <p className="text-[15px]">Este navegador não aceita chave de acesso. Abra o sistema no celular ou num navegador atualizado.</p>
+      )}
+      <Button type="button" variante="fantasma" onClick={aoVoltar}>
+        Voltar
+      </Button>
+      <p className="text-center text-[13px] text-texto-suave">Perdeu o aparelho? Peça ao gestor para zerar o 2FA.</p>
+    </LayoutDeAcesso>
+  )
+}
+
+/**
+ * Primeiro acesso de gestor e financeiro. A chave de acesso vem primeiro: não precisa instalar nada.
+ * O aplicativo autenticador continua como opção (aparelho sem suporte, ou quem prefere).
+ */
 function PassoConfigurar({ aoConcluir }: { aoConcluir: (p: Papel) => Promise<void> }) {
+  const [comAplicativo, setComAplicativo] = useState(() => !aparelhoAceitaChave())
+  if (comAplicativo)
+    return <PassoConfigurarAplicativo aoConcluir={aoConcluir} aoVoltar={aparelhoAceitaChave() ? () => setComAplicativo(false) : undefined} />
+
+  return (
+    <LayoutDeAcesso titulo="Proteja sua conta" subtitulo="Gestor e financeiro confirmam a entrada com um segundo passo, além da senha.">
+      <div className="flex flex-col gap-2 text-[15px]">
+        <p className="font-semibold">Use a digital ou o rosto deste aparelho</p>
+        <p className="text-texto-suave">
+          Não precisa instalar nada. Nas próximas vezes, você entra só com a digital, sem digitar a senha.
+        </p>
+      </div>
+      <BotaoDaChave
+        rotulo="Cadastrar a digital ou o rosto"
+        variante="principal"
+        executar={() => chaveDeAcesso.cadastrar()}
+        aoConcluir={aoConcluir}
+      />
+      <Ou />
+      <Button type="button" variante="neutro" tamanho="grande" onClick={() => setComAplicativo(true)}>
+        Usar um aplicativo autenticador
+      </Button>
+    </LayoutDeAcesso>
+  )
+}
+
+function PassoConfigurarAplicativo({ aoConcluir, aoVoltar }: { aoConcluir: (p: Papel) => Promise<void>; aoVoltar?: () => void }) {
   const [qr, setQr] = useState<{ enderecoOtpAuth: string; segredo: string }>()
   const [erro, setErro] = useState<string>()
 
@@ -170,7 +292,7 @@ function PassoConfigurar({ aoConcluir }: { aoConcluir: (p: Papel) => Promise<voi
   }, [])
 
   return (
-    <LayoutDeAcesso titulo="Proteja sua conta" subtitulo="Gestor e financeiro entram com senha e com um código do celular.">
+    <LayoutDeAcesso titulo="Proteja sua conta" subtitulo="Gestor e financeiro confirmam a entrada com um código do celular, além da senha.">
       <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px]">
         <li>Instale um aplicativo autenticador, como Google Authenticator ou Microsoft Authenticator.</li>
         <li>No aplicativo, adicione uma conta lendo o QR code abaixo.</li>
@@ -198,6 +320,11 @@ function PassoConfigurar({ aoConcluir }: { aoConcluir: (p: Papel) => Promise<voi
           if (resposta.usuario) await aoConcluir(resposta.usuario.papel)
         }}
       />
+      {aoVoltar && (
+        <Button type="button" variante="fantasma" onClick={aoVoltar}>
+          Prefiro usar a digital ou o rosto
+        </Button>
+      )}
     </LayoutDeAcesso>
   )
 }

@@ -80,7 +80,7 @@ A senha dos quatro é a `SENHA_DEMONSTRACAO` do `.env`, e não a do README. O si
    grep '^SENHA_DEMONSTRACAO=' .env       # anote a senha no gerenciador de senhas
    sh deploy/atualizar.sh
    ```
-2. **Logo em seguida, entre como gestor e como financeiro e configure o 2FA dos dois.** Até isso acontecer, quem souber a senha poderia configurar o 2FA no lugar de vocês.
+2. **Logo em seguida, entre como gestor e como financeiro e configure o 2FA dos dois:** a digital ou o rosto do celular (chave de acesso), ou um aplicativo autenticador. Até isso acontecer, quem souber a senha poderia configurar o 2FA no lugar de vocês.
 3. A senha só é definida para usuário fictício que ainda não tem senha. Trocar a `SENHA_DEMONSTRACAO` depois não muda nada, a não ser que você saia do modo e ligue de novo.
 
 ### Sair do modo demonstração
@@ -117,7 +117,11 @@ Para fixar uma versão, crie a tag `vX.Y.Z` na `main`, espere a publicação e c
 Estes quatro itens fazem o sistema voltar inteiro:
 - o **banco**;
 - o volume **`fotos`**, que é a prova das retiradas (RN14);
-- o volume **`chaves`**: sem ele, todos saem da sessão e o 2FA precisa ser configurado de novo;
+- o volume **`chaves`**: sem ele, todos saem da sessão e o 2FA por aplicativo precisa ser configurado de novo (as chaves de acesso ficam no banco e continuam valendo);
 - o **`.env`**.
 
 O volume `caddy_dados` só evita emitir o certificado de novo.
+
+## Chave de acesso (digital ou rosto)
+
+A chave de acesso (ADR-012) fica presa ao `DOMINIO` do `.env`: o compose de produção passa o domínio e a origem `https://<DOMINIO>` para a API. Se o domínio mudar, as chaves cadastradas param de valer, e cada pessoa entra com a senha (e o aplicativo, se tiver) e cadastra de novo em **Minha conta**. Quem perdeu o celular pede ao gestor **Zerar 2FA e chaves**.
