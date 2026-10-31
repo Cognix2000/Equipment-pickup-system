@@ -1,7 +1,7 @@
 # Produção: soma-se ao docker-compose.yml, que continua sendo a homologação.
 # As imagens vêm prontas do GHCR (workflow "Publicar imagens"): o servidor não compila nada.
 #   cp .env.producao.example .env      # e troque cada "troque-…" por um valor seu
-#   deploy/atualizar.sh                # baixa as imagens da VERSAO do .env e sobe tudo
+#   sh deploy/atualizar.sh             # código e imagens na VERSAO do .env (uma tag lançada) e sobe tudo
 #
 # O que muda em relação à homologação:
 # - HTTPS no domínio do .env (Caddy, certificado automático) e HTTP redirecionado para HTTPS;
@@ -23,12 +23,12 @@ services:
 
   migrador:
     <<: *logs
-    image: ghcr.io/cognix2000/retirada-api:${VERSAO:-main}
+    image: ghcr.io/cognix2000/retirada-api:${VERSAO:?defina VERSAO no .env com uma tag como v0.1.0}
     command: ["migrar"]
 
   api:
     <<: *logs
-    image: ghcr.io/cognix2000/retirada-api:${VERSAO:-main}
+    image: ghcr.io/cognix2000/retirada-api:${VERSAO:?defina VERSAO no .env com uma tag como v0.1.0}
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -36,6 +36,8 @@ services:
       # ADR-012: a chave de acesso (passkey) fica presa a este domínio; em outro endereço, não funciona.
       Acesso__ChaveDeAcesso__Dominio: ${DOMINIO:?defina DOMINIO no .env}
       Acesso__ChaveDeAcesso__Origens: https://${DOMINIO}
+      # Repasse ao técnico por retirada conferida, em centavos (500 = R$ 5,00). Muda no .env, sem mexer neste arquivo.
+      Ordens__ValorPorRetiradaCentavos: ${VALOR_POR_RETIRADA_CENTAVOS:-500}
 
   fotos:
     <<: *logs
@@ -43,7 +45,7 @@ services:
 
   web:
     <<: *logs
-    image: ghcr.io/cognix2000/retirada-web:${VERSAO:-main}
+    image: ghcr.io/cognix2000/retirada-web:${VERSAO:?defina VERSAO no .env com uma tag como v0.1.0}
     restart: unless-stopped
 
   proxy:

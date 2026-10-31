@@ -1,0 +1,2 @@
+# Scripts de shell sempre com fim de linha LF: com CRLF (Windows), o sh falha com "bad interpreter".
+*.sh text eol=lf
