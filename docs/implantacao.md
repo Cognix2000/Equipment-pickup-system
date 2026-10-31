@@ -122,6 +122,33 @@ Estes quatro itens fazem o sistema voltar inteiro:
 
 O volume `caddy_dados` só evita emitir o certificado de novo.
 
+## Monitor de disponibilidade (fora do servidor)
+
+O monitor fica **fora** do servidor de propósito. Um monitor instalado no próprio servidor (como o Uptime Kuma) para junto com ele e não avisa justamente quando o servidor cai, além de gastar a pouca RAM que ele tem.
+
+O `/health` responde **200** quando a API e o banco estão bem e **503** quando o banco falha. Basta conferir o código da resposta.
+
+**Recomendado: StatusCake, plano gratuito.** Ele permite uso comercial, com 10 monitores a cada 5 minutos e alerta por e-mail. O UptimeRobot gratuito **não serve**: desde 2024, ele só vale para projeto pessoal ou sem fins lucrativos.
+
+1. Crie a conta em statuscake.com, de preferência com um e-mail da equipe e não um pessoal.
+2. Em **Uptime › New Uptime Test**, preencha:
+   - **Test type:** HTTP(S);
+   - **Website URL:** `https://pedro.devioslab.com.br/health`;
+   - **Check rate:** 5 minutos;
+   - **Confirmation:** 2 servidores, para não avisar por um soluço da rede.
+3. Em **Contact Groups**, cadastre os e-mails de quem deve saber. Para receber no celular, use Telegram, Discord ou Slack.
+4. Crie um segundo teste para `https://pedro.devioslab.com.br/`. Ele confere se o app (PWA) abre e se o certificado HTTPS está válido.
+5. Para testar o alerta, pare a API por 15 minutos fora do horário de uso e confira se o e-mail chega:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.producao.yml stop api
+   ```
+   Depois, suba de novo:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.producao.yml start api
+   ```
+
+**Alternativa sem conta externa:** o Uptime Kuma, instalado em **outra** máquina que fique ligada (outro servidor ou um mini PC da empresa), apontando para os mesmos dois endereços.
+
 ## Valor do repasse ao técnico
 
 Cada retirada conferida pelo estoque gera R$ 5,00 para o técnico que retirou. Para mudar o valor, ponha `Ordens__ValorPorRetiradaCentavos` (em centavos, ex.: `700` = R$ 7,00) no `environment` da `api` e rode `deploy/atualizar.sh`. O valor novo vale só para as próximas conferências: o que já foi creditado não muda.
