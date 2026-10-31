@@ -5,6 +5,7 @@ import { useLocation } from 'react-router'
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { useOrdens } from '@/features/ordens/consultas'
 import { OrdemCard } from '@/features/ordens/OrdemCard'
+import { ResumoDoTecnico } from '@/features/ordens/ResumoDoTecnico'
 import { caixaDeTitulo } from '@/features/ordens/tipos'
 import { useConectado } from '@/lib/useConectado'
 import { cn } from '@/lib/utils'
@@ -42,6 +43,7 @@ export function MinhasOrdens() {
         <p className="text-sm text-texto-claro">
           {isPending ? 'Carregando suas ordens' : `${ordens?.length ?? 0} ${ordens?.length === 1 ? 'ordem atribuída' : 'ordens atribuídas'} a você`}
         </p>
+        <ResumoDoTecnico />
       </header>
 
       {bairros.length > 1 && (
