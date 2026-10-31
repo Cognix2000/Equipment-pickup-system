@@ -1,6 +1,6 @@
 # Produção: soma-se ao docker-compose.yml, que continua sendo a homologação.
 # As imagens vêm prontas do GHCR (workflow "Publicar imagens"): o servidor não compila nada.
-#   cp .env.producao.example .env      # e troque cada "troque-…" por um valor seu
+#   sh ferramentas/criar-env.sh producao <domínio> <versão>   # cria o .env com senhas aleatórias
 #   sh deploy/atualizar.sh             # código e imagens na VERSAO do .env (uma tag lançada) e sobe tudo
 #
 # O que muda em relação à homologação:
