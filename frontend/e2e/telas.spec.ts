@@ -13,6 +13,23 @@ const usuarios = [
   { id: '0192f000-0000-7000-8000-000000000005', nome: 'Técnico Desligado', email: 'desligado@exemplo.invalid', papel: 'tecnico', situacao: 'revogado', doisFatores: false, ultimoLoginEm: '2026-09-30T08:00:00-03:00' },
 ]
 
+const repassesDosTecnicos = [
+  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', situacao: 'ativo', quantidade: 2, valorCentavos: 1000, ultimoPagamentoEm: '2026-10-24T17:00:00-03:00' },
+  { id: '0192f000-0000-7000-8000-000000000006', nome: 'Técnico Parceiro', situacao: 'ativo', quantidade: 0, valorCentavos: 0, ultimoPagamentoEm: null },
+]
+
+const detalheDoRepasse = {
+  id: '0192f000-0000-7000-8000-000000000001',
+  nome: 'Técnico Demonstração',
+  quantidade: 2,
+  valorCentavos: 1000,
+  emAberto: [
+    { id: '0192f000-0000-7000-8000-0000000000d1', creditadoEm: '2026-10-30T15:20:00-03:00', valorCentavos: 500, numeroOs: 5101, bairro: 'CENTRO' },
+    { id: '0192f000-0000-7000-8000-0000000000d2', creditadoEm: '2026-10-29T11:05:00-03:00', valorCentavos: 500, numeroOs: 5102, bairro: 'JARDIM DAS FLORES' },
+  ],
+  pagamentos: [{ id: '0192f000-0000-7000-8000-0000000000e0', pagoEm: '2026-10-24T17:00:00-03:00', valorCentavos: 4500, quantidade: 9, observacao: 'PIX' }],
+}
+
 /** Simula a API com dados fictícios. `papel` = quem está logado (null = ninguém). */
 async function simularApi(page: Page, papel: Papel) {
   await page.route('**/api/acesso/eu', (rota) =>
@@ -40,6 +57,20 @@ async function simularApi(page: Page, papel: Papel) {
       .filter((o) => !busca || String(o.numeroOs) === busca || o.equipamentos.some((e) => e.numeroSerie === busca))
     return rota.fulfill({ json: encontradas })
   })
+  await page.route('**/api/repasses**', (rota) => {
+    const caminho = new URL(rota.request().url()).pathname
+    if (caminho === '/api/repasses/meu')
+      return rota.fulfill({
+        json: {
+          valorPorRetiradaCentavos: 500,
+          aReceber: { quantidade: 7, valorCentavos: 3500 },
+          ultimosPagamentos: [{ pagoEm: new Date(Date.now() - 86_400_000).toISOString(), valorCentavos: 12500, quantidade: 25 }],
+        },
+      })
+    if (caminho === '/api/repasses') return rota.fulfill({ json: repassesDosTecnicos })
+    if (caminho.endsWith('/pagamentos')) return rota.fulfill({ json: { id: '0192f000-0000-7000-8000-0000000000e1', pagoEm: '2026-10-31T10:00:00-03:00', valorCentavos: 1000, quantidade: 2 } })
+    return rota.fulfill({ json: detalheDoRepasse })
+  })
   // Registrada depois, atende antes da rota geral das ordens.
   await page.route('**/api/ordens/meu-resumo', (rota) =>
     rota.fulfill({
@@ -65,6 +96,7 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'ordem-no-painel', rota: `/financeiro/ordens/${ordemMaria.id}`, pronto: 'O que fazer', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
+  { nome: 'repasses', rota: '/financeiro/repasses', pronto: 'Técnico Demonstração', papel: 'financeiro' },
   { nome: 'minha-conta', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'financeiro' },
   { nome: 'minha-conta-no-celular', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'tecnico' },
   { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou SN de um item', papel: 'estoque' },
@@ -674,4 +706,36 @@ test('técnico vê quantas retirou e quantas o estoque já conferiu, por períod
   await resumo.getByRole('button', { name: 'Mês' }).click()
   await expect(resumo.getByRole('button', { name: 'Mês' })).toHaveAttribute('aria-pressed', 'true')
   await expect(resumo.locator('dd')).toHaveText(['31', '28', '8'])
+})
+
+test('técnico vê quanto tem a receber e o aviso do último pagamento', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.goto('/tecnico/ordens')
+
+  const repasse = page.getByRole('region', { name: 'Seu repasse' })
+  await expect(repasse.getByText('R$ 35,00')).toBeVisible()
+  await expect(repasse.getByText('7 retiradas conferidas · R$ 5,00 cada')).toBeVisible()
+  await expect(repasse.getByRole('status')).toContainText('Pagamento de R$ 125,00 registrado pelo financeiro')
+})
+
+test('financeiro confere as retiradas e registra o pagamento com confirmação', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  let pagamento: unknown
+  await page.route('**/api/repasses/*/pagamentos', async (rota) => {
+    expect(rota.request().headers()['x-retirada']).toBe('1')
+    pagamento = rota.request().postDataJSON()
+    await rota.fulfill({ json: { id: '0192f000-0000-7000-8000-0000000000e1', pagoEm: '2026-10-31T10:00:00-03:00', valorCentavos: 1000, quantidade: 2 } })
+  })
+  await page.goto('/financeiro/repasses')
+
+  await expect(page.getByText('Total a pagar: R$ 10,00')).toBeVisible()
+  await page.getByRole('button', { name: /Técnico Demonstração/ }).click()
+  await expect(page.getByRole('cell', { name: 'JARDIM DAS FLORES' })).toBeVisible()
+
+  await page.getByLabel('Observação (opcional)').fill('PIX de 31/10')
+  await page.getByRole('button', { name: 'Registrar pagamento de R$ 10,00' }).click()
+  await expect(page.getByText('Você já pagou R$ 10,00 (2 retiradas) a este técnico?')).toBeVisible()
+  await page.getByRole('button', { name: 'Sim, registrar o pagamento' }).click()
+
+  await expect.poll(() => pagamento).toEqual({ valorCentavos: 1000, observacao: 'PIX de 31/10' })
 })

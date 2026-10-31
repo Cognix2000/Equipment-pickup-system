@@ -122,6 +122,10 @@ Estes quatro itens fazem o sistema voltar inteiro:
 
 O volume `caddy_dados` só evita emitir o certificado de novo.
 
+## Valor do repasse ao técnico
+
+Cada retirada conferida pelo estoque gera R$ 5,00 para o técnico que retirou. Para mudar o valor, ponha `Ordens__ValorPorRetiradaCentavos` (em centavos, ex.: `700` = R$ 7,00) no `environment` da `api` e rode `deploy/atualizar.sh`. O valor novo vale só para as próximas conferências: o que já foi creditado não muda.
+
 ## Chave de acesso (digital ou rosto)
 
 A chave de acesso (ADR-012) fica presa ao `DOMINIO` do `.env`: o compose de produção passa o domínio e a origem `https://<DOMINIO>` para a API. Se o domínio mudar, as chaves cadastradas param de valer, e cada pessoa entra com a senha (e o aplicativo, se tiver) e cadastra de novo em **Minha conta**. Quem perdeu o celular pede ao gestor **Zerar 2FA e chaves**.
