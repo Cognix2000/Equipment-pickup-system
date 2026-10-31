@@ -235,4 +235,16 @@ public class GuardasEEventosTestes
     [InlineData(0, 180.0001)]
     public void Coordenada_fora_do_limite_e_recusada(double latitude, double longitude) =>
         DeveViolar(() => _ = new Localizacao(latitude, longitude), "LOCALIZACAO");
+
+    [Fact]
+    public void Visita_sem_sucesso_da_o_pino_a_ordem_sem_coordenada_e_nao_mexe_na_que_ja_tem()
+    {
+        var semPino = Atribuida();
+        semPino.RegistrarVisitaSemSucesso(MotivoVisitaSemSucesso.Ausente, 3, Agora, NoCliente);
+        semPino.Localizacao.ShouldBe(NoCliente);
+
+        var comPino = Atribuida(new Localizacao(-21.1, -39.1));
+        comPino.RegistrarVisitaSemSucesso(MotivoVisitaSemSucesso.Ausente, 3, Agora, NoCliente);
+        comPino.Localizacao.ShouldBe(new Localizacao(-21.1, -39.1));
+    }
 }

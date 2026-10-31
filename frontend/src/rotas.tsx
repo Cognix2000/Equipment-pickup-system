@@ -6,6 +6,7 @@ import { PrimeiroAcesso } from '@/paginas/acesso/PrimeiroAcesso'
 import { LayoutDaConta } from '@/paginas/conta/LayoutDaConta'
 import { MinhaConta } from '@/paginas/conta/MinhaConta'
 import { DetalheDaOrdem } from '@/paginas/painel/DetalheDaOrdem'
+import { Equipe } from '@/paginas/painel/Equipe'
 import { Importar } from '@/paginas/painel/Importar'
 import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
 import { OrdensFinanceiro } from '@/paginas/painel/OrdensFinanceiro'
@@ -70,7 +71,10 @@ export const rotas = createBrowserRouter([
         <LayoutPainel />
       </RotaProtegida>
     ),
-    children: [{ path: 'usuarios', element: <Usuarios /> }],
+    children: [
+      { path: 'equipe', element: <Equipe /> },
+      { path: 'usuarios', element: <Usuarios /> },
+    ],
   },
   {
     path: '/conta',

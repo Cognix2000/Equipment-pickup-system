@@ -71,6 +71,7 @@ Na primeira vez demora alguns minutos, porque monta as imagens. O serviço `migr
 | App do técnico | http://localhost:8080/tecnico/ordens | Abra no celular ou no modo celular do navegador |
 | Painel do financeiro | http://localhost:8080/financeiro/ordens | |
 | Repasses | http://localhost:8080/financeiro/repasses | Financeiro e gestor |
+| Equipe em campo (mapa) | http://localhost:8080/gestao/equipe | Gestor. Na homologação, o mapa é a cidade simulada |
 | Gestão de usuários | http://localhost:8080/gestao/usuarios | Gestor |
 | Minha conta (chaves de acesso) | http://localhost:8080/conta | Todos |
 | Saúde da API | http://localhost:8080/health | `Healthy` quando banco e API estão bem |

@@ -8,6 +8,7 @@ import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
 import { Historico } from '@/features/ordens/Historico'
 import { useOrdem } from '@/features/ordens/consultas'
 import { descreverPrazo } from '@/features/ordens/prazo'
+import { linksDeRota } from '@/features/ordens/rota'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
 import { RegistroDeContato } from '@/features/ordens/RegistroDeContato'
 import { caixaDeTitulo, comOCliente, devolvidosNaLoja, nomeDoItem, enderecoCurto, rotuloDoTipo, type Ordem } from '@/features/ordens/tipos'
@@ -53,9 +54,7 @@ export function DetalheOrdem() {
 function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
   const prazo = descreverPrazo(ordem.carenciaAte)
   const { endereco } = ordem
-  const destino = ordem.localizacao
-    ? `${ordem.localizacao.latitude},${ordem.localizacao.longitude}`
-    : `${endereco.logradouro}, ${endereco.numero ?? ''}, ${endereco.cidade} - ${endereco.uf}`
+  const rota = linksDeRota(ordem)
 
   return (
     <>
@@ -66,28 +65,30 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
           <p className="text-xs text-texto-suave">Cliente</p>
           <p className="mt-0.5 text-[17px] font-semibold text-marinho">{ordem.cliente}</p>
         </div>
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <p>
-              {enderecoCurto(ordem)}
-              {endereco.complemento && ` · ${caixaDeTitulo(endereco.complemento)}`}
-            </p>
-            <p className="mt-0.5 text-[13px] text-texto-suave">
-              {caixaDeTitulo(endereco.bairro)} · {caixaDeTitulo(endereco.cidade)}
-              {endereco.referencia && ` · ${caixaDeTitulo(endereco.referencia)}`}
-            </p>
-          </div>
-          {/* RF11: abre o app de mapas do celular no endereço. */}
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] border border-azul px-3.5 text-sm font-semibold text-azul no-underline"
-          >
+        <div>
+          <p>
+            {enderecoCurto(ordem)}
+            {endereco.complemento && ` · ${caixaDeTitulo(endereco.complemento)}`}
+          </p>
+          <p className="mt-0.5 text-[13px] text-texto-suave">
+            {caixaDeTitulo(endereco.bairro)} · {caixaDeTitulo(endereco.cidade)}
+            {endereco.referencia && ` · ${caixaDeTitulo(endereco.referencia)}`}
+          </p>
+        </div>
+        {/* RF11: abre o app de mapas do celular no endereço, no que o técnico preferir. */}
+        <div className="grid grid-cols-2 gap-2">
+          <a href={rota.googleMaps} target="_blank" rel="noreferrer" className={classeDoBotaoDeRota}>
             <Navigation aria-hidden className="size-[18px]" />
-            Rota
+            Google Maps
+          </a>
+          <a href={rota.waze} target="_blank" rel="noreferrer" className={classeDoBotaoDeRota}>
+            <Navigation aria-hidden className="size-[18px]" />
+            Waze
           </a>
         </div>
+        {!ordem.localizacao && (
+          <p className="text-[13px] text-texto-suave">Rota pelo endereço escrito: confira o número na chegada.</p>
+        )}
         {ordem.observacao && <p className="rounded-lg bg-fundo px-2.5 py-2 text-[13px] text-texto-suave">Obs.: {ordem.observacao}</p>}
         <Telefones ordem={ordem} />
       </Card>
@@ -117,6 +118,9 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
     </>
   )
 }
+
+const classeDoBotaoDeRota =
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] border border-azul px-3.5 text-sm font-semibold text-azul no-underline'
 
 /** Contato só depois da carência e antes da retirada (RN10); fora disso, os telefones aparecem só para consulta. */
 const aceitaContato = (ordem: Ordem) => ordem.status === 'disponivel' || ordem.status === 'atribuida' || ordem.status === 'em_rota'

@@ -38,6 +38,8 @@ services:
       Acesso__ChaveDeAcesso__Origens: https://${DOMINIO}
       # Repasse ao técnico por retirada conferida, em centavos (500 = R$ 5,00). Muda no .env, sem mexer neste arquivo.
       Ordens__ValorPorRetiradaCentavos: ${VALOR_POR_RETIRADA_CENTAVOS:-500}
+      # Mapa com as ruas de verdade (OpenFreeMap). A homologação usa a cidade simulada dos dados fictícios.
+      Mapa__Estilo: real
 
   fotos:
     <<: *logs
