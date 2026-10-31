@@ -68,4 +68,6 @@ Nunca use dado real em código, teste, issue, log ou captura de tela. Use os fic
 
 ## Versões
 
-Ao fechar um incremento, crie a tag `vX.Y.Z` na `main`. Produção só recebe versão com tag, com aprovação manual.
+**A produção só recebe versão com tag** (ADR-006). O merge na `main` vai para a homologação, e a tag é a aprovação manual para a produção.
+
+O passo a passo (criar a release no GitHub, esperar as imagens e atualizar o servidor) e a regra do número (correção, funcionalidade ou dados reais) estão em [docs/implantacao.md, "Lançar uma versão"](docs/implantacao.md#lançar-uma-versão).

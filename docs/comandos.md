@@ -109,12 +109,14 @@ git stash && git stash pop                           # guarda o que está pela m
 
 ## Produção (no servidor)
 
+Atualizar para uma versão já lançada (a produção só aceita tag, nunca `main`):
+
 ```bash
-cd ~/retirada && sh deploy/atualizar.sh                                             # baixa as imagens novas e atualiza
+cd ~/retirada && sed -i 's/^VERSAO=.*/VERSAO=v0.2.0/' .env && sh deploy/atualizar.sh   # código e imagens na tag v0.2.0
 docker compose -f docker-compose.yml -f docker-compose.producao.yml ps             # o que está rodando
 docker compose -f docker-compose.yml -f docker-compose.producao.yml logs -f api    # log da API
 docker compose -f docker-compose.yml -f docker-compose.producao.yml logs migrador  # resultado das migrações
 curl -sI https://pedro.devioslab.com.br/health                                      # saúde de fora do servidor
 ```
 
-O resto da produção (HTTPS, modo demonstração, backup e primeiro gestor) está em [implantacao.md](implantacao.md).
+Para lançar uma versão nova (criar a tag), veja "Lançar uma versão" em [implantacao.md](implantacao.md#lançar-uma-versão). O resto da produção (HTTPS, modo demonstração, backup e primeiro gestor) está no mesmo arquivo.

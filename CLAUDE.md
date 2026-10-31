@@ -122,7 +122,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 
 ## Onde paramos (out/2026)
 
-- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)).
+- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro.
 - **Entregue depois do incremento 1:**
 
   | PR | O que entrou |
