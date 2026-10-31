@@ -11,6 +11,8 @@ Tudo roda com dados fictícios: nenhum dado real de cliente entra aqui.
 
 ## Como rodar
 
+Primeira vez? Instale as ferramentas com [docs/ambiente.md](docs/ambiente.md). Todos os documentos estão listados em [docs/README.md](docs/README.md).
+
 ### Tudo no Docker (homologação)
 
 ```bash
