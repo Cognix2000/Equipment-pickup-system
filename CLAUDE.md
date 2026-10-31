@@ -1,6 +1,11 @@
 # CLAUDE.md · Retirada Netwise
 
-Contexto para o Claude (VS Code, terminal ou web) trabalhar neste repositório. Leia este arquivo inteiro antes de mudar qualquer coisa. Para rodar e testar, siga o [README](README.md). Para branches e PRs, siga o [CONTRIBUTING](CONTRIBUTING.md). As decisões técnicas estão em [docs/adr](docs/adr/README.md).
+Contexto para o Claude (VS Code, terminal ou web) e para qualquer agente de IA trabalhar neste repositório (o [AGENTS.md](AGENTS.md) aponta para cá). Leia este arquivo inteiro antes de mudar qualquer coisa.
+
+- **Mapa da documentação:** [docs/README.md](docs/README.md).
+- **Arquitetura e banco:** [docs/arquitetura.md](docs/arquitetura.md) e [docs/modelo-de-dados.md](docs/modelo-de-dados.md).
+- **Branches e PRs:** [CONTRIBUTING](CONTRIBUTING.md).
+- **Decisões técnicas:** [docs/adr](docs/adr/README.md).
 
 ## O que é
 
@@ -70,6 +75,7 @@ Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último 
 ## Comandos
 
 ```bash
+./testar.sh                                     # o mesmo que o CI, antes de dizer que terminou (./testar.sh rapido no meio do trabalho)
 docker compose up --build                       # tudo: banco, migrações, dados fictícios, API, app, fotos → http://localhost:8080
 cd backend && dotnet test                       # domínio, arquitetura e contrato (os de banco ficam ignorados)
 RETIRADA_TESTE_BANCO="Host=localhost;Database=retirada_teste;Username=retirada_dono;Password=...;GSS Encryption Mode=Disable" dotnet test
@@ -116,11 +122,19 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 
 ## Onde paramos (out/2026)
 
-- **Incremento 1 completo na `main`** (último: PR #20, devolução parcial na loja). Tem 239 testes no backend, 21 no Vitest e 174 no e2e, e o ensaio passou 6/6 contra a stack real.
-- **Próximo passo:**
-  1. subir com `docker compose up --build` e conferir em homologação;
-  2. seguir [docs/roteiro-de-demonstracao.md](docs/roteiro-de-demonstracao.md) para apresentar;
-  3. configurar o 2FA do financeiro e do gestor antes.
+- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro.
+- **Entregue depois do incremento 1:**
+
+  | PR | O que entrou |
+  | --- | --- |
+  | #34 | Chave de acesso, a passkey (ADR-012) |
+  | #35 | Resumo do técnico na tela dele |
+  | #36 | Repasse ao técnico, com o registro do pagamento |
+
+- **Próximos pedidos do Pedro, nesta ordem:**
+  1. **Mapa real e localização em tempo real.** O técnico (CLT ou PJ) vê o endereço da retirada e a própria posição, com um botão de rota para o Google Maps ou o Waze. O gestor acompanha todos os técnicos. Estoque e financeiro não veem a localização. O PWA só manda a posição com o app aberto.
+  2. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
+  3. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
 - **Não comece funcionalidade nova sem o Pedro pedir.**
 
