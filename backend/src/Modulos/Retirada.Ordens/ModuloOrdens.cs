@@ -48,6 +48,7 @@ public static class ModuloOrdens
 
         ListarOrdens.Mapear(grupo);
         ObterOrdem.Mapear(grupo);
+        ResumoDoTecnico.Mapear(grupo);
 
         // Comandos (ADR-009): POST /api/ordens/{id}/<ação>, todos com Idempotency-Key.
         Liberar.Mapear(grupo);

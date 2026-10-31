@@ -585,6 +585,26 @@
         }
       }
     },
+    "/api/ordens/meu-resumo": {
+      "get": {
+        "tags": [
+          "Ordens"
+        ],
+        "summary": "Resumo do t\u00E9cnico: retiradas, conferidas e visitas de hoje, da semana e do m\u00EAs",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ordens/{id}/liberar": {
       "post": {
         "tags": [
