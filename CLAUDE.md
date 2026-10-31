@@ -94,6 +94,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | RF16 | Histórico |
 | RF18 | Parâmetros ajustáveis |
 | RF19 | Baixa no HubSoft |
+| Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou PJ, igual); o financeiro registra o pagamento (`Ordens:ValorPorRetiradaCentavos`) |
 | RN01 | Reimportar não duplica |
 | RN02 | Só cliente rescindido vira ordem |
 | RN03 | Carência de 48 h; o financeiro pode liberar antes |

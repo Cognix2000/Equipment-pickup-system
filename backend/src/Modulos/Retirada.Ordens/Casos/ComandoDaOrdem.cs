@@ -19,7 +19,8 @@ namespace Retirada.Ordens.Casos;
 /// <summary>Parâmetros das regras que o gestor ajusta sem mexer no código (RF18).</summary>
 /// <param name="ModoSimulacao">Homologação com dados fictícios: aceita o DDD 00 (RN05).</param>
 /// <param name="DiasSemResposta">Dias depois da carência sem resposta do cliente antes de encerrar (RN09).</param>
-internal sealed record ParametrosDasOrdens(int LimiteDeVisitas, int CarenciaHoras = 48, bool ModoSimulacao = false, int DiasSemResposta = 10);
+internal sealed record ParametrosDasOrdens(
+    int LimiteDeVisitas, int CarenciaHoras = 48, bool ModoSimulacao = false, int DiasSemResposta = 10, int ValorPorRetiradaCentavos = 500);
 
 /// <summary>O que todo comando recebe: a ordem da rota, a chave de idempotência e o contexto da requisição.</summary>
 internal sealed record PedidoDeComando(

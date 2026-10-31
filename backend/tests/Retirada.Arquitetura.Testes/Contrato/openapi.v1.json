@@ -1436,6 +1436,127 @@
         }
       }
     },
+    "/api/repasses/meu": {
+      "get": {
+        "tags": [
+          "Repasses"
+        ],
+        "summary": "Repasse do t\u00E9cnico: valor a receber e \u00FAltimos pagamentos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/repasses": {
+      "get": {
+        "tags": [
+          "Repasses"
+        ],
+        "summary": "Repasse de cada t\u00E9cnico: retiradas conferidas a pagar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TecnicoNaLista"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/repasses/{tecnicoId}": {
+      "get": {
+        "tags": [
+          "Repasses"
+        ],
+        "summary": "Retiradas a pagar e pagamentos de um t\u00E9cnico",
+        "parameters": [
+          {
+            "name": "tecnicoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detalhe"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/repasses/{tecnicoId}/pagamentos": {
+      "post": {
+        "tags": [
+          "Repasses"
+        ],
+        "summary": "Registrar o pagamento de tudo o que o t\u00E9cnico tem a receber",
+        "parameters": [
+          {
+            "name": "tecnicoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pedido"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registrado"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/importacoes/previa": {
       "post": {
         "tags": [
@@ -1643,6 +1764,97 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "Credito": {
+        "required": [
+          "id",
+          "creditadoEm",
+          "valorCentavos",
+          "numeroOs",
+          "bairro"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creditadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "numeroOs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bairro": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Detalhe": {
+        "required": [
+          "id",
+          "nome",
+          "quantidade",
+          "valorCentavos",
+          "emAberto",
+          "pagamentos"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "quantidade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "emAberto": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Credito"
+            }
+          },
+          "pagamentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Pagamento"
+            }
           }
         }
       },
@@ -2212,6 +2424,48 @@
           }
         }
       },
+      "Pagamento": {
+        "required": [
+          "id",
+          "pagoEm",
+          "valorCentavos",
+          "quantidade",
+          "observacao"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pagoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "observacao": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Pedido": {
         "required": [
           "email",
@@ -2514,6 +2768,41 @@
           }
         }
       },
+      "Registrado": {
+        "required": [
+          "id",
+          "pagoEm",
+          "valorCentavos",
+          "quantidade"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pagoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RelatorioDaImportacaoDto": {
         "required": [
           "importacaoId",
@@ -2728,6 +3017,52 @@
           "encerrada_sem_retirada"
         ]
       },
+      "TecnicoNaLista": {
+        "required": [
+          "id",
+          "nome",
+          "situacao",
+          "quantidade",
+          "valorCentavos",
+          "ultimoPagamentoEm"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "situacao": {
+            "type": "string"
+          },
+          "quantidade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ultimoPagamentoEm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "TelefoneDto": {
         "required": [
           "id",
@@ -2851,6 +3186,9 @@
     },
     {
       "name": "Ordens"
+    },
+    {
+      "name": "Repasses"
     },
     {
       "name": "Importa\u00E7\u00E3o"
