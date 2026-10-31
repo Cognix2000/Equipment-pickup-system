@@ -52,16 +52,10 @@ Instale o Docker Engine pelo repositório oficial da Docker (com o plugin `docke
 
 ```bash
 git clone git@github.com:Cognix2000/Equipment-pickup-system.git retirada && cd retirada
-cp .env.example .env
+sh ferramentas/criar-env.sh homologacao
 ```
 
-No `.env`, troque cada `troque-…` por um valor forte. Para gerar um:
-
-```bash
-openssl rand -hex 24
-```
-
-Depois, suba tudo:
+O script cria o `.env` com senhas aleatórias fortes e permissão só para você. Não existe arquivo de exemplo no repositório, e o `.env` nunca vai para o Git. Depois, suba tudo:
 
 ```bash
 docker compose up --build
@@ -109,7 +103,7 @@ O banco fica no Docker, e a API e o app rodam na sua máquina. Toda mudança apa
 
 | Sintoma | Causa | Solução |
 | --- | --- | --- |
-| `defina BANCO_SENHA_DONO no .env` | Falta o `.env` ou a variável | `cp .env.example .env` e preencha |
+| `defina BANCO_SENHA_DONO no .env` | Falta o `.env` | `sh ferramentas/criar-env.sh homologacao` |
 | `port is already allocated` na 8080 | Outra coisa usa a porta | `WEB_PORTA=8081` no `.env` |
 | `port is already allocated` na 5432 | Um PostgreSQL instalado na máquina | Pare esse serviço ou mude a porta do `banco` no compose |
 | A API não sobe | O migrador falhou | `docker compose logs migrador` |

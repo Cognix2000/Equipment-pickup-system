@@ -16,7 +16,7 @@ Primeira vez? Instale as ferramentas com [docs/ambiente.md](docs/ambiente.md). T
 ### Tudo no Docker (homologação)
 
 ```bash
-cp .env.example .env          # e troque cada "troque-…" por um valor seu
+sh ferramentas/criar-env.sh homologacao   # cria o .env com senhas aleatórias (não existe arquivo de exemplo)
 docker compose up --build
 ```
 
@@ -116,7 +116,7 @@ O volume `chaves` guarda as chaves do ASP.NET Data Protection, que assinam o coo
 ### Desenvolvimento com recarga automática
 
 ```bash
-cp .env.example .env
+sh ferramentas/criar-env.sh homologacao                 # se ainda não tiver o .env
 docker compose up -d banco migrador                      # banco + migrações + dados fictícios
 
 cd backend/src/Retirada.Api

@@ -119,4 +119,4 @@ docker compose -f docker-compose.yml -f docker-compose.producao.yml logs migrado
 curl -sI https://pedro.devioslab.com.br/health                                      # saúde de fora do servidor
 ```
 
-Para lançar uma versão nova (criar a tag), veja "Lançar uma versão" em [implantacao.md](implantacao.md#lançar-uma-versão). O resto da produção (HTTPS, modo demonstração, backup e primeiro gestor) está no mesmo arquivo.
+Para lançar uma versão nova (criar a tag), veja "Lançar uma versão" em [implantacao.md](implantacao.md#lançar-uma-versão). O resto da produção (HTTPS, zerar o teste, backup e primeiro gestor) está no mesmo arquivo.

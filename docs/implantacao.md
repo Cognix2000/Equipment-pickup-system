@@ -40,11 +40,22 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
    docker login ghcr.io -u <seu-usuario-github>   # cole o token quando pedir a senha
    ```
 
-3. **Configuração.** Gere um valor forte para cada "troque-…" com `openssl rand -hex 24`:
+3. **Configuração.** O script cria o `.env` com senhas aleatórias fortes, permissão só para o dono, o domínio e a versão:
    ```bash
-   cp .env.producao.example .env && chmod 600 .env && nano .env
+   sh ferramentas/criar-env.sh producao pedro.devioslab.com.br v0.1.0
    ```
-   Guarde uma cópia do `.env` num cofre de senhas. Sem ela, o backup do banco não serve.
+   Não existe arquivo de exemplo no repositório, e o `.env` nunca vai para o Git. Guarde uma cópia dele num cofre de senhas: sem ela, o backup do banco não serve.
+
+   | Variável | O que é |
+   | --- | --- |
+   | `VERSAO` | A versão lançada que roda (tag `vX.Y.Z`) |
+   | `DOMINIO` | O domínio com DNS para o servidor (HTTPS) |
+   | `BANCO_SENHA_DONO`, `BANCO_SENHA_API` | Senhas do banco: valem desde a primeira subida, **não troque depois** |
+   | `FOTOS_CHAVE`, `FOTOS_SEGREDO` | Acesso da API ao armazenamento das fotos |
+   | `WEB_PORTA` | `127.0.0.1:8080`: o app só sai pelo Caddy |
+   | `IMPORTACAO_MODO_SIMULACAO` | `false`: só telefone real (RN05) |
+   | `OTEL_ENDPOINT` | Destino da telemetria (vazio = nenhum) |
+   | `VALOR_POR_RETIRADA_CENTAVOS` | Repasse ao técnico por retirada conferida |
 
 4. **Subir.** A `VERSAO` do `.env` precisa ser uma versão já lançada, como `v0.1.0` (veja [Lançar uma versão](#lançar-uma-versão)):
    ```bash
@@ -59,40 +70,13 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
    ```
    O link vale 48 h e uma vez só. A partir daí, o gestor cadastra os outros usuários pela tela de gestão.
 
-## Modo demonstração (antes dos dados reais)
+## Antes dos dados reais: zerar o teste
 
-Antes de entrar com dados reais, o servidor pode rodar com os **usuários de teste**, um por papel, e as **ordens fictícias**, para mostrar o produto:
-
-| Papel | E-mail | 2FA |
-| --- | --- | --- |
-| Gestor | `gestor.demo@exemplo.invalid` | sim |
-| Financeiro | `financeiro.demo@exemplo.invalid` | sim |
-| Técnico | `tecnico.demo@exemplo.invalid` | não |
-| Estoque | `estoque.demo@exemplo.invalid` | não |
-
-A senha dos quatro é a `SENHA_DEMONSTRACAO` do `.env`, e não a do README. O site está aberto na internet.
-
-1. **Ligar:**
-   ```bash
-   cd ~/retirada
-   grep -q '^MODO_DEMONSTRACAO=' .env || echo 'MODO_DEMONSTRACAO=false' >> .env    # .env criado antes desta opção
-   grep -q '^SENHA_DEMONSTRACAO=' .env || echo 'SENHA_DEMONSTRACAO=' >> .env
-   sed -i 's/^MODO_DEMONSTRACAO=.*/MODO_DEMONSTRACAO=true/' .env
-   sed -i "s|^SENHA_DEMONSTRACAO=.*|SENHA_DEMONSTRACAO=$(openssl rand -base64 18)|" .env
-   grep '^SENHA_DEMONSTRACAO=' .env       # anote a senha no gerenciador de senhas
-   sh deploy/atualizar.sh
-   ```
-2. **Logo em seguida, entre como gestor e como financeiro e configure o 2FA dos dois:** a digital ou o rosto do celular (chave de acesso), ou um aplicativo autenticador. Até isso acontecer, quem souber a senha poderia configurar o 2FA no lugar de vocês.
-3. A senha só é definida para usuário fictício que ainda não tem senha. Trocar a `SENHA_DEMONSTRACAO` depois não muda nada, a não ser que você saia do modo e ligue de novo.
-
-### Sair do modo demonstração
-
-Ordens e históricos nunca são apagados pela aplicação (RN12). Por isso, o teste é **zerado inteiro** antes do primeiro dado real. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
+Enquanto o servidor tiver só dado de teste (usuários e ordens fictícias), zere tudo antes do primeiro dado real. Ordens e históricos nunca são apagados pela aplicação (RN12), então o teste não pode ficar misturado com o real. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
 
 ```bash
 cd ~/retirada
-docker compose -f docker-compose.yml -f docker-compose.producao.yml -f docker-compose.demonstracao.yml down -v
-sed -i 's/^MODO_DEMONSTRACAO=.*/MODO_DEMONSTRACAO=false/; s/^SENHA_DEMONSTRACAO=.*/SENHA_DEMONSTRACAO=/' .env
+docker compose -f docker-compose.yml -f docker-compose.producao.yml down -v
 sh deploy/atualizar.sh
 ```
 
@@ -155,13 +139,14 @@ Depois do merge que trouxe esta regra, lance a `v0.1.0` (passo 3 acima) e rode, 
 
 ```bash
 cd ~/retirada
-git pull --ff-only
+git fetch --force origin && git checkout --detach origin/main     # traz o script novo (funciona depois da limpeza do histórico)
 grep -q '^VERSAO=' .env || echo 'VERSAO=' >> .env
 sed -i 's/^VERSAO=.*/VERSAO=v0.1.0/' .env
+sed -i '/^MODO_DEMONSTRACAO=/d; /^SENHA_DEMONSTRACAO=/d' .env      # o modo demonstração saiu
 sh deploy/atualizar.sh
 ```
 
-O `git pull` traz o script novo. Nas próximas vezes, o próprio script leva o código para a tag.
+Nas próximas vezes, o próprio script leva o código para a tag.
 
 ## O que guardar no backup
 
