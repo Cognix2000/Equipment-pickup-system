@@ -119,5 +119,5 @@ jobs:
       - uses: actions/checkout@v7
       - name: Monta as imagens da API e do PWA
         run: |
-          cp .env.example .env
+          sh ferramentas/criar-env.sh homologacao
           docker compose build

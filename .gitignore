@@ -1,7 +1,17 @@
-# Segredos
+# Segredos e arquivos de ambiente: nunca vão para o Git (o .env nasce de ferramentas/criar-env.sh)
 .env
+.env.*
+*.env
 *.pfx
+*.pem
+*.key
+*.p12
+id_rsa*
+id_ed25519*
 appsettings.*.local.json
+# Variações locais do compose (ex.: o antigo modo demonstração): não entram no repositório
+docker-compose.*.local.yml
+docker-compose.demonstracao.yml
 
 # .NET
 bin/

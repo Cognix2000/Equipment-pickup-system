@@ -7,7 +7,7 @@ Duração: uns 15 minutos. Este roteiro foi ensaiado de ponta a ponta contra a A
 ## 1. Preparar (na véspera)
 
 ```bash
-cp .env.example .env            # e troque cada "troque-…" por um valor seu
+sh ferramentas/criar-env.sh homologacao   # cria o .env com senhas aleatórias
 docker compose up --build       # primeira vez: alguns minutos
 ```
 

@@ -1,7 +1,6 @@
 #!/bin/sh
 # Sobe ou atualiza a produção na versão do .env (VERSAO=vX.Y.Z). ADR-006: produção só recebe versão com tag.
 # O código do servidor (compose, Caddyfile, scripts) vai para a MESMA tag das imagens, então os dois andam juntos.
-# Com MODO_DEMONSTRACAO=true no .env, sobe também os usuários de teste e as ordens fictícias.
 # Rode na pasta do repositório, no servidor:  sh deploy/atualizar.sh
 set -eu
 cd "$(dirname "$0")/.."
@@ -25,12 +24,7 @@ principal() {
   git -c advice.detachedHead=false checkout --quiet "$versao"
   echo "Código e imagens na versão $versao ($(git rev-parse --short HEAD))."
 
-  arquivos="-f docker-compose.yml -f docker-compose.producao.yml"
-  if grep -qx 'MODO_DEMONSTRACAO=true' .env; then
-    arquivos="$arquivos -f docker-compose.demonstracao.yml"
-    echo "Modo demonstração: usuários de teste e ordens fictícias (zere antes de usar com dados reais)."
-  fi
-  compose="docker compose $arquivos"
+  compose="docker compose -f docker-compose.yml -f docker-compose.producao.yml"
 
   $compose pull                      # imagens da API e do app nessa versão (GHCR), banco, fotos e Caddy
   $compose up -d --no-build --remove-orphans
