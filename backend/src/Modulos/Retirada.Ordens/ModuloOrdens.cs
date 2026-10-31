@@ -31,7 +31,9 @@ public static class ModuloOrdens
             LimiteDeVisitas: config.GetValue("Ordens:LimiteDeVisitas", 3),
             CarenciaHoras: config.GetValue("Ordens:CarenciaHoras", 48),          // RN03
             ModoSimulacao: config.GetValue("Importacao:ModoSimulacao", false),   // RN05: DDD 00 só com dados fictícios
-            DiasSemResposta: config.GetValue("Ordens:DiasSemResposta", 10)));    // RN09
+            DiasSemResposta: config.GetValue("Ordens:DiasSemResposta", 10),     // RN09
+            // Repasse ao técnico por retirada conferida, em centavos (R$ 5,00). Muda só daqui para a frente.
+            ValorPorRetiradaCentavos: ValorPositivo(config.GetValue("Ordens:ValorPorRetiradaCentavos", 500), "Ordens:ValorPorRetiradaCentavos")));
 
         // Rotinas automáticas (RN03, RN09). A cada 5 min basta: os prazos são de horas e dias. Os testes desligam para controlar o relógio.
         if (config.GetValue("Ordens:Rotinas:Ativas", true))
@@ -41,6 +43,9 @@ public static class ModuloOrdens
         }
         return services;
     }
+
+    private static int ValorPositivo(int valor, string chave) =>
+        valor > 0 ? valor : throw new InvalidOperationException($"{chave} precisa ser maior que zero.");
 
     public static IEndpointRouteBuilder MapModuloOrdens(this IEndpointRouteBuilder app)
     {
@@ -62,6 +67,12 @@ public static class ModuloOrdens
         RegistrarDevolucaoNaLoja.Mapear(grupo);
         MarcarBaixaFeita.Mapear(grupo);
         RegistrarContato.Mapear(grupo);
+
+        // Repasse ao técnico: o dele (técnico), o de todos e o pagamento (financeiro e gestor).
+        var repasses = app.MapGroup("/api/repasses").WithTags("Repasses");
+        MeuRepasse.Mapear(repasses);
+        RepassesDosTecnicos.Mapear(repasses);
+        RegistrarPagamentoDeRepasse.Mapear(repasses);
 
         // Importação (RF03–RF05): prévia, confirmação e descarte.
         var importacoes = app.MapGroup("/api/importacoes").WithTags("Importação").RequireAuthorization(Politicas.Financeiro);

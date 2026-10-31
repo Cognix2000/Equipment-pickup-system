@@ -6,6 +6,7 @@ import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { useOrdens } from '@/features/ordens/consultas'
 import { OrdemCard } from '@/features/ordens/OrdemCard'
 import { ResumoDoTecnico } from '@/features/ordens/ResumoDoTecnico'
+import { ARecebe } from '@/features/repasses/ARecebe'
 import { caixaDeTitulo } from '@/features/ordens/tipos'
 import { useConectado } from '@/lib/useConectado'
 import { cn } from '@/lib/utils'
@@ -44,6 +45,7 @@ export function MinhasOrdens() {
           {isPending ? 'Carregando suas ordens' : `${ordens?.length ?? 0} ${ordens?.length === 1 ? 'ordem atribuída' : 'ordens atribuídas'} a você`}
         </p>
         <ResumoDoTecnico />
+        <ARecebe />
       </header>
 
       {bairros.length > 1 && (
