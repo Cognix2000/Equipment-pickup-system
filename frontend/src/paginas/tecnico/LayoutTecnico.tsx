@@ -1,14 +1,19 @@
 import { CloudUpload, LogOut, Map as IconeMapa, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
+import { useEu } from '@/features/acesso/acesso'
 import { useSair } from '@/features/acesso/useSair'
+import { useCompartilharPosicao } from '@/features/mapa/minhaPosicao'
 import { cn } from '@/lib/utils'
 
 /**
  * Casca do app de campo: coluna de celular. Em tablet ou computador fica centralizada
  * em até 560 px, para continuar usável com uma mão (RNF02).
+ * Com o app aberto, o técnico compartilha a posição com o gestor (o gestor que abre esta tela, não).
  */
 export function LayoutTecnico() {
   const sair = useSair()
+  const { data: eu } = useEu()
+  useCompartilharPosicao(eu?.papel === 'tecnico')
   return (
     <div className="min-h-dvh bg-moldura">
       <div className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col bg-fundo">

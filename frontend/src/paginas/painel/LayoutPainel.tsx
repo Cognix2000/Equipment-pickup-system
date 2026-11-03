@@ -10,6 +10,7 @@ const secoes: { para: string; texto: string; papeis: Papel[] }[] = [
   { para: '/financeiro/importar', texto: 'Importar', papeis: ['admin', 'financeiro'] },
   { para: '/financeiro/repasses', texto: 'Repasses', papeis: ['admin', 'financeiro'] },
   { para: '/estoque/conferir', texto: 'Conferir', papeis: ['admin', 'estoque'] },
+  { para: '/gestao/equipe', texto: 'Equipe', papeis: ['admin'] },
   { para: '/gestao/usuarios', texto: 'Usuários', papeis: ['admin'] },
 ]
 

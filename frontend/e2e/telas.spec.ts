@@ -30,6 +30,13 @@ const detalheDoRepasse = {
   pagamentos: [{ id: '0192f000-0000-7000-8000-0000000000e0', pagoEm: '2026-10-24T17:00:00-03:00', valorCentavos: 4500, quantidade: 9, observacao: 'PIX' }],
 }
 
+/** Posições na Cidade Simulada; os horários são relativos a agora para o "Agora" / "Há X min" não envelhecer. */
+const equipeEmCampo = () => [
+  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', latitude: -21.0012, longitude: -38.9978, precisaoM: 9, registradaEm: new Date(Date.now() - 30_000).toISOString(), ordensComEle: 3 },
+  { id: '0192f000-0000-7000-8000-000000000006', nome: 'Técnico Parceiro', latitude: -20.9961, longitude: -38.9851, precisaoM: 20, registradaEm: new Date(Date.now() - 40 * 60_000).toISOString(), ordensComEle: 1 },
+  { id: '0192f000-0000-7000-8000-000000000007', nome: 'Técnico Novo', latitude: null, longitude: null, precisaoM: null, registradaEm: null, ordensComEle: 0 },
+]
+
 /** Simula a API com dados fictícios. `papel` = quem está logado (null = ninguém). */
 async function simularApi(page: Page, papel: Papel) {
   await page.route('**/api/acesso/eu', (rota) =>
@@ -71,6 +78,9 @@ async function simularApi(page: Page, papel: Papel) {
     if (caminho.endsWith('/pagamentos')) return rota.fulfill({ json: { id: '0192f000-0000-7000-8000-0000000000e1', pagoEm: '2026-10-31T10:00:00-03:00', valorCentavos: 1000, quantidade: 2 } })
     return rota.fulfill({ json: detalheDoRepasse })
   })
+  await page.route('**/api/mapa', (rota) => rota.fulfill({ json: { estilo: 'simulado' } }))
+  await page.route('**/api/localizacao/equipe', (rota) => rota.fulfill({ json: equipeEmCampo() }))
+  await page.route('**/api/localizacao/minha', (rota) => rota.fulfill({ status: 204 }))
   // Registrada depois, atende antes da rota geral das ordens.
   await page.route('**/api/ordens/meu-resumo', (rota) =>
     rota.fulfill({
@@ -95,6 +105,7 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'ordens-do-financeiro', rota: '/financeiro/ordens', pronto: 'MARIA EXEMPLO SILVA', papel: 'financeiro' },
   { nome: 'ordem-no-painel', rota: `/financeiro/ordens/${ordemMaria.id}`, pronto: 'O que fazer', papel: 'financeiro' },
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
+  { nome: 'equipe', rota: '/gestao/equipe', pronto: '1 técnico em campo agora', papel: 'admin' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
   { nome: 'repasses', rota: '/financeiro/repasses', pronto: 'Técnico Demonstração', papel: 'financeiro' },
   { nome: 'minha-conta', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'financeiro' },
@@ -738,4 +749,84 @@ test('financeiro confere as retiradas e registra o pagamento com confirmação',
   await page.getByRole('button', { name: 'Sim, registrar o pagamento' }).click()
 
   await expect.poll(() => pagamento).toEqual({ valorCentavos: 1000, observacao: 'PIX de 31/10' })
+})
+
+test('técnico abre a rota no Google Maps ou no Waze', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.goto(`/tecnico/ordens/${ordemMaria.id}`)
+
+  const waze = page.getByRole('link', { name: 'Waze' })
+  await expect(waze).toHaveAttribute('href', /^https:\/\/waze\.com\/ul\?.*navigate=yes$/)
+  await expect(waze).toHaveAttribute('target', '_blank')
+  await expect(page.getByRole('link', { name: 'Google Maps' })).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/)
+})
+
+test('com o app aberto, o técnico manda a posição para o gestor e é avisado disso', async ({ page, context }) => {
+  await simularApi(page, 'tecnico')
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: -21.0012, longitude: -38.9978, accuracy: 9 })
+  const posicoes: unknown[] = []
+  await page.route('**/api/localizacao/minha', async (rota) => {
+    expect(rota.request().headers()['x-retirada']).toBe('1')
+    posicoes.push(rota.request().postDataJSON())
+    await rota.fulfill({ status: 204 })
+  })
+
+  await page.goto('/tecnico/ordens')
+
+  await expect(page.getByText('Sua localização aparece para o gestor enquanto o app está aberto.')).toBeVisible()
+  await expect.poll(() => posicoes.length).toBeGreaterThan(0)
+  expect(posicoes[0]).toMatchObject({ latitude: -21.0012, longitude: -38.9978, precisaoM: 9, registradaEm: expect.any(String) })
+  await expect(page.getByRole('img', { name: 'Você está aqui' })).toBeVisible()
+})
+
+test('com a localização bloqueada, o técnico sabe que o gestor não vê onde ele está', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.addInitScript(() => {
+    navigator.geolocation.watchPosition = (_ok, erro) => {
+      erro?.({ code: 1, message: 'negado', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError)
+      return 1
+    }
+  })
+  await page.goto('/tecnico/ordens')
+
+  await expect(page.getByRole('status').filter({ hasText: 'A localização está bloqueada' })).toBeVisible()
+})
+
+test('gestor que abre a tela do técnico não manda posição', async ({ page, context }) => {
+  await simularApi(page, 'admin')
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: -21.0012, longitude: -38.9978, accuracy: 9 })
+  let mandou = false
+  await page.route('**/api/localizacao/minha', (rota) => {
+    mandou = true
+    return rota.fulfill({ status: 204 })
+  })
+
+  await page.goto('/tecnico/ordens')
+  await expect(page.getByText('Ver ordem').first()).toBeVisible()
+  await expect(page.getByText('Sua localização aparece para o gestor')).toHaveCount(0)
+  expect(mandou).toBe(false)
+})
+
+test('gestor acompanha a equipe: quem está em campo agora e quem não abriu o app', async ({ page }) => {
+  await simularApi(page, 'admin')
+  await page.goto('/gestao/equipe')
+
+  const lista = page.getByRole('region', { name: /em campo agora/ })
+  await expect(lista.getByRole('listitem').nth(0)).toContainText('Técnico Demonstração')
+  await expect(lista.getByRole('listitem').nth(0)).toContainText('Agora')
+  await expect(lista.getByRole('listitem').nth(0)).toContainText('3 ordens com ele')
+  await expect(lista.getByRole('listitem').nth(1)).toContainText('Há 40 min')
+  await expect(lista.getByRole('listitem').nth(2)).toContainText('Ainda não abriu o app')
+  // Só quem já mandou posição tem pino no mapa.
+  await expect(page.getByRole('button', { name: /: ver na lista$/ })).toHaveCount(2)
+})
+
+test('financeiro e estoque não veem a equipe no mapa', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  await page.goto('/financeiro/ordens')
+  await expect(page.getByRole('link', { name: 'Equipe' })).toHaveCount(0)
+  await page.goto('/gestao/equipe')
+  await expect(page).not.toHaveURL(/\/gestao\/equipe/)
 })

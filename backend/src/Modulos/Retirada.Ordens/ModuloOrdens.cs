@@ -74,6 +74,12 @@ public static class ModuloOrdens
         RepassesDosTecnicos.Mapear(repasses);
         RegistrarPagamentoDeRepasse.Mapear(repasses);
 
+        // Localização: o técnico manda a dele; só o gestor vê a equipe. E o fundo do mapa (real ou simulado).
+        var localizacao = app.MapGroup("/api/localizacao").WithTags("Localização");
+        RegistrarMinhaPosicao.Mapear(localizacao);
+        PosicoesDaEquipe.Mapear(localizacao);
+        ConfiguracaoDoMapa.Mapear(app.MapGroup("/api/mapa").WithTags("Localização"));
+
         // Importação (RF03–RF05): prévia, confirmação e descarte.
         var importacoes = app.MapGroup("/api/importacoes").WithTags("Importação").RequireAuthorization(Politicas.Financeiro);
         PreverImportacao.Mapear(importacoes);

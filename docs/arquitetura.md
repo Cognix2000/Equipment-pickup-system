@@ -50,7 +50,7 @@ Os testes de arquitetura (NetArchTest, `tests/Retirada.Arquitetura.Testes`) gara
 flowchart TB
     Host["Retirada.Api<br/>host: Program.cs, CSRF, sessão, limite de requisições, erros"]
     Acesso["Retirada.Acesso<br/>login, 2FA, chave de acesso, usuários, convites"]
-    Ordens["Retirada.Ordens<br/>ordens, importação, contato, fotos, conferência, repasse"]
+    Ordens["Retirada.Ordens<br/>ordens, importação, contato, fotos, conferência, repasse, localização"]
     Comum["Retirada.Comum<br/>Entidade, RegraDeNegocioException, papéis e políticas"]
     BancoProj["Retirada.Banco<br/>migrações (Scripts/NNNN_*.sql)"]
 
@@ -166,6 +166,12 @@ flowchart LR
 - **Dados do servidor:** TanStack Query. O cache invalida pela chave: `['ordens']`, `['repasses']`, `['acesso', …]`.
 - **Toda resposta passa por um schema zod.** Se a API mudar o contrato, a tela falha com uma mensagem clara, e não mostra dado quebrado.
 - **Guardas de rota** (`RotaProtegida`): só evitam abrir uma tela proibida. Quem barra de verdade é o servidor (RNF04).
+- **Mapa:** MapLibre, carregado depois da lista (`lazy`). `GET /api/mapa` diz o estilo:
+  - `real` em produção (`Mapa__Estilo` no compose): ruas do OpenFreeMap, grátis, sem chave e com uso comercial permitido;
+  - `simulado` na homologação: a cidade fictícia em `public/dados-ficticios/`, porque as coordenadas dos dados de teste não caem em ruas de verdade.
+
+  Sem geocodificação: a planilha do HubSoft não traz coordenada, e o Nominatim público proíbe dado pessoal e uso recorrente. A rota abre o Google Maps ou o Waze pelo endereço escrito, e a ordem ganha o pino no primeiro GPS registrado (retirada ou visita sem sucesso).
+- **Localização do técnico:** `useCompartilharPosicao` (em `LayoutTecnico`) usa `watchPosition` só com o app visível e manda para `POST /api/localizacao/minha` a cada 30 s, ou antes se andou 75 m. O gestor vê em `/gestao/equipe` (`GET /api/localizacao/equipe`, atualiza a cada 15 s). Estoque e financeiro não têm acesso.
 
 ## Onde mexer para…
 

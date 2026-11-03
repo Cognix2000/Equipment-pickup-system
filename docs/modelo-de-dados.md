@@ -28,6 +28,7 @@ erDiagram
     usuario ||--o{ repasse_credito : "técnico recebe"
     repasse_pagamento ||--|{ repasse_credito : "quita"
     usuario ||--o{ repasse_pagamento : "técnico"
+    usuario ||--o| posicao_tecnico : "última posição"
 
     usuario {
         uuid id PK
@@ -153,6 +154,13 @@ erDiagram
         timestamptz pago_em
         uuid registrado_por FK
     }
+    posicao_tecnico {
+        uuid tecnico_id PK "uma linha por técnico"
+        geography local "Point 4326"
+        real precisao_m
+        timestamptz registrada_em "hora do celular"
+        timestamptz recebida_em
+    }
 ```
 
 ## O que cada tabela guarda
@@ -174,6 +182,7 @@ erDiagram
 | `tentativa_contato` | Ligações e WhatsApp registrados, com o resultado | Ordens | 0001 |
 | `repasse_credito` | R$ por retirada conferida, para o técnico que retirou | Ordens | 0005 |
 | `repasse_pagamento` | Pagamento registrado pelo financeiro, quitando os créditos em aberto | Ordens | 0005 |
+| `posicao_tecnico` | Só a **última** posição de cada técnico, mandada com o app aberto. Não guarda trajeto; só o gestor vê | Ordens | 0006 |
 
 ### Reservadas para depois (já existem, sem uso no código)
 
@@ -202,6 +211,7 @@ erDiagram
 - **Idempotência:** `evento_ordem.chave_idempotencia` é única. O celular reenvia sem duplicar.
 - **Dinheiro em centavos** (`integer`), nunca `float`.
 - **Datas** em `timestamptz` (UTC no banco). A tela mostra no horário de Brasília.
+- **Posição do técnico:** é sobrescrita (`ON CONFLICT … DO UPDATE`), e uma leitura que chega atrasada não volta o técnico para trás (`registrada_em` mais antiga é ignorada). Apagar o usuário apaga a posição.
 - **Expurgo e dinheiro:** apagar uma ordem no expurgo **não** apaga o repasse (`ordem_id` vira nulo).
 
 ## Mudar o esquema

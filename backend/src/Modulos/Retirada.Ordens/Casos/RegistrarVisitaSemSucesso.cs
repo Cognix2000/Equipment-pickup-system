@@ -15,7 +15,7 @@ internal static class RegistrarVisitaSemSucesso
         grupo.MapPost("/{id:guid}/visita-sem-sucesso", ([AsParameters] PedidoDeComando p, PedidoDeVisita corpo, ParametrosDasOrdens parametros) =>
                 ComandoDaOrdem.ExecutarAsync(p, (ordem, agora) =>
                 {
-                    ordem.RegistrarVisitaSemSucesso(corpo.Motivo, parametros.LimiteDeVisitas, agora);
+                    ordem.RegistrarVisitaSemSucesso(corpo.Motivo, parametros.LimiteDeVisitas, agora, corpo.Gps.Localizacao());
                     return Task.FromResult<object?>(new { visitas = ordem.VisitasSemSucesso, limite = parametros.LimiteDeVisitas });
                 }, corpo.Gps))
             .ComoComando(Politicas.Campo, "Registrar visita sem sucesso (RF13)");

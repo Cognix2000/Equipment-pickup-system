@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
+import { AvisoDeLocalizacao } from '@/features/mapa/AvisoDeLocalizacao'
 import { useOrdens } from '@/features/ordens/consultas'
 import { OrdemCard } from '@/features/ordens/OrdemCard'
 import { ResumoDoTecnico } from '@/features/ordens/ResumoDoTecnico'
@@ -68,6 +69,7 @@ export function MinhasOrdens() {
       )}
 
       <main className="flex flex-1 flex-col gap-3 p-4">
+        <AvisoDeLocalizacao />
         {aviso && (
           <p role="status" className="flex items-start gap-2 rounded-[10px] bg-sucesso-fundo px-3.5 py-2.5 text-sm font-medium text-sucesso">
             <Check aria-hidden className="mt-0.5 size-4 shrink-0" />

@@ -100,6 +100,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | RF16 | Histórico |
 | RF18 | Parâmetros ajustáveis |
 | RF19 | Baixa no HubSoft |
+| Localização | O técnico manda só a última posição, com o app aberto; só o gestor vê a equipe (`/gestao/equipe`). Mapa real em produção (`Mapa:Estilo=real`, OpenFreeMap) |
 | Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou PJ, igual); o financeiro registra o pagamento (`Ordens:ValorPorRetiradaCentavos`) |
 | RN01 | Reimportar não duplica |
 | RN02 | Só cliente rescindido vira ordem |
@@ -130,11 +131,11 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #34 | Chave de acesso, a passkey (ADR-012) |
   | #35 | Resumo do técnico na tela dele |
   | #36 | Repasse ao técnico, com o registro do pagamento |
+  | #39 | Mapa real, posição do técnico para o gestor e rota no Google Maps ou no Waze |
 
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Mapa real e localização em tempo real.** O técnico (CLT ou PJ) vê o endereço da retirada e a própria posição, com um botão de rota para o Google Maps ou o Waze. O gestor acompanha todos os técnicos. Estoque e financeiro não veem a localização. O PWA só manda a posição com o app aberto.
-  2. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
-  3. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+  1. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
+  2. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
 - **Não comece funcionalidade nova sem o Pedro pedir.**
 

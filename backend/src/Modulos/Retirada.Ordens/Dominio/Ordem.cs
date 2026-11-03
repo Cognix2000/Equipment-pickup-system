@@ -226,10 +226,14 @@ public sealed class Ordem : Entidade
             $"Série diferente da cadastrada: tire uma foto da etiqueta de {string.Join(", ", semProva.Select(e => e.Modelo))}.");
     }
 
-    /// <summary>RF13 e RN09: no limite de visitas, encerra sem retirada; antes disso, volta para Disponível.</summary>
-    public void RegistrarVisitaSemSucesso(MotivoVisitaSemSucesso motivo, int limiteVisitas, DateTimeOffset agora)
+    /// <summary>
+    /// RF13 e RN09: no limite de visitas, encerra sem retirada; antes disso, volta para Disponível.
+    /// A planilha não traz coordenadas: o GPS do técnico na porta do cliente vira o pino da ordem, se ela ainda não tiver.
+    /// </summary>
+    public void RegistrarVisitaSemSucesso(MotivoVisitaSemSucesso motivo, int limiteVisitas, DateTimeOffset agora, Localizacao? local = null)
     {
         Exigir(ComTecnico.Contains(Status), "RF13", "Só ordem atribuída a um técnico recebe visita.");
+        Localizacao ??= local;
 
         VisitasSemSucesso++;
         ResponsavelId = null;

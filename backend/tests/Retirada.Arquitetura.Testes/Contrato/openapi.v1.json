@@ -1557,6 +1557,72 @@
         }
       }
     },
+    "/api/localizacao/minha": {
+      "post": {
+        "tags": [
+          "Localiza\u00E7\u00E3o"
+        ],
+        "summary": "T\u00E9cnico: posi\u00E7\u00E3o atual do celular (s\u00F3 a \u00FAltima fica guardada)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pedido"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/localizacao/equipe": {
+      "get": {
+        "tags": [
+          "Localiza\u00E7\u00E3o"
+        ],
+        "summary": "Gestor: \u00FAltima posi\u00E7\u00E3o de cada t\u00E9cnico ativo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TecnicoNoMapa"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mapa": {
+      "get": {
+        "tags": [
+          "Localiza\u00E7\u00E3o"
+        ],
+        "summary": "Fundo do mapa: real (produ\u00E7\u00E3o) ou simulado (homologa\u00E7\u00E3o)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/importacoes/previa": {
       "post": {
         "tags": [
@@ -3063,6 +3129,69 @@
           }
         }
       },
+      "TecnicoNoMapa": {
+        "required": [
+          "id",
+          "nome",
+          "latitude",
+          "longitude",
+          "precisaoM",
+          "registradaEm",
+          "ordensComEle"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "latitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "precisaoM": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "registradaEm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "ordensComEle": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "TelefoneDto": {
         "required": [
           "id",
@@ -3189,6 +3318,9 @@
     },
     {
       "name": "Repasses"
+    },
+    {
+      "name": "Localiza\u00E7\u00E3o"
     },
     {
       "name": "Importa\u00E7\u00E3o"
