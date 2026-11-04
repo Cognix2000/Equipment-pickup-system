@@ -184,9 +184,8 @@ internal static partial class Interpretador
         decimal? valor = null;
         if (v(Campo.ValorEquipamento) is { } textoValor)
         {
-            if (decimal.TryParse(textoValor.Replace("R$", string.Empty).Trim(), NumberStyles.Number, PtBr, out var emReais) && emReais >= 0) valor = emReais;
-            else if (decimal.TryParse(textoValor, NumberStyles.Number, CultureInfo.InvariantCulture, out var ponto) && ponto >= 0) valor = ponto;
-            else alertas.Add($"valor do equipamento fora do padrão: {textoValor}");
+            valor = Valor(textoValor);
+            if (valor is null) alertas.Add($"valor do equipamento fora do padrão: {textoValor}");
         }
 
         return modelo is null || (serie is null && tipo != TipoEquipamento.Fonte) ? null : new EquipamentoLido(tipo.Value, modelo, serie, mac, valor);
@@ -201,6 +200,21 @@ internal static partial class Interpretador
         alertas.Add("localização inválida: aparece só na lista, não no mapa");
         return null;
     }
+
+    /// <summary>
+    /// Valor em reais. A célula numérica do Excel chega com ponto decimal ("150.5"); o texto digitado vem no formato
+    /// brasileiro ("R$ 1.500,00"). Ler tudo como pt-BR tomava o ponto por milhar e transformava 150,50 em 1.505,00.
+    /// Regra: com vírgula, ou com ponto só em grupos de três dígitos ("1.500"), é pt-BR; senão, o ponto é decimal.
+    /// </summary>
+    internal static decimal? Valor(string texto)
+    {
+        var limpo = texto.Replace("R$", string.Empty).Replace("\u00A0", string.Empty).Replace(" ", string.Empty);
+        var cultura = limpo.Contains(',') || PontoDeMilhar().IsMatch(limpo) ? PtBr : CultureInfo.InvariantCulture;
+        return decimal.TryParse(limpo, NumberStyles.Number, cultura, out var valor) && valor >= 0 ? valor : null;
+    }
+
+    [GeneratedRegex(@"^\d{1,3}(\.\d{3})+$")]
+    private static partial Regex PontoDeMilhar();
 
     private static double? Decimal(string? texto) =>
         double.TryParse(texto?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : null;
