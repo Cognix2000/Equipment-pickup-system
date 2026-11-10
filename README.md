@@ -76,7 +76,7 @@ Na retirada, o técnico fotografa os equipamentos recolhidos (pelo menos uma fot
 - As fotos ficam num armazenamento compatível com S3: o serviço `fotos` do docker-compose (SeaweedFS), que não é publicado fora da rede do Docker. Quem entrega a foto é a API, depois de conferir a permissão ([ADR-011](docs/adr/0011-armazenamento-das-fotos.md)).
 - Antes de enviar, o celular reduz a foto e tira o EXIF (GPS, modelo do aparelho); o servidor tira de novo. O GPS e a hora que valem são os da retirada.
 - No desenvolvimento sem Docker, as fotos ficam numa pasta temporária (`Fotos__Pasta` muda o lugar).
-- **Backup:** o volume `fotos` guarda a prova das retiradas. Faça backup dele junto com o banco e as chaves.
+- **Backup:** o volume `fotos` guarda a prova das retiradas. O `deploy/backup.sh` copia as fotos junto com o banco, as chaves e o `.env`, todo dia ([docs/implantacao.md, "Backup automático"](docs/implantacao.md#backup-automático)).
 
 ### Contato com o cliente
 

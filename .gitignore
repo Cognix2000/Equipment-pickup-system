@@ -9,6 +9,9 @@
 id_rsa*
 id_ed25519*
 appsettings.*.local.json
+# Backups da produção (deploy/backup.sh): ficam no servidor e na cópia remota, nunca no Git
+backups/
+
 # Variações locais do compose (ex.: o antigo modo demonstração): não entram no repositório
 docker-compose.*.local.yml
 docker-compose.demonstracao.yml

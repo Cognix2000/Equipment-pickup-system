@@ -59,6 +59,15 @@ IMPORTACAO_MODO_SIMULACAO=false
 OTEL_ENDPOINT=
 # Repasse ao técnico por retirada conferida, em centavos (500 = R$ 5,00).
 VALOR_POR_RETIRADA_CENTAVOS=500
+# Backup automático (deploy/backup.sh; docs/implantacao.md, "Backup automático").
+# Chave PÚBLICA do age (age1...). A privada fica com você, num cofre de senhas, nunca neste servidor.
+BACKUP_CHAVE_PUBLICA=
+# Destino do rclone para a cópia fora do servidor (ex.: nuvem:retirada-backup). Vazio = só neste servidor.
+BACKUP_DESTINO=
+BACKUP_DIAS=14
+BACKUP_DIAS_REMOTO=30
+# Endereço chamado quando o backup termina bem (monitor de batimento). Vazio = não chama.
+BACKUP_AVISO_URL=
 EOF
     ;;
   *)
