@@ -119,4 +119,12 @@ docker compose -f docker-compose.yml -f docker-compose.producao.yml logs migrado
 curl -sI https://pedro.devioslab.com.br/health                                      # saúde de fora do servidor
 ```
 
+Backup e restauração ([implantacao.md, "Backup automático"](implantacao.md#backup-automático)):
+
+```bash
+cd ~/retirada && sh deploy/backup.sh                                       # backup agora (o cron faz todo dia às 3h30)
+ls -lh backups/ && tail -n 20 backups/backup.log                           # os backups e o resultado do último
+sh deploy/restaurar.sh backups/retirada-AAAAMMDD-HHMMSS.tar.age ~/chave.txt   # APAGA o atual e põe o backup (pede confirmação)
+```
+
 Para lançar uma versão nova (criar a tag), veja "Lançar uma versão" em [implantacao.md](implantacao.md#lançar-uma-versão). O resto da produção (HTTPS, zerar o teste, backup e primeiro gestor) está no mesmo arquivo.

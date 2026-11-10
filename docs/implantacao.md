@@ -148,15 +148,79 @@ sh deploy/atualizar.sh
 
 Nas próximas vezes, o próprio script leva o código para a tag.
 
-## O que guardar no backup
+## Backup automático
 
-Estes quatro itens fazem o sistema voltar inteiro:
-- o **banco**;
-- o volume **`fotos`**, que é a prova das retiradas (RN14);
+O `deploy/backup.sh` junta num arquivo só, **cifrado**, os quatro itens que fazem o sistema voltar inteiro ([ADR-013](adr/0013-backup.md)):
+- o **banco** (`pg_dump`, com a API rodando);
+- o volume **`fotos`**, que é a prova das retiradas (RN14). O serviço de fotos para por alguns segundos durante a cópia;
 - o volume **`chaves`**: sem ele, todos saem da sessão e o 2FA por aplicativo precisa ser configurado de novo (as chaves de acesso ficam no banco e continuam valendo);
-- o **`.env`**.
+- o **`.env`**, com as senhas.
 
-O volume `caddy_dados` só evita emitir o certificado de novo.
+O volume `caddy_dados` não entra: ele só evita emitir o certificado de novo.
+
+O arquivo fica em `backups/` no servidor (14 dias) e vai para fora do servidor com o rclone (30 dias). Ele é cifrado com o **age**: quem não tem a chave privada não abre, nem quem levar o disco ou entrar na conta da nuvem.
+
+### 1. Gerar a chave (no seu computador, não no servidor)
+
+```bash
+age-keygen -o chave-backup-retirada.txt     # Windows: winget install FiloSottile.age; Linux: sudo apt install -y age
+```
+
+- Guarde o arquivo inteiro num **cofre de senhas** (Bitwarden, 1Password, KeePass). Sem ele, **nenhum backup abre**.
+- Copie só a linha `# public key: age1...`. Ela vai para o servidor.
+
+### 2. Preparar o servidor
+
+```bash
+cd ~/retirada
+sudo apt install -y age rclone
+sed -i 's/^BACKUP_CHAVE_PUBLICA=.*/BACKUP_CHAVE_PUBLICA=age1.../' .env   # a chave pública do passo 1
+```
+
+O `.env` criado antes desta versão não tem as linhas `BACKUP_*`: acrescente-as, copiando do `ferramentas/criar-env.sh`.
+
+**Cópia fora do servidor (recomendado):** sem ela, o backup morre junto com o disco.
+1. Rode `rclone config` e crie o destino (por exemplo, `nuvem`). Pode ser Google Drive, OneDrive, Backblaze B2 ou um S3 qualquer.
+2. Ponha no `.env`: `BACKUP_DESTINO=nuvem:retirada-backup`.
+
+**Se a Netwise já usa o Veeam:** aponte o Veeam para a pasta `~/retirada/backups`. Ele copia os arquivos já cifrados para o repositório da empresa. Assim, o Veeam faz o papel da cópia fora do servidor, e o `BACKUP_DESTINO` pode ficar vazio. Não use a cópia da máquina inteira (imagem) do Veeam no lugar do `pg_dump`: uma imagem tirada com o banco gravando pode voltar corrompida.
+
+**Aviso de falha (opcional):** `BACKUP_AVISO_URL` recebe o endereço de um monitor de batimento, chamado a cada backup que termina bem. Se o aviso parar de chegar, o backup parou.
+
+### 3. Agendar
+
+Rode uma vez à mão e confira se o arquivo aparece em `backups/`:
+
+```bash
+sh deploy/backup.sh
+```
+
+Depois, agende para todo dia às 3h30, horário com pouco uso (`crontab -e`, com o usuário que roda o Docker):
+
+```
+30 3 * * * cd ~/retirada && sh deploy/backup.sh >> backups/backup.log 2>&1
+```
+
+### 4. Testar a restauração (uma vez por mês)
+
+Backup que nunca foi restaurado não é backup. Uma vez por mês, restaure o último numa **outra máquina** (uma VM serve) e confira se o sistema abre com os dados:
+1. siga "Primeira vez" até o passo do `.env`, mas **sem** criar o `.env`;
+2. copie para lá o arquivo `.tar.age` e a chave privada;
+3. rode o `restaurar.sh` (abaixo);
+4. confira na própria máquina com `curl -s localhost:8080/health` e abrindo `http://localhost:8080`. O HTTPS não sai no ensaio, porque o domínio aponta para o servidor de verdade;
+5. apague a chave privada e desligue essa máquina.
+
+### Restaurar
+
+**Apaga** o banco, as fotos e as chaves do servidor e põe os do backup. O script pede para digitar `RESTAURAR` antes de mexer em qualquer coisa:
+
+```bash
+cd ~/retirada
+sh deploy/restaurar.sh backups/retirada-AAAAMMDD-HHMMSS.tar.age ~/chave-backup-retirada.txt
+rm ~/chave-backup-retirada.txt          # a chave privada não fica no servidor
+```
+
+Num servidor novo, sem `.env`, o script usa o `.env` que está dentro do backup, com as mesmas senhas. Para trazer um backup da nuvem: `rclone copy nuvem:retirada-backup/retirada-AAAAMMDD-HHMMSS.tar.age backups/`.
 
 ## Monitor de disponibilidade (fora do servidor)
 
