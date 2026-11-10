@@ -21,6 +21,8 @@ public sealed class Usuario : Entidade
     public string Email { get; private set; } = string.Empty;
     // Stryker disable once String : idem
     public string Papel { get; private set; } = string.Empty;
+    /// <summary>Só do técnico: CLT (recebe na folha) ou terceiro (resgata por PIX). Nos outros papéis, nulo.</summary>
+    public string? Vinculo { get; private set; }
     public SituacaoUsuario Situacao { get; private set; }
     public string? SenhaHash { get; private set; }
     public short FalhasLogin { get; private set; }
@@ -43,7 +45,7 @@ public sealed class Usuario : Entidade
     private Usuario() { } // EF Core
 
     /// <summary>RF02: o gestor cadastra e o usuário fica pendente até definir a senha pelo convite.</summary>
-    public static Usuario Cadastrar(string nome, string email, string papel, Guid cadastradoPor, DateTimeOffset agora)
+    public static Usuario Cadastrar(string nome, string email, string papel, Guid cadastradoPor, DateTimeOffset agora, string? vinculo = null)
     {
         if (string.IsNullOrWhiteSpace(nome))
             throw new RegraDeNegocioException("USUARIO_NOME", "Informe o nome.");
@@ -58,12 +60,31 @@ public sealed class Usuario : Entidade
             Nome = nome.Trim(),
             Email = emailNormalizado,
             Papel = papel,
+            Vinculo = VinculoDoPapel(papel, vinculo),
             Situacao = SituacaoUsuario.Pendente,
             AprovadoPor = cadastradoPor,
             AprovadoEm = agora,
             CriadoEm = agora,
             AtualizadoEm = agora,
         };
+    }
+
+    /// <summary>O gestor muda o vínculo do técnico (ex.: o terceiro foi contratado CLT). Vale para os próximos resgates.</summary>
+    public void DefinirVinculo(string vinculo, DateTimeOffset agora)
+    {
+        if (Papel != Papeis.Tecnico)
+            throw new RegraDeNegocioException("USUARIO_VINCULO", "Só o técnico tem vínculo (CLT ou terceiro).");
+        Vinculo = VinculoDoPapel(Papel, vinculo);
+        AtualizadoEm = agora;
+    }
+
+    /// <summary>Técnico sem vínculo informado entra como CLT, o caminho sem resgate por PIX.</summary>
+    private static string? VinculoDoPapel(string papel, string? vinculo)
+    {
+        if (papel != Papeis.Tecnico)
+            return vinculo is null ? null : throw new RegraDeNegocioException("USUARIO_VINCULO", "Só o técnico tem vínculo (CLT ou terceiro).");
+        if (vinculo is null) return Vinculos.Clt;
+        return Vinculos.Valido(vinculo) ? vinculo : throw new RegraDeNegocioException("USUARIO_VINCULO", "Vínculo inválido: use CLT ou terceiro.");
     }
 
     /// <summary>Só para instalar o sistema: o primeiro gestor aprova a si mesmo.</summary>

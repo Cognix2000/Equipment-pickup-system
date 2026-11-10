@@ -2,13 +2,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, UserPlus } from 'lucide-react'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Badge, type TomDoSelo } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
 import { linkDeConvite, rotuloDoPapel, usuarioNaLista, usuariosQuery, type LinkDeConvite, type UsuarioNaLista } from '@/features/acesso/acesso'
+import { rotuloDoVinculo } from '@/features/repasses/resgate'
 import { enviar, ErroDaApi } from '@/lib/api'
 import { classeDoInput } from '@/components/ui/input'
 import { AvisoDeErro, Campo } from '@/paginas/acesso/LayoutDeAcesso'
@@ -17,6 +18,7 @@ const formulario = z.object({
   nome: z.string().trim().min(2, 'Digite o nome.'),
   email: z.email('Digite um e-mail válido.'),
   papel: z.enum(['tecnico', 'financeiro', 'estoque', 'admin']),
+  vinculo: z.enum(['clt', 'terceiro']),
 })
 
 const situacao: Record<UsuarioNaLista['situacao'], { texto: string; tom: TomDoSelo }> = {
@@ -70,7 +72,12 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
     mutationFn: () => enviar(`/api/usuarios/${u.id}/convite`, undefined, linkDeConvite),
     onSuccess: aoConvidar,
   })
-  const erro = acao.error ?? novoConvite.error
+  // CLT recebe na folha; terceiro resgata por PIX. Muda só daqui para a frente.
+  const vinculo = useMutation({
+    mutationFn: (novo: 'clt' | 'terceiro') => enviar(`/api/usuarios/${u.id}/vinculo`, { vinculo: novo }),
+    onSuccess: () => clienteDeConsultas.invalidateQueries({ queryKey: usuariosQuery.queryKey }),
+  })
+  const erro = acao.error ?? novoConvite.error ?? vinculo.error
   const { texto, tom } = situacao[u.situacao]
 
   return (
@@ -82,6 +89,7 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
         </div>
         <span className="flex flex-wrap gap-1.5">
           <Badge tom="info">{rotuloDoPapel[u.papel]}</Badge>
+          {u.vinculo && <Badge tom={u.vinculo === 'terceiro' ? 'destaque' : 'neutro'}>{rotuloDoVinculo[u.vinculo]}</Badge>}
           <Badge tom={tom}>{texto}</Badge>
         </span>
       </div>
@@ -94,6 +102,16 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
         {u.situacao !== 'revogado' && (
           <Button variante="neutro" tamanho="compacto" onClick={() => novoConvite.mutate()} disabled={novoConvite.isPending}>
             {u.situacao === 'pendente' ? 'Novo convite' : 'Convite para nova senha'}
+          </Button>
+        )}
+        {u.vinculo && u.situacao !== 'revogado' && (
+          <Button
+            variante="neutro"
+            tamanho="compacto"
+            onClick={() => vinculo.mutate(u.vinculo === 'terceiro' ? 'clt' : 'terceiro')}
+            disabled={vinculo.isPending}
+          >
+            {u.vinculo === 'terceiro' ? 'Mudar para CLT' : 'Mudar para terceiro'}
           </Button>
         )}
         {u.doisFatores && (
@@ -131,13 +149,16 @@ function CadastroDeUsuario({ aoCadastrar }: { aoCadastrar: (nome: string, link: 
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
-  } = useForm<z.infer<typeof formulario>>({ resolver: zodResolver(formulario), defaultValues: { papel: 'tecnico' } })
+  } = useForm<z.infer<typeof formulario>>({ resolver: zodResolver(formulario), defaultValues: { papel: 'tecnico', vinculo: 'clt' } })
+  const ehTecnico = useWatch({ control, name: 'papel' }) === 'tecnico'
 
   const cadastrar = handleSubmit(async (dados) => {
     setErro(undefined)
     try {
-      const resposta = await enviar('/api/usuarios', dados, z.object({ usuario: usuarioNaLista, convite: linkDeConvite }))
+      const pedido = { ...dados, vinculo: dados.papel === 'tecnico' ? dados.vinculo : undefined }
+      const resposta = await enviar('/api/usuarios', pedido, z.object({ usuario: usuarioNaLista, convite: linkDeConvite }))
       aoCadastrar(resposta.usuario.nome, resposta.convite)
       reset()
       await clienteDeConsultas.invalidateQueries({ queryKey: usuariosQuery.queryKey })
@@ -167,6 +188,14 @@ function CadastroDeUsuario({ aoCadastrar }: { aoCadastrar: (nome: string, link: 
             <option value="admin">Gestor</option>
           </select>
         </Campo>
+        {ehTecnico && (
+          <Campo id="vinculo" rotulo="Vínculo" ajuda="CLT recebe o repasse na folha. Terceiro resgata por PIX, na hora, o que o estoque já conferiu.">
+            <select id="vinculo" className={classeDoInput} aria-describedby="vinculo-ajuda" {...register('vinculo')}>
+              <option value="clt">CLT</option>
+              <option value="terceiro">Terceiro (PJ)</option>
+            </select>
+          </Campo>
+        )}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Cadastrando' : 'Cadastrar e gerar convite'}
         </Button>

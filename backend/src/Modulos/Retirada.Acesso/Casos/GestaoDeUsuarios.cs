@@ -11,7 +11,7 @@ using Retirada.Comum;
 namespace Retirada.Acesso.Casos;
 
 internal sealed record UsuarioNaLista(
-    Guid Id, string Nome, string Email, string Papel, string Situacao, bool DoisFatores, DateTimeOffset? UltimoLoginEm);
+    Guid Id, string Nome, string Email, string Papel, string? Vinculo, string Situacao, bool DoisFatores, DateTimeOffset? UltimoLoginEm);
 
 /// <summary>O link vai sem o domínio: o PWA monta com o endereço onde está aberto.</summary>
 internal sealed record LinkDeConvite(string Caminho, DateTimeOffset ExpiraEm)
@@ -22,7 +22,8 @@ internal sealed record LinkDeConvite(string Caminho, DateTimeOffset ExpiraEm)
 /// <summary>RF02, só para o gestor: listar, cadastrar, convidar de novo, revogar, reativar e zerar o 2FA.</summary>
 internal static class GestaoDeUsuarios
 {
-    internal sealed record PedidoDeCadastro(string Nome, string Email, string Papel);
+    internal sealed record PedidoDeCadastro(string Nome, string Email, string Papel, string? Vinculo);
+    internal sealed record PedidoDeVinculo(string Vinculo);
     internal sealed record Cadastrado(UsuarioNaLista Usuario, LinkDeConvite Convite);
 
     public static void Mapear(IEndpointRouteBuilder app)
@@ -35,6 +36,9 @@ internal static class GestaoDeUsuarios
             MudarAsync(id, s, db, r, h, "revogar_usuario", (u, agora) => u.Revogar(s.Id(), agora), ct)).WithSummary("Revogar: corta o acesso na hora (RF02)");
         grupo.MapPost("/{id:guid}/reativar", (Guid id, ClaimsPrincipal s, AcessoDbContext db, TimeProvider r, HttpContext h, CancellationToken ct) =>
             MudarAsync(id, s, db, r, h, "reativar_usuario", (u, agora) => u.Reativar(agora), ct)).WithSummary("Reativar usuário revogado");
+        grupo.MapPost("/{id:guid}/vinculo", (Guid id, PedidoDeVinculo pedido, ClaimsPrincipal s, AcessoDbContext db, TimeProvider r, HttpContext h, CancellationToken ct) =>
+            MudarAsync(id, s, db, r, h, $"vinculo_usuario:{pedido.Vinculo}", (u, agora) => u.DefinirVinculo(pedido.Vinculo, agora), ct))
+            .WithSummary("Mudar o vínculo do técnico: CLT (recebe na folha) ou terceiro (resgata por PIX)");
         grupo.MapPost("/{id:guid}/zerar-2fa", ZerarSegundoFatorAsync)
             .WithSummary("Zerar o 2FA de quem trocou de celular: apaga o aplicativo e as chaves de acesso");
     }
@@ -68,7 +72,7 @@ internal static class GestaoDeUsuarios
         if (await db.Usuarios.AnyAsync(u => u.Email == email, ct))
             return Sessao.Recusa("Já existe um usuário com esse e-mail.", "USUARIO_DUPLICADO", StatusCodes.Status409Conflict);
 
-        var usuario = Usuario.Cadastrar(pedido.Nome, pedido.Email, pedido.Papel, sessao.Id(), agora);
+        var usuario = Usuario.Cadastrar(pedido.Nome, pedido.Email, pedido.Papel, sessao.Id(), agora, pedido.Vinculo);
         var (convite, token) = Convite.Gerar(usuario.Id, sessao.Id(), agora);
         db.Usuarios.Add(usuario);
         db.Convites.Add(convite);
@@ -108,5 +112,5 @@ internal static class GestaoDeUsuarios
 
     /// <summary>"DoisFatores": tem o aplicativo ou ao menos uma chave de acesso.</summary>
     private static UsuarioNaLista NaLista(Usuario u, bool temChave) =>
-        new(u.Id, u.Nome, u.Email, u.Papel, u.Situacao.ToString().ToLowerInvariant(), u.Tem2FA || temChave, u.UltimoLoginEm);
+        new(u.Id, u.Nome, u.Email, u.Papel, u.Vinculo, u.Situacao.ToString().ToLowerInvariant(), u.Tem2FA || temChave, u.UltimoLoginEm);
 }

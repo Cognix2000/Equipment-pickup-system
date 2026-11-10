@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Retirada.Ordens.Casos;
 using Retirada.Ordens.Infraestrutura;
+using Retirada.Ordens.Portas;
 
 namespace Retirada.Ordens.Rotinas;
 
@@ -33,6 +34,12 @@ internal sealed partial class RotinasDasOrdens(
         await RodarAsync("carência", (db, agora) => LiberacaoPelaCarencia.ExecutarAsync(db, agora, ct), OrdensLiberadas, ct);
         var prazo = TimeSpan.FromDays(regras.DiasSemResposta);
         await RodarAsync("sem resposta", (db, agora) => EncerramentoSemResposta.ExecutarAsync(db, prazo, agora, ct), OrdensEncerradas, ct);
+        await RodarAsync("conciliação dos resgates", async (db, agora) =>
+        {
+            await using var escopo = escopos.CreateAsyncScope();
+            var gateway = escopo.ServiceProvider.GetRequiredService<IGatewayDePagamento>();
+            return await ConciliacaoDeResgates.ExecutarAsync(db, gateway, agora, log, ct);
+        }, ResgatesConciliados, ct);
     }
 
     private async Task RodarAsync(string rotina, Func<OrdensDbContext, DateTimeOffset, Task<int>> lote, Action<int> registrar, CancellationToken ct)
@@ -68,6 +75,9 @@ internal sealed partial class RotinasDasOrdens(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Sem resposta no prazo: {Quantidade} ordem(ns) encerradas sem retirada (RN09).")]
     private partial void OrdensEncerradas(int quantidade);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Conciliação: {Quantidade} resgate(s) parados foram resolvidos.")]
+    private partial void ResgatesConciliados(int quantidade);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "A rotina das ordens ({Rotina}) falhou; tenta de novo na próxima rodada.")]
     private partial void RotinaFalhou(Exception erro, string rotina);

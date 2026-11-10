@@ -98,6 +98,8 @@ public static class ModuloAcesso
             o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
             {
                 if (http.Request.Path.StartsWithSegments("/health")) return RateLimitPartition.GetNoLimiter("saude");
+                // O gateway manda avisos em rajada, sempre do mesmo IP; o token dele é que barra o resto.
+                if (http.Request.Path.StartsWithSegments("/api/webhooks")) return RateLimitPartition.GetNoLimiter("gateway");
                 var usuario = http.User.FindFirst(Reivindicacoes.Usuario)?.Value;
                 return usuario is not null
                     ? PorMinuto($"usuario:{usuario}", requisicoesPorMinuto)
@@ -124,7 +126,9 @@ public static class ModuloAcesso
     {
         var metodo = http.Request.Method;
         var ehComando = !(HttpMethods.IsGet(metodo) || HttpMethods.IsHead(metodo) || HttpMethods.IsOptions(metodo));
-        if (ehComando && http.Request.Path.StartsWithSegments("/api") && http.Request.Headers[CabecalhoAntiCsrf] != "1")
+        // Os avisos do gateway (/api/webhooks) não vêm do navegador: quem os autentica é o token do gateway.
+        var ehAvisoDeGateway = http.Request.Path.StartsWithSegments("/api/webhooks");
+        if (ehComando && !ehAvisoDeGateway && http.Request.Path.StartsWithSegments("/api") && http.Request.Headers[CabecalhoAntiCsrf] != "1")
         {
             await Results.Problem(title: "Requisição sem o cabeçalho de proteção do aplicativo.", statusCode: StatusCodes.Status400BadRequest,
                 extensions: new Dictionary<string, object?> { ["codigo"] = "CSRF" }).ExecuteAsync(http);

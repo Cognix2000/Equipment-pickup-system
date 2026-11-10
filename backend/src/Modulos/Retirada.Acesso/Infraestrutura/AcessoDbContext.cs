@@ -23,6 +23,7 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
             u.Property(x => x.Nome).HasColumnName("nome");
             u.Property(x => x.Email).HasColumnName("email");
             u.Property(x => x.Papel).HasColumnName("papel");
+            u.Property(x => x.Vinculo).HasColumnName("vinculo");
             u.Property(x => x.Situacao).HasColumnName("situacao").HasConversion(
                 s => s.ToString().ToLowerInvariant(),
                 s => Enum.Parse<SituacaoUsuario>(s, true));

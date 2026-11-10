@@ -461,6 +461,50 @@
         }
       }
     },
+    "/api/usuarios/{id}/vinculo": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "Mudar o v\u00EDnculo do t\u00E9cnico: CLT (recebe na folha) ou terceiro (resgata por PIX)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeVinculo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioNaLista"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/usuarios/{id}/zerar-2fa": {
       "post": {
         "tags": [
@@ -1557,6 +1601,270 @@
         }
       }
     },
+    "/api/repasses/folha": {
+      "get": {
+        "tags": [
+          "Repasses"
+        ],
+        "summary": "Repasse do m\u00EAs dos t\u00E9cnicos CLT, para a folha (mes=AAAA-MM; sem ele, o m\u00EAs atual)",
+        "parameters": [
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resgates/meu": {
+      "get": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Resgate do t\u00E9cnico: v\u00EDnculo, saldo que pode sair, chave PIX e \u00FAltimos resgates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resgates/minha-chave-pix": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Cadastrar ou trocar a chave PIX; vale depois que o financeiro aprova",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pedido"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chave"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resgates": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Resgatar por PIX o saldo das retiradas conferidas (s\u00F3 t\u00E9cnico terceiro)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resposta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "\u00DAltimos resgates por PIX dos t\u00E9cnicos terceiros",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResgateNaLista"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resgates/chaves-pix": {
+      "get": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Chaves PIX esperando aprova\u00E7\u00E3o do financeiro",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChaveParaAprovar"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resgates/chaves-pix/{id}/aprovar": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Aprovar a chave PIX: os pr\u00F3ximos resgates v\u00E3o para ela",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/resgates/chaves-pix/{id}/recusar": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Recusar a chave PIX; o t\u00E9cnico v\u00EA o motivo e cadastra outra",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeRecusa"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/webhooks/asaas/validacao": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Asaas pergunta antes de soltar o PIX: aprovar ou recusar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/webhooks/asaas/eventos": {
+      "post": {
+        "tags": [
+          "Resgates"
+        ],
+        "summary": "Asaas avisa o resultado do PIX (pago, falhou, cancelado)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/localizacao/minha": {
       "post": {
         "tags": [
@@ -1804,6 +2112,42 @@
           "whatsapp"
         ]
       },
+      "Chave": {
+        "required": [
+          "id",
+          "tipo",
+          "mascarada",
+          "situacao",
+          "cadastradaEm",
+          "motivoRecusa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "mascarada": {
+            "type": "string"
+          },
+          "situacao": {
+            "type": "string"
+          },
+          "cadastradaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivoRecusa": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ChaveNaLista": {
         "required": [
           "id",
@@ -1830,6 +2174,44 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ChaveParaAprovar": {
+        "required": [
+          "id",
+          "tecnicoId",
+          "tecnicoNome",
+          "tipo",
+          "chave",
+          "cadastradaEm",
+          "trocaDeChave"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tecnicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tecnicoNome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "chave": {
+            "type": "string"
+          },
+          "cadastradaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "trocaDeChave": {
+            "type": "boolean"
           }
         }
       },
@@ -2551,7 +2933,8 @@
         "required": [
           "nome",
           "email",
-          "papel"
+          "papel",
+          "vinculo"
         ],
         "type": "object",
         "properties": {
@@ -2563,6 +2946,12 @@
           },
           "papel": {
             "type": "string"
+          },
+          "vinculo": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -2692,6 +3081,20 @@
           }
         }
       },
+      "PedidoDeRecusa": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PedidoDeRetirada": {
         "required": [
           "itens",
@@ -2717,6 +3120,17 @@
             "items": {
               "$ref": "#/components/schemas/FotoDaRetiradaDto"
             }
+          }
+        }
+      },
+      "PedidoDeVinculo": {
+        "required": [
+          "vinculo"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculo": {
+            "type": "string"
           }
         }
       },
@@ -2921,6 +3335,83 @@
           }
         }
       },
+      "ResgateNaLista": {
+        "required": [
+          "id",
+          "tecnicoId",
+          "tecnicoNome",
+          "valorCentavos",
+          "quantidade",
+          "situacao",
+          "solicitadoEm",
+          "concluidoEm",
+          "idFimAFim",
+          "comprovanteUrl",
+          "motivoFalha"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tecnicoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tecnicoNome": {
+            "type": "string"
+          },
+          "valorCentavos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "situacao": {
+            "type": "string"
+          },
+          "solicitadoEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "concluidoEm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "idFimAFim": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "comprovanteUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "motivoFalha": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Resposta": {
         "required": [
           "enderecoOtpAuth",
@@ -3088,6 +3579,7 @@
           "id",
           "nome",
           "situacao",
+          "vinculo",
           "quantidade",
           "valorCentavos",
           "ultimoPagamentoEm"
@@ -3102,6 +3594,9 @@
             "type": "string"
           },
           "situacao": {
+            "type": "string"
+          },
+          "vinculo": {
             "type": "string"
           },
           "quantidade": {
@@ -3270,6 +3765,7 @@
           "nome",
           "email",
           "papel",
+          "vinculo",
           "situacao",
           "doisFatores",
           "ultimoLoginEm"
@@ -3288,6 +3784,12 @@
           },
           "papel": {
             "type": "string"
+          },
+          "vinculo": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "situacao": {
             "type": "string"
@@ -3318,6 +3820,9 @@
     },
     {
       "name": "Repasses"
+    },
+    {
+      "name": "Resgates"
     },
     {
       "name": "Localiza\u00E7\u00E3o"

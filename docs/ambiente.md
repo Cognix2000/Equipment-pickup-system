@@ -70,7 +70,8 @@ Na primeira vez demora alguns minutos, porque monta as imagens. O serviço `migr
 | App (login) | http://localhost:8080/entrar | Porta muda com `WEB_PORTA` no `.env` |
 | App do técnico | http://localhost:8080/tecnico/ordens | Abra no celular ou no modo celular do navegador |
 | Painel do financeiro | http://localhost:8080/financeiro/ordens | |
-| Repasses | http://localhost:8080/financeiro/repasses | Financeiro e gestor |
+| Repasses | http://localhost:8080/financeiro/repasses | Financeiro e gestor: pagamentos, chaves PIX para aprovar, resgates e folha do mês |
+| Resgate do técnico | http://localhost:8080/tecnico/resgate | Técnico terceiro. Na homologação, o PIX é simulado: "cai" na hora |
 | Equipe em campo (mapa) | http://localhost:8080/gestao/equipe | Gestor. Na homologação, o mapa é a cidade simulada |
 | Gestão de usuários | http://localhost:8080/gestao/usuarios | Gestor |
 | Minha conta (chaves de acesso) | http://localhost:8080/conta | Todos |
@@ -86,7 +87,8 @@ A senha de todos é `Demo@Retirada2026`, e só vale para os e-mails `@exemplo.in
 
 | E-mail | Papel | Segundo fator |
 | --- | --- | --- |
-| `tecnico.demo@exemplo.invalid` | Técnico | não |
+| `tecnico.demo@exemplo.invalid` | Técnico (CLT: recebe na folha) | não |
+| `terceiro.demo@exemplo.invalid` | Técnico (terceiro: resgata por PIX simulado, chave já aprovada) | não |
 | `estoque.demo@exemplo.invalid` | Estoque | não |
 | `financeiro.demo@exemplo.invalid` | Financeiro | sim, no primeiro login |
 | `gestor.demo@exemplo.invalid` | Gestor | sim, no primeiro login |

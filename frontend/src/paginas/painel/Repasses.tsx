@@ -12,6 +12,18 @@ import {
   repassesQuery,
   type TecnicoNaLista,
 } from '@/features/repasses/repasses'
+import {
+  aprovarChave,
+  chavesParaAprovarQuery,
+  folhaDoMesQuery,
+  mesDe,
+  recusarChave,
+  resgatesQuery,
+  rotuloDoTipoDeChave,
+  rotuloDoVinculo,
+  textoDaSituacao,
+  type ChaveParaAprovar,
+} from '@/features/repasses/resgate'
 import { ErroDaApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { AvisoDeErro, Campo } from '@/paginas/acesso/LayoutDeAcesso'
@@ -49,6 +61,10 @@ export function Repasses() {
           <LinhaDoTecnico key={t.id} tecnico={t} />
         ))}
       </div>
+
+      <ChavesPixParaAprovar />
+      <ResgatesPorPix />
+      <FolhaDoMes />
     </>
   )
 }
@@ -69,6 +85,7 @@ function LinhaDoTecnico({ tecnico: t }: { tecnico: TecnicoNaLista }) {
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
             <span className="text-base font-semibold text-marinho">{t.nome}</span>
+            <Badge tom={t.vinculo === 'terceiro' ? 'destaque' : 'info'}>{rotuloDoVinculo[t.vinculo]}</Badge>
             {t.situacao !== 'ativo' && <Badge tom="erro">Revogado</Badge>}
           </span>
           <span className="block text-[13px] text-texto-suave">
@@ -201,3 +218,176 @@ function RegistroDePagamento({ tecnicoId, valorCentavos, quantidade }: { tecnico
     </div>
   )
 }
+
+/**
+ * Chave PIX nova do técnico terceiro: só vale depois que o financeiro confere com ele. É a defesa contra quem entra
+ * na conta do técnico e troca a chave para a própria.
+ */
+function ChavesPixParaAprovar() {
+  const { data } = useQuery(chavesParaAprovarQuery)
+  if (!data || data.length === 0) return null
+  return (
+    <section aria-labelledby="titulo-chaves" className="flex max-w-[860px] flex-col gap-3">
+      <div>
+        <h2 id="titulo-chaves" className="text-xl font-bold text-marinho">
+          Chaves PIX para aprovar
+        </h2>
+        <p className="text-[15px] text-texto-suave">Confira com o técnico (de preferência por telefone) antes de aprovar: o próximo PIX vai para esta chave.</p>
+      </div>
+      {data.map((c) => (
+        <ChaveParaDecidir key={c.id} chave={c} />
+      ))}
+    </section>
+  )
+}
+
+function ChaveParaDecidir({ chave: c }: { chave: ChaveParaAprovar }) {
+  const clienteDeConsultas = useQueryClient()
+  const [recusando, setRecusando] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const idDoMotivo = useId()
+  const decidir = useMutation({
+    mutationFn: (aprovar: boolean) => (aprovar ? aprovarChave(c.id) : recusarChave(c.id, motivo.trim())),
+    onSuccess: () => clienteDeConsultas.invalidateQueries({ queryKey: ['repasses'] }),
+  })
+  return (
+    <article aria-label={`Chave PIX de ${c.tecnicoNome}`} className="flex flex-col gap-3 rounded-xl bg-superficie p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold text-marinho">{c.tecnicoNome}</span>
+        {c.trocaDeChave && <Badge tom="alerta">Troca de chave</Badge>}
+      </div>
+      <p className="text-[15px] break-all">
+        {rotuloDoTipoDeChave[c.tipo]}: <span className="font-semibold tabular-nums">{c.chave}</span>
+        <span className="block text-[13px] text-texto-suave">Cadastrada em {formatoDataHora.format(new Date(c.cadastradaEm))}</span>
+      </p>
+      <AvisoDeErro mensagem={decidir.error ? (decidir.error instanceof ErroDaApi ? decidir.error.message : 'Sem resposta do servidor.') : undefined} />
+      {recusando ? (
+        <div className="flex flex-col gap-2">
+          <Campo id={idDoMotivo} rotulo="Motivo (o técnico vê)">
+            <input id={idDoMotivo} maxLength={200} className={classeDoInput} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+          </Campo>
+          <div className="flex flex-wrap gap-2">
+            <Button variante="perigo" tamanho="compacto" disabled={decidir.isPending} onClick={() => decidir.mutate(false)}>
+              Recusar a chave
+            </Button>
+            <Button variante="fantasma" tamanho="compacto" onClick={() => setRecusando(false)}>
+              Voltar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button tamanho="compacto" disabled={decidir.isPending} onClick={() => decidir.mutate(true)}>
+            Aprovar a chave
+          </Button>
+          <Button variante="neutro" tamanho="compacto" onClick={() => setRecusando(true)}>
+            Recusar
+          </Button>
+        </div>
+      )}
+    </article>
+  )
+}
+
+/** Os últimos resgates por PIX, com o ID de Fim a Fim e o comprovante, para conferir com o extrato do Asaas. */
+function ResgatesPorPix() {
+  const { data } = useQuery(resgatesQuery)
+  if (!data || data.length === 0) return null
+  return (
+    <section aria-labelledby="titulo-resgates" className="flex max-w-[860px] flex-col gap-3">
+      <h2 id="titulo-resgates" className="text-xl font-bold text-marinho">
+        Resgates por PIX
+      </h2>
+      <div className="overflow-x-auto rounded-xl bg-superficie p-4">
+        <table className="w-full text-left text-sm">
+          <caption className="sr-only">Últimos resgates por PIX dos técnicos terceiros</caption>
+          <thead className="text-texto-suave">
+            <tr>
+              <th scope="col" className="py-2 pr-3 font-medium">Pedido em</th>
+              <th scope="col" className="py-2 pr-3 font-medium">Técnico</th>
+              <th scope="col" className="py-2 pr-3 font-medium">Situação</th>
+              <th scope="col" className="py-2 pr-3 font-medium">ID de Fim a Fim</th>
+              <th scope="col" className="py-2 text-right font-medium">Valor</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-borda">
+            {data.map((r) => (
+              <tr key={r.id}>
+                <td className="py-2 pr-3 whitespace-nowrap">{formatoDataHora.format(new Date(r.solicitadoEm))}</td>
+                <td className="py-2 pr-3">{r.tecnicoNome}</td>
+                <td className="py-2 pr-3">
+                  {textoDaSituacao[r.situacao]}
+                  {r.situacao === 'falhou' && r.motivoFalha ? <span className="block text-[13px] text-texto-suave">{r.motivoFalha}</span> : null}
+                </td>
+                <td className="py-2 pr-3 break-all">
+                  {r.idFimAFim ?? '—'}
+                  {r.comprovanteUrl && (
+                    <a href={r.comprovanteUrl} target="_blank" rel="noreferrer" className="block font-semibold text-azul">
+                      Comprovante
+                    </a>
+                  )}
+                </td>
+                <td className="py-2 text-right tabular-nums">{emReais(r.valorCentavos)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+/** O repasse do mês de cada técnico CLT, para levar à folha. Depois de pagar no salário, registre o pagamento acima. */
+function FolhaDoMes() {
+  const [mes, setMes] = useState(() => mesDe(new Date()))
+  const { data } = useQuery(folhaDoMesQuery(mes))
+  const idDoMes = useId()
+  return (
+    <section aria-labelledby="titulo-folha" className="flex max-w-[860px] flex-col gap-3">
+      <div>
+        <h2 id="titulo-folha" className="text-xl font-bold text-marinho">
+          Folha do mês (CLT)
+        </h2>
+        <p className="text-[15px] text-texto-suave">Retiradas conferidas no mês por técnico CLT. Depois de pagar no salário, registre o pagamento na lista acima.</p>
+      </div>
+      <Campo id={idDoMes} rotulo="Mês">
+        <input id={idDoMes} type="month" className={cn(classeDoInput, 'max-w-[220px]')} value={mes} onChange={(e) => e.target.value && setMes(e.target.value)} />
+      </Campo>
+      {data && data.tecnicos.length === 0 && <p className="text-[15px] text-texto-suave">Nenhuma retirada conferida de técnico CLT neste mês.</p>}
+      {data && data.tecnicos.length > 0 && (
+        <div className="overflow-x-auto rounded-xl bg-superficie p-4">
+          <table className="w-full text-left text-sm">
+            <caption className="sr-only">Repasse do mês por técnico CLT</caption>
+            <thead className="text-texto-suave">
+              <tr>
+                <th scope="col" className="py-2 pr-3 font-medium">Técnico</th>
+                <th scope="col" className="py-2 pr-3 text-right font-medium">Retiradas</th>
+                <th scope="col" className="py-2 pr-3 text-right font-medium">Valor no mês</th>
+                <th scope="col" className="py-2 text-right font-medium">Falta registrar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-borda">
+              {data.tecnicos.map((t) => (
+                <tr key={t.id}>
+                  <td className="py-2 pr-3">{t.nome}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{t.quantidade}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{emReais(t.valorCentavos)}</td>
+                  <td className="py-2 text-right tabular-nums">{emReais(t.emAbertoCentavos)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-semibold">
+                <td className="pt-2 pr-3">Total</td>
+                <td />
+                <td className="pt-2 pr-3 text-right tabular-nums">{emReais(data.totalCentavos)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+

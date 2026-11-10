@@ -102,8 +102,8 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | RF18 | Parâmetros ajustáveis |
 | RF19 | Baixa no HubSoft |
 | Localização | O técnico manda só a última posição, com o app aberto; só o gestor vê a equipe (`/gestao/equipe`). Mapa real em produção (`Mapa:Estilo=real`, OpenFreeMap) |
-| Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou terceiro, igual); hoje o financeiro paga por fora e registra o pagamento (`Ordens:ValorPorRetiradaCentavos`) |
-| Resgate (decidido, a implementar) | **Terceiro** aperta "Resgatar" e recebe por PIX pelo **Asaas**, só do que o estoque já conferiu; o Asaas confirma com o servidor antes de pagar e devolve o comprovante e o ID de Fim a Fim. **CLT** recebe na folha, no fim do mês, e só acompanha no app. O técnico ganha o campo **vínculo** (CLT ou terceiro) |
+| Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou terceiro, igual; `Ordens:ValorPorRetiradaCentavos`). O CLT recebe na folha e o financeiro registra o pagamento; o terceiro resgata por PIX (linha abaixo) |
+| Resgate (ADR-014) | **Terceiro** aperta "Resgatar" (`/tecnico/resgate`) e recebe por PIX pelo **Asaas**, só do que o estoque já conferiu, para a chave PIX que o financeiro aprovou; o Asaas valida com o servidor antes de pagar (`/api/webhooks/asaas/validacao`) e o aviso `TRANSFER_DONE` traz o ID de Fim a Fim e o comprovante. **CLT** recebe na folha e só acompanha; o financeiro vê a folha do mês. Campo `vinculo` no técnico. `Pagamentos:Gateway` = `asaas`, `simulado` (homologação) ou `desligado` (padrão) |
 | RN01 | Reimportar não duplica |
 | RN02 | Só cliente rescindido vira ordem |
 | RN03 | Carência de 48 h; o financeiro pode liberar antes |
@@ -137,13 +137,14 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #43 | Valor do equipamento da planilha com ponto decimal (não vira mais milhar) |
   | #47 | Node 26 no CI e no guia do ambiente, igual ao Docker |
   | #48 | Backup diário cifrado (age), com cópia fora do servidor (rclone) e restauração (ADR-013) |
+  | #50 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Resgate do técnico terceiro pelo Asaas** (decisões na tabela de requisitos, linha "Resgate"). Falta a Netwise abrir a conta no Asaas com o CNPJ; até lá, o desenvolvimento usa o ambiente de testes (sandbox). A chave da API vai só no `.env` do servidor.
-  2. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
-  3. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+  1. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
+  2. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
 - **Backup na produção:** o script está pronto, mas falta o Pedro gerar a chave do age, preencher `BACKUP_*` no `.env`, configurar o rclone (ou o Veeam) e agendar no cron ([docs/implantacao.md](docs/implantacao.md#backup-automático)).
+- **Resgate na produção:** o código está pronto e desligado. Falta a Netwise abrir a conta no Asaas (CNPJ, só para os resgates), pôr a chave e o token no `.env` e configurar os dois webhooks ([docs/implantacao.md](docs/implantacao.md#resgate-por-pix-asaas)). Conferir no ambiente de testes do Asaas o formato da chave de celular.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
 - **Não comece funcionalidade nova sem o Pedro pedir.**
 

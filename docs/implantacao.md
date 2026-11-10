@@ -253,6 +253,59 @@ O `/health` responde **200** quando a API e o banco estão bem e **503** quando 
 
 Cada retirada conferida pelo estoque gera R$ 5,00 para o técnico que retirou. Para mudar o valor, ponha `VALOR_POR_RETIRADA_CENTAVOS` no `.env`, em centavos (ex.: `700` = R$ 7,00), e rode `sh deploy/atualizar.sh`. O valor novo vale só para as próximas conferências: o que já foi creditado não muda.
 
+## Resgate por PIX (Asaas)
+
+O técnico **terceiro** aperta "Resgatar" e recebe por PIX, pelo Asaas ([ADR-014](adr/0014-resgate-por-pix.md)). O **CLT** recebe na folha e não resgata. Enquanto `PAGAMENTOS_GATEWAY=desligado` (o padrão), o botão aparece, mas avisa que o resgate ainda não está ligado.
+
+### 1. A conta (com o financeiro da Netwise)
+
+1. Abra uma conta no Asaas no **CNPJ da Netwise**, **só para os resgates**. Com a validação ligada (passo 3), o sistema recusa qualquer transferência dessa conta que não seja um resgate.
+2. Deixe saldo na conta, com um PIX da conta da empresa. Os resgates saem desse saldo.
+3. Em **Integrações › Chaves de API**, gere a chave da API. Ela começa com `$aact_`. Copie direto para o `.env` do servidor e não mande por chat nem por e-mail.
+
+### 2. O `.env` do servidor
+
+```bash
+cd ~/retirada
+nano .env
+```
+
+Confira estas linhas. O `.env` criado antes desta versão não tem nenhuma delas: copie do `ferramentas/criar-env.sh` e gere o token com `openssl rand -hex 24`.
+
+```
+PAGAMENTOS_GATEWAY=asaas
+RESGATE_MINIMO_CENTAVOS=2000
+ASAAS_ENDERECO=https://api.asaas.com
+ASAAS_CHAVE_DA_API='$aact_...'
+ASAAS_TOKEN_DO_WEBHOOK=<48 letras e números>
+```
+
+- **A chave do Asaas fica entre aspas simples.** Sem elas, o Docker lê o `$` do começo como variável e apaga parte da chave.
+- **Para testar antes com dinheiro de mentira**, use uma conta do ambiente de testes do Asaas com `ASAAS_ENDERECO=https://api-sandbox.asaas.com`.
+
+Depois de salvar, rode `sh deploy/atualizar.sh`.
+
+### 3. Os avisos (webhooks), no painel do Asaas
+
+O sistema só marca um resgate como **pago** quando o Asaas avisa, com o ID de Fim a Fim. Configure os dois avisos, com o **mesmo token** do `ASAAS_TOKEN_DO_WEBHOOK`:
+
+1. **Eventos.** Em **Integrações › Webhooks › Criar Webhook**, preencha:
+   - **URL:** `https://<DOMINIO>/api/webhooks/asaas/eventos`;
+   - **Auth Token:** o token do `.env`;
+   - **Eventos:** os de transferência, pelo menos `TRANSFER_DONE`, `TRANSFER_FAILED` e `TRANSFER_CANCELLED`.
+2. **Validação antes de pagar.** Ligue o mecanismo de validação de saque por webhook, com a URL `https://<DOMINIO>/api/webhooks/asaas/validacao` e o mesmo token. Se o painel não mostrar a opção, peça ao suporte do Asaas.
+
+Sem a validação, o sistema funciona, mas perde a proteção principal: quem roubasse a chave da API poderia mandar PIX por fora.
+
+### 4. Conferir
+
+1. No sistema, o gestor marca um técnico como **Terceiro** (Gestão › Usuários).
+2. O técnico cadastra a chave PIX dele e o financeiro aprova (Repasses › Chaves PIX para aprovar).
+3. Com o saldo mínimo, o técnico resgata. Em segundos, o resgate aparece como **Pago** na tela dele e na de Repasses, com o ID de Fim a Fim e o comprovante.
+4. Se ficar **A caminho** por mais de 30 minutos, confira em **Integrações › Logs de Webhooks** no Asaas se os avisos estão chegando (resposta 200).
+
+**Folha do CLT:** em Repasses, a seção **Folha do mês (CLT)** mostra quanto cada técnico CLT tem no mês. Pague no salário e registre o pagamento na lista de técnicos, como antes.
+
 **Não edite os arquivos do repositório no servidor** (compose, Caddyfile): o deploy leva o código para a tag e recusa se houver mudança local. O que muda por servidor fica no `.env`.
 
 ## Chave de acesso (digital ou rosto)

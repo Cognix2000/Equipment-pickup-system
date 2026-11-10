@@ -19,3 +19,4 @@ Para registrar uma decisão nova: copie `modelo.md`, use o próximo número e ab
 | [011](0011-armazenamento-das-fotos.md) | Armazenamento das fotos da retirada | Aceita |
 | [012](0012-chave-de-acesso.md) | Chave de acesso (passkey) no lugar do aplicativo autenticador | Aceita |
 | [013](0013-backup.md) | Backup diário cifrado, com cópia fora do servidor | Aceita |
+| [014](0014-resgate-por-pix.md) | Resgate do técnico terceiro por PIX, pelo Asaas | Aceita |
