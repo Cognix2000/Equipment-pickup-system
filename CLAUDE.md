@@ -33,6 +33,7 @@ Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último 
 - **Terceiros (parceiros) veem o mínimo** de dados do cliente.
 - **WhatsApp:** só o oficial. O sistema registra o contato; não envia mensagem nem usa ferramenta não oficial.
 - **Nada de importar `.sql`/`.bak`** de sistemas da empresa. A entrada é só a planilha `.xlsx`.
+- **Tudo o que é novo fica documentado no mesmo PR:** este arquivo (requisitos e "Onde paramos"), os `docs/` que a mudança toca e, para regra de negócio, o documento do projeto, fora do repositório. A lista do que atualizar em cada caso está em [docs/README.md, "Manter atualizado"](docs/README.md#manter-atualizado). Sem documentação, não está pronto.
 
 ## Stack
 
@@ -101,7 +102,8 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | RF18 | Parâmetros ajustáveis |
 | RF19 | Baixa no HubSoft |
 | Localização | O técnico manda só a última posição, com o app aberto; só o gestor vê a equipe (`/gestao/equipe`). Mapa real em produção (`Mapa:Estilo=real`, OpenFreeMap) |
-| Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou PJ, igual); o financeiro registra o pagamento (`Ordens:ValorPorRetiradaCentavos`) |
+| Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou terceiro, igual); hoje o financeiro paga por fora e registra o pagamento (`Ordens:ValorPorRetiradaCentavos`) |
+| Resgate (decidido, a implementar) | **Terceiro** aperta "Resgatar" e recebe por PIX pelo **Asaas**, só do que o estoque já conferiu; o Asaas confirma com o servidor antes de pagar e devolve o comprovante e o ID de Fim a Fim. **CLT** recebe na folha, no fim do mês, e só acompanha no app. O técnico ganha o campo **vínculo** (CLT ou terceiro) |
 | RN01 | Reimportar não duplica |
 | RN02 | Só cliente rescindido vira ordem |
 | RN03 | Carência de 48 h; o financeiro pode liberar antes |
@@ -121,7 +123,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 
 RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de começar.
 
-## Onde paramos (out/2026)
+## Onde paramos (nov/2026)
 
 - **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro.
 - **Entregue depois do incremento 1:**
@@ -132,10 +134,14 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #35 | Resumo do técnico na tela dele |
   | #36 | Repasse ao técnico, com o registro do pagamento |
   | #39 | Mapa real, posição do técnico para o gestor e rota no Google Maps ou no Waze |
+  | #43 | Valor do equipamento da planilha com ponto decimal (não vira mais milhar) |
 
+- **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
-  2. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+  1. **Resgate do técnico terceiro pelo Asaas** (decisões na tabela de requisitos, linha "Resgate"). Falta a Netwise abrir a conta no Asaas com o CNPJ; até lá, o desenvolvimento usa o ambiente de testes (sandbox). A chave da API vai só no `.env` do servidor.
+  2. **Backup automático** (banco, fotos, chaves e `.env`), com cópia fora do servidor.
+  3. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
+  4. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
 - **Não comece funcionalidade nova sem o Pedro pedir.**
 
@@ -154,4 +160,5 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 - **Fluxo de trabalho:**
   - branch curta a partir da `main`, com Conventional Commits em português;
   - PR com o CI verde e squash merge;
-  - nunca commitar direto na `main`.
+  - nunca commitar direto na `main`;
+  - **documentar tudo o que é novo no mesmo PR** (veja "Regras que não se negociam").

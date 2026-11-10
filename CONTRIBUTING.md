@@ -59,7 +59,7 @@ Os outros comandos estão em [docs/comandos.md](docs/comandos.md).
 
 - **Mudou a API de propósito?** Rode `ATUALIZAR_CONTRATO=1 dotnet test` e versione `Contrato/openapi.v1.json`.
 - **Mudou uma tela?** Atualize as capturas de referência e confira a diferença no artefato do CI.
-- **Criou uma tabela, um módulo ou um comando?** Atualize a documentação no mesmo PR (veja "Manter atualizado" em [docs/README.md](docs/README.md)).
+- **Entregou algo novo?** Documente no mesmo PR: o `CLAUDE.md` (requisitos e "Onde paramos") e os `docs/` que a mudança toca. A lista de cada caso está em "Manter atualizado", no [docs/README.md](docs/README.md#manter-atualizado). Sem documentação, o PR não está pronto.
 - **CI vermelho em "Dependências com falha conhecida"?** Um pacote tem falha alta ou crítica: atualize a versão (o Dependabot costuma já ter aberto o PR).
 
 ## Dados de cliente
