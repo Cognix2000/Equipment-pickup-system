@@ -137,7 +137,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #43 | Valor do equipamento da planilha com ponto decimal (não vira mais milhar) |
   | #47 | Node 26 no CI e no guia do ambiente, igual ao Docker |
   | #48 | Backup diário cifrado (age), com cópia fora do servidor (rclone) e restauração (ADR-013) |
-  | #49 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
+  | #50 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**
