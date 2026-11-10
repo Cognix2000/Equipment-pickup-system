@@ -68,6 +68,15 @@ ASAAS_ENDERECO=https://api.asaas.com
 ASAAS_CHAVE_DA_API=''
 # Token que o Asaas manda nos avisos (webhooks). Este foi gerado agora; copie igual para o painel do Asaas.
 ASAAS_TOKEN_DO_WEBHOOK=$(segredo)
+# Backup automático (deploy/backup.sh; docs/implantacao.md, "Backup automático").
+# Chave PÚBLICA do age (age1...). A privada fica com você, num cofre de senhas, nunca neste servidor.
+BACKUP_CHAVE_PUBLICA=
+# Destino do rclone para a cópia fora do servidor (ex.: nuvem:retirada-backup). Vazio = só neste servidor.
+BACKUP_DESTINO=
+BACKUP_DIAS=14
+BACKUP_DIAS_REMOTO=30
+# Endereço chamado quando o backup termina bem (monitor de batimento). Vazio = não chama.
+BACKUP_AVISO_URL=
 EOF
     ;;
   *)

@@ -9,7 +9,7 @@ Do computador vazio ao sistema rodando com dados fictícios em `http://localhost
 | Git | atual | Código |
 | Docker Desktop (ou Docker Engine no Linux) | atual, com `docker compose` | Banco, API, app e fotos, iguais à produção |
 | .NET SDK | **10** | Rodar e testar o backend fora do Docker |
-| Node.js | **22** (a mesma do CI) | Rodar e testar o frontend fora do Docker |
+| Node.js | **26** (a mesma do CI e do Docker) | Rodar e testar o frontend fora do Docker |
 | VS Code | atual | Editor. Extensões: C# Dev Kit, Tailwind CSS IntelliSense, Playwright Test |
 
 Só para **ver o sistema** funcionando, basta Git e Docker. O .NET e o Node servem para desenvolver e rodar os testes.
@@ -23,7 +23,7 @@ wsl --install                              # Linux (Ubuntu) dentro do Windows; r
 winget install Git.Git
 winget install Docker.DockerDesktop        # no primeiro uso, deixe marcado "Use WSL 2 based engine"
 winget install Microsoft.DotNet.SDK.10
-winget install OpenJS.NodeJS.22
+winget install OpenJS.NodeJS.LTS             # Node 26
 winget install Microsoft.VisualStudioCode
 ```
 
@@ -33,7 +33,7 @@ Dentro do Ubuntu, instale o .NET e o Node do lado Linux:
 
 ```bash
 sudo apt update && sudo apt install -y git dotnet-sdk-10.0
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_26.x | sudo -E bash - && sudo apt install -y nodejs
 ```
 
 **Fim de linha:** o repositório força `LF` nos `.sh` (`.gitattributes`). Se clonar no Windows mesmo assim, configure antes do clone:
@@ -46,7 +46,7 @@ Sem isso, os scripts podem falhar com `/bin/sh^M: bad interpreter`.
 
 ### Linux (Ubuntu)
 
-Instale o Docker Engine pelo repositório oficial da Docker (com o plugin `docker compose`), depois o `dotnet-sdk-10.0` e o Node 22, como no bloco do Ubuntu acima.
+Instale o Docker Engine pelo repositório oficial da Docker (com o plugin `docker compose`), depois o `dotnet-sdk-10.0` e o Node 26, como no bloco do Ubuntu acima.
 
 ## 2. Subir o sistema
 

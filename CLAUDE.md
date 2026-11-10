@@ -135,13 +135,15 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #36 | Repasse ao técnico, com o registro do pagamento |
   | #39 | Mapa real, posição do técnico para o gestor e rota no Google Maps ou no Waze |
   | #43 | Valor do equipamento da planilha com ponto decimal (não vira mais milhar) |
+  | #47 | Node 26 no CI e no guia do ambiente, igual ao Docker |
+  | #48 | Backup diário cifrado (age), com cópia fora do servidor (rclone) e restauração (ADR-013) |
   | #49 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Backup automático** (banco, fotos, chaves e `.env`), com cópia fora do servidor.
-  2. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
-  3. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+  1. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
+  2. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+- **Backup na produção:** o script está pronto, mas falta o Pedro gerar a chave do age, preencher `BACKUP_*` no `.env`, configurar o rclone (ou o Veeam) e agendar no cron ([docs/implantacao.md](docs/implantacao.md#backup-automático)).
 - **Resgate na produção:** o código está pronto e desligado. Falta a Netwise abrir a conta no Asaas (CNPJ, só para os resgates), pôr a chave e o token no `.env` e configurar os dois webhooks ([docs/implantacao.md](docs/implantacao.md#resgate-por-pix-asaas)). Conferir no ambiente de testes do Asaas o formato da chave de celular.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
 - **Não comece funcionalidade nova sem o Pedro pedir.**
