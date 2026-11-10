@@ -10,6 +10,15 @@ INSERT INTO usuario (id, nome, email, papel, situacao) VALUES
     ('0192f000-0000-7000-8000-000000000003', 'Estoque Demonstração', 'estoque.demo@exemplo.invalid', 'estoque',    'ativo'),
     ('0192f000-0000-7000-8000-000000000004', 'Gestor Demonstração', 'gestor.demo@exemplo.invalid', 'admin',      'ativo')
 ON CONFLICT DO NOTHING;
+UPDATE usuario SET vinculo = 'clt' WHERE id = '0192f000-0000-7000-8000-000000000001' AND vinculo IS NULL; -- recebe na folha
+-- Técnico terceiro (PJ): resgata o repasse por PIX. Na homologação o PIX é simulado (ADR-014).
+INSERT INTO usuario (id, nome, email, papel, situacao, vinculo) VALUES
+    ('0192f000-0000-7000-8000-000000000008', 'Terceiro Demonstração', 'terceiro.demo@exemplo.invalid', 'tecnico', 'ativo', 'terceiro')
+ON CONFLICT DO NOTHING;
+INSERT INTO chave_pix (id, tecnico_id, tipo, chave, situacao, cadastrada_em, decidida_em, decidida_por) VALUES
+    ('0192f000-0000-7000-8000-0000000000e8', '0192f000-0000-7000-8000-000000000008', 'email', 'terceiro.demo@exemplo.invalid',
+     'aprovada', now(), now(), '0192f000-0000-7000-8000-000000000004')
+ON CONFLICT DO NOTHING;
 -- As senhas não ficam aqui: o migrador com --dados-ficticios define a senha de demonstração (README).
 
 INSERT INTO cliente (id, codigo_hubsoft, nome, tipo_pessoa) VALUES

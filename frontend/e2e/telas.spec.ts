@@ -7,15 +7,15 @@ import type { Ordem } from '../src/features/ordens/tipos'
 type Papel = 'tecnico' | 'financeiro' | 'admin' | 'estoque' | null
 
 const usuarios = [
-  { id: '0192f000-0000-7000-8000-000000000004', nome: 'Gestor Demonstração', email: 'gestor.demo@exemplo.invalid', papel: 'admin', situacao: 'ativo', doisFatores: true, ultimoLoginEm: '2026-10-08T12:00:00-03:00' },
-  { id: '0192f000-0000-7000-8000-000000000002', nome: 'Financeiro Demonstração', email: 'financeiro.demo@exemplo.invalid', papel: 'financeiro', situacao: 'ativo', doisFatores: false, ultimoLoginEm: null },
-  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', email: 'tecnico.demo@exemplo.invalid', papel: 'tecnico', situacao: 'pendente', doisFatores: false, ultimoLoginEm: null },
-  { id: '0192f000-0000-7000-8000-000000000005', nome: 'Técnico Desligado', email: 'desligado@exemplo.invalid', papel: 'tecnico', situacao: 'revogado', doisFatores: false, ultimoLoginEm: '2026-09-30T08:00:00-03:00' },
+  { id: '0192f000-0000-7000-8000-000000000004', nome: 'Gestor Demonstração', email: 'gestor.demo@exemplo.invalid', papel: 'admin', vinculo: null, situacao: 'ativo', doisFatores: true, ultimoLoginEm: '2026-10-08T12:00:00-03:00' },
+  { id: '0192f000-0000-7000-8000-000000000002', nome: 'Financeiro Demonstração', email: 'financeiro.demo@exemplo.invalid', papel: 'financeiro', vinculo: null, situacao: 'ativo', doisFatores: false, ultimoLoginEm: null },
+  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', email: 'tecnico.demo@exemplo.invalid', papel: 'tecnico', vinculo: 'clt', situacao: 'pendente', doisFatores: false, ultimoLoginEm: null },
+  { id: '0192f000-0000-7000-8000-000000000005', nome: 'Técnico Desligado', email: 'desligado@exemplo.invalid', papel: 'tecnico', vinculo: 'terceiro', situacao: 'revogado', doisFatores: false, ultimoLoginEm: '2026-09-30T08:00:00-03:00' },
 ]
 
 const repassesDosTecnicos = [
-  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', situacao: 'ativo', quantidade: 2, valorCentavos: 1000, ultimoPagamentoEm: '2026-10-24T17:00:00-03:00' },
-  { id: '0192f000-0000-7000-8000-000000000006', nome: 'Técnico Parceiro', situacao: 'ativo', quantidade: 0, valorCentavos: 0, ultimoPagamentoEm: null },
+  { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', situacao: 'ativo', vinculo: 'clt', quantidade: 2, valorCentavos: 1000, ultimoPagamentoEm: '2026-10-24T17:00:00-03:00' },
+  { id: '0192f000-0000-7000-8000-000000000006', nome: 'Técnico Parceiro', situacao: 'ativo', vinculo: 'terceiro', quantidade: 0, valorCentavos: 0, ultimoPagamentoEm: null },
 ]
 
 const detalheDoRepasse = {
@@ -36,6 +36,43 @@ const equipeEmCampo = () => [
   { id: '0192f000-0000-7000-8000-000000000006', nome: 'Técnico Parceiro', latitude: -20.9961, longitude: -38.9851, precisaoM: 20, registradaEm: new Date(Date.now() - 40 * 60_000).toISOString(), ordensComEle: 1 },
   { id: '0192f000-0000-7000-8000-000000000007', nome: 'Técnico Novo', latitude: null, longitude: null, precisaoM: null, registradaEm: null, ordensComEle: 0 },
 ]
+
+/** Resgate do técnico terceiro: chave aprovada, R$ 35,00 para resgatar, um PIX pago e um que não saiu. */
+const meuResgate = (vinculo: 'clt' | 'terceiro' = 'terceiro') => ({
+  vinculo,
+  resgateLigado: true,
+  minimoCentavos: 2000,
+  disponivel: { quantidade: 7, valorCentavos: 3500 },
+  chaves:
+    vinculo === 'terceiro'
+      ? [{ id: '0192f000-0000-7000-8000-0000000000f1', tipo: 'email', mascarada: 'te***@exemplo.invalid', situacao: 'aprovada', cadastradaEm: '2026-11-01T09:00:00-03:00', motivoRecusa: null }]
+      : [],
+  resgates:
+    vinculo === 'terceiro'
+      ? [
+          {
+            id: '0192f000-0000-7000-8000-0000000000f2', valorCentavos: 2500, quantidade: 5, situacao: 'pago',
+            solicitadoEm: '2026-11-05T18:00:00-03:00', concluidoEm: '2026-11-05T18:00:05-03:00',
+            idFimAFim: 'E00000000202611052100abcdefghijk', comprovanteUrl: 'https://comprovante.exemplo.invalid/1', motivoFalha: null,
+          },
+          {
+            id: '0192f000-0000-7000-8000-0000000000f3', valorCentavos: 2000, quantidade: 4, situacao: 'falhou',
+            solicitadoEm: '2026-11-03T18:00:00-03:00', concluidoEm: '2026-11-03T18:00:05-03:00',
+            idFimAFim: null, comprovanteUrl: null, motivoFalha: 'Chave PIX não encontrada.',
+          },
+        ]
+      : [],
+})
+
+const chavesParaAprovar = [
+  { id: '0192f000-0000-7000-8000-0000000000f4', tecnicoId: '0192f000-0000-7000-8000-000000000006', tecnicoNome: 'Técnico Parceiro', tipo: 'email', chave: 'parceiro.pix@exemplo.invalid', cadastradaEm: '2026-11-09T10:00:00-03:00', trocaDeChave: true },
+]
+
+const folhaDoMes = {
+  mes: '2026-11',
+  totalCentavos: 4500,
+  tecnicos: [{ id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', situacao: 'ativo', quantidade: 9, valorCentavos: 4500, emAbertoCentavos: 1000 }],
+}
 
 /** Simula a API com dados fictícios. `papel` = quem está logado (null = ninguém). */
 async function simularApi(page: Page, papel: Papel) {
@@ -75,8 +112,17 @@ async function simularApi(page: Page, papel: Papel) {
         },
       })
     if (caminho === '/api/repasses') return rota.fulfill({ json: repassesDosTecnicos })
+    if (caminho === '/api/repasses/folha') return rota.fulfill({ json: folhaDoMes })
     if (caminho.endsWith('/pagamentos')) return rota.fulfill({ json: { id: '0192f000-0000-7000-8000-0000000000e1', pagoEm: '2026-10-31T10:00:00-03:00', valorCentavos: 1000, quantidade: 2 } })
     return rota.fulfill({ json: detalheDoRepasse })
+  })
+  await page.route('**/api/resgates**', (rota) => {
+    const caminho = new URL(rota.request().url()).pathname
+    if (caminho === '/api/resgates/meu') return rota.fulfill({ json: meuResgate() })
+    if (caminho === '/api/resgates/chaves-pix') return rota.fulfill({ json: chavesParaAprovar })
+    if (caminho === '/api/resgates')
+      return rota.request().method() === 'POST' ? rota.fulfill({ json: meuResgate() }) : rota.fulfill({ json: [] })
+    return rota.fulfill({ status: 204 })
   })
   await page.route('**/api/mapa', (rota) => rota.fulfill({ json: { estilo: 'simulado' } }))
   await page.route('**/api/localizacao/equipe', (rota) => rota.fulfill({ json: equipeEmCampo() }))
@@ -107,7 +153,8 @@ const telas: { nome: string; rota: string; pronto: string; papel: Papel }[] = [
   { nome: 'importar-planilha', rota: '/financeiro/importar', pronto: 'Escolher arquivo', papel: 'financeiro' },
   { nome: 'equipe', rota: '/gestao/equipe', pronto: '1 técnico em campo agora', papel: 'admin' },
   { nome: 'usuarios', rota: '/gestao/usuarios', pronto: 'Cadastrar e gerar convite', papel: 'admin' },
-  { nome: 'repasses', rota: '/financeiro/repasses', pronto: 'Técnico Demonstração', papel: 'financeiro' },
+  { nome: 'repasses', rota: '/financeiro/repasses', pronto: 'Chaves PIX para aprovar', papel: 'financeiro' },
+  { nome: 'resgate', rota: '/tecnico/resgate', pronto: 'Seus resgates', papel: 'tecnico' },
   { nome: 'minha-conta', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'financeiro' },
   { nome: 'minha-conta-no-celular', rota: '/conta', pronto: 'Cadastrar neste aparelho', papel: 'tecnico' },
   { nome: 'conferir-no-estoque', rota: '/estoque/conferir', pronto: 'Protocolo, número da OS ou SN de um item', papel: 'estoque' },
@@ -829,4 +876,106 @@ test('financeiro e estoque não veem a equipe no mapa', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Equipe' })).toHaveCount(0)
   await page.goto('/gestao/equipe')
   await expect(page).not.toHaveURL(/\/gestao\/equipe/)
+})
+
+test('técnico terceiro resgata o saldo por PIX com confirmação e vê o comprovante dos anteriores', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  let pediu = false
+  const antes = meuResgate()
+  // Depois do pedido, o servidor responde (e continua respondendo) com o PIX a caminho.
+  const depois = {
+    ...antes,
+    disponivel: { quantidade: 0, valorCentavos: 0 },
+    resgates: [{ ...antes.resgates[0], id: '0192f000-0000-7000-8000-0000000000f9', valorCentavos: 3500, situacao: 'enviado', idFimAFim: null, comprovanteUrl: null, concluidoEm: null }, ...antes.resgates],
+  }
+  await page.route('**/api/resgates/meu', (rota) => rota.fulfill({ json: pediu ? depois : antes }))
+  await page.route('**/api/resgates', async (rota) => {
+    if (rota.request().method() !== 'POST') return rota.fallback()
+    expect(rota.request().headers()['x-retirada']).toBe('1')
+    pediu = true
+    await rota.fulfill({ json: depois })
+  })
+  await page.goto('/tecnico/ordens')
+  await page.getByRole('link', { name: 'Resgatar por PIX' }).click()
+
+  await expect(page.getByText('R$ 35,00').first()).toBeVisible()
+  await expect(page.getByText('E00000000202611052100abcdefghijk')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ver comprovante' })).toHaveAttribute('href', 'https://comprovante.exemplo.invalid/1')
+  await expect(page.getByText('Chave PIX não encontrada. O valor voltou para o seu saldo.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Resgatar R$ 35,00' }).click()
+  await expect(page.getByText('Mandar R$ 35,00 por PIX para a chave te***@exemplo.invalid?')).toBeVisible()
+  await page.getByRole('button', { name: 'Sim, resgatar' }).click()
+  await expect.poll(() => pediu).toBe(true)
+  await expect(page.getByText('Confirmando com o banco…')).toBeVisible()
+})
+
+test('técnico terceiro troca a chave PIX e espera o financeiro aprovar', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  let corpo: unknown
+  await page.route('**/api/resgates/minha-chave-pix', async (rota) => {
+    corpo = rota.request().postDataJSON()
+    await rota.fulfill({ json: { id: '0192f000-0000-7000-8000-0000000000fa', tipo: 'cpf', mascarada: '***.456.789-**', situacao: 'pendente', cadastradaEm: '2026-11-10T10:00:00-03:00', motivoRecusa: null } })
+  })
+  await page.goto('/tecnico/resgate')
+  await page.getByRole('button', { name: 'Trocar a chave' }).click()
+  await page.getByLabel('Tipo da chave').selectOption('cpf')
+  await page.getByLabel('Chave', { exact: true }).fill('123.456.789-09')
+  await page.getByRole('button', { name: 'Enviar para aprovação' }).click()
+  await expect.poll(() => corpo).toEqual({ tipo: 'cpf', chave: '123.456.789-09' })
+})
+
+test('técnico CLT não resgata: o repasse vai na folha', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.route('**/api/resgates/meu', (rota) => rota.fulfill({ json: meuResgate('clt') }))
+  await page.goto('/tecnico/ordens')
+  await expect(page.getByText('Vai no salário, na folha do fim do mês.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Resgatar por PIX' })).toHaveCount(0)
+  await page.goto('/tecnico/resgate')
+  await expect(page.getByRole('heading', { name: 'Seu repasse vai na folha' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Resgatar/ })).toHaveCount(0)
+})
+
+test('financeiro aprova a chave PIX nova e vê a folha dos CLT', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  let aprovou = false
+  await page.route('**/api/resgates/chaves-pix/*/aprovar', async (rota) => {
+    aprovou = true
+    await rota.fulfill({ status: 204 })
+  })
+  await page.goto('/financeiro/repasses')
+  const chave = page.getByRole('article', { name: 'Chave PIX de Técnico Parceiro' })
+  await expect(chave.getByText('parceiro.pix@exemplo.invalid')).toBeVisible()
+  await expect(chave.getByText('Troca de chave')).toBeVisible()
+  await chave.getByRole('button', { name: 'Aprovar a chave' }).click()
+  await expect.poll(() => aprovou).toBe(true)
+
+  const folha = page.getByRole('region', { name: 'Folha do mês (CLT)' })
+  await expect(folha.getByRole('cell', { name: 'Técnico Demonstração' })).toBeVisible()
+  await expect(folha.getByRole('cell', { name: 'R$ 45,00' }).first()).toBeVisible()
+})
+
+test('gestor cadastra técnico terceiro', async ({ page }) => {
+  await simularApi(page, 'admin')
+  let corpo: unknown
+  await page.route('**/api/usuarios', async (rota) => {
+    if (rota.request().method() !== 'POST') return rota.fallback()
+    corpo = rota.request().postDataJSON()
+    await rota.fulfill({
+      status: 201,
+      json: {
+        usuario: { id: '0192f000-0000-7000-8000-00000000000b', nome: 'Terceiro Novo', email: 'terceiro.novo@exemplo.invalid', papel: 'tecnico', vinculo: 'terceiro', situacao: 'pendente', doisFatores: false, ultimoLoginEm: null },
+        convite: { caminho: '/primeiro-acesso#t=token-ficticio', expiraEm: '2026-11-12T10:00:00-03:00' },
+      },
+    })
+  })
+  await page.goto('/gestao/usuarios')
+  await page.getByLabel('Nome').fill('Terceiro Novo')
+  await page.getByLabel('E-mail').fill('terceiro.novo@exemplo.invalid')
+  await page.getByLabel('Vínculo').selectOption('terceiro')
+  await page.getByRole('button', { name: 'Cadastrar e gerar convite' }).click()
+  await expect.poll(() => corpo).toEqual({ nome: 'Terceiro Novo', email: 'terceiro.novo@exemplo.invalid', papel: 'tecnico', vinculo: 'terceiro' })
+
+  await page.getByLabel('Papel').selectOption('financeiro')
+  await expect(page.getByLabel('Vínculo')).toHaveCount(0) // só o técnico tem vínculo
 })

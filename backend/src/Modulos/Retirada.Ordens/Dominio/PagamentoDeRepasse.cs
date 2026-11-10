@@ -4,8 +4,8 @@ namespace Retirada.Ordens.Dominio;
 
 /// <summary>
 /// Repasse ao técnico, como o do entregador de aplicativo: cada retirada conferida pelo estoque vira um crédito,
-/// e o financeiro registra de uma vez o pagamento de tudo o que está em aberto. Técnico CLT ou PJ recebe igual;
-/// o sistema registra o pagamento, mas não transfere dinheiro (CLT entra na folha, PJ paga por fora com nota).
+/// e o financeiro registra de uma vez o pagamento de tudo o que está em aberto. Técnico CLT ou terceiro recebe igual:
+/// o CLT na folha (o financeiro registra aqui) e o terceiro pelo resgate por PIX (ADR-014, <see cref="RegrasDoResgate"/>).
 /// </summary>
 public static class PagamentoDeRepasse
 {

@@ -12,6 +12,7 @@ using Retirada.Comum;
 using Retirada.Ordens.Casos;
 using Retirada.Ordens.Infraestrutura;
 using Retirada.Ordens.Infraestrutura.Fotos;
+using Retirada.Ordens.Infraestrutura.Pagamentos;
 using Retirada.Ordens.Portas;
 using Retirada.Ordens.Rotinas;
 
@@ -34,6 +35,12 @@ public static class ModuloOrdens
             DiasSemResposta: config.GetValue("Ordens:DiasSemResposta", 10),     // RN09
             // Repasse ao técnico por retirada conferida, em centavos (R$ 5,00). Muda só daqui para a frente.
             ValorPorRetiradaCentavos: ValorPositivo(config.GetValue("Ordens:ValorPorRetiradaCentavos", 500), "Ordens:ValorPorRetiradaCentavos")));
+
+        GatewayDePagamento(services, config, ambiente);
+        services.AddSingleton(new ParametrosDosResgates(
+            // Resgate mínimo do técnico terceiro (R$ 20,00): cada PIX tem custo no gateway.
+            MinimoCentavos: ValorPositivo(config.GetValue("Pagamentos:ResgateMinimoCentavos", 2000), "Pagamentos:ResgateMinimoCentavos"),
+            TokenDoWebhook: config["Pagamentos:Asaas:TokenDoWebhook"]));
 
         // Rotinas automáticas (RN03, RN09). A cada 5 min basta: os prazos são de horas e dias. Os testes desligam para controlar o relógio.
         if (config.GetValue("Ordens:Rotinas:Ativas", true))
@@ -73,6 +80,16 @@ public static class ModuloOrdens
         MeuRepasse.Mapear(repasses);
         RepassesDosTecnicos.Mapear(repasses);
         RegistrarPagamentoDeRepasse.Mapear(repasses);
+        FolhaDoMes.Mapear(repasses);
+
+        // Resgate por PIX do técnico terceiro (ADR-014): a tela dele, a chave PIX, o pedido e a aprovação do financeiro.
+        var resgates = app.MapGroup("/api/resgates").WithTags("Resgates");
+        MeuResgate.Mapear(resgates);
+        CadastrarChavePix.Mapear(resgates);
+        SolicitarResgate.Mapear(resgates);
+        ChavesPixParaAprovar.Mapear(resgates);
+        ResgatesDosTecnicos.Mapear(resgates);
+        WebhooksDoAsaas.Mapear(app);
 
         // Localização: o técnico manda a dele; só o gestor vê a equipe. E o fundo do mapa (real ou simulado).
         var localizacao = app.MapGroup("/api/localizacao").WithTags("Localização");
@@ -87,6 +104,41 @@ public static class ModuloOrdens
         DescartarImportacao.Mapear(importacoes);
 
         return app;
+    }
+
+    /// <summary>
+    /// Quem envia o PIX do resgate (Pagamentos:Gateway): "asaas" com a conta da Netwise, "simulado" na homologação
+    /// (o PIX "cai" sem dinheiro sair) ou "desligado", o padrão. A produção recusa o simulado ao subir.
+    /// </summary>
+    private static void GatewayDePagamento(IServiceCollection services, IConfiguration config, IHostEnvironment ambiente)
+    {
+        switch (config["Pagamentos:Gateway"] ?? "desligado")
+        {
+            case "asaas":
+                var endereco = config["Pagamentos:Asaas:Endereco"];
+                var chave = config["Pagamentos:Asaas:ChaveDaApi"];
+                if (string.IsNullOrWhiteSpace(endereco) || string.IsNullOrWhiteSpace(chave) || string.IsNullOrWhiteSpace(config["Pagamentos:Asaas:TokenDoWebhook"]))
+                    throw new InvalidOperationException("Com Pagamentos:Gateway=asaas, configure Pagamentos:Asaas:Endereco, ChaveDaApi e TokenDoWebhook.");
+                services.AddHttpClient<GatewayAsaas>(http =>
+                {
+                    http.BaseAddress = new Uri(endereco.TrimEnd('/') + "/");
+                    http.DefaultRequestHeaders.Add("access_token", chave);
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd("retirada-netwise/1.0");
+                    http.Timeout = TimeSpan.FromSeconds(20);
+                });
+                services.AddTransient<IGatewayDePagamento>(sp => sp.GetRequiredService<GatewayAsaas>());
+                break;
+            case "simulado":
+                if (ambiente.IsProduction())
+                    throw new InvalidOperationException("Pagamentos:Gateway=simulado não vale em produção: o resgate pareceria pago sem o dinheiro sair.");
+                services.AddSingleton<IGatewayDePagamento, GatewaySimulado>();
+                break;
+            case "desligado":
+                services.AddSingleton<IGatewayDePagamento, GatewayDesligado>();
+                break;
+            default:
+                throw new InvalidOperationException("Pagamentos:Gateway aceita asaas, simulado ou desligado.");
+        }
     }
 
     /// <summary>

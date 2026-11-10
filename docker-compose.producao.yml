@@ -40,6 +40,13 @@ services:
       Ordens__ValorPorRetiradaCentavos: ${VALOR_POR_RETIRADA_CENTAVOS:-500}
       # Mapa com as ruas de verdade (OpenFreeMap). A homologação usa a cidade simulada dos dados fictícios.
       Mapa__Estilo: real
+      # ADR-014: resgate do técnico terceiro por PIX pelo Asaas. Desligado até a conta da Netwise existir;
+      # o passo a passo está em docs/implantacao.md, "Resgate por PIX (Asaas)".
+      Pagamentos__Gateway: ${PAGAMENTOS_GATEWAY:-desligado}
+      Pagamentos__ResgateMinimoCentavos: ${RESGATE_MINIMO_CENTAVOS:-2000}
+      Pagamentos__Asaas__Endereco: ${ASAAS_ENDERECO:-https://api.asaas.com}
+      Pagamentos__Asaas__ChaveDaApi: ${ASAAS_CHAVE_DA_API:-}
+      Pagamentos__Asaas__TokenDoWebhook: ${ASAAS_TOKEN_DO_WEBHOOK:-}
 
   fotos:
     <<: *logs

@@ -35,9 +35,10 @@ internal static class RegistrarPagamentoDeRepasse
 
         await using var transacao = await db.Database.BeginTransactionAsync(ct);
         // Trava os créditos em aberto: outro pagamento ao mesmo tempo espera e, depois, não acha saldo.
+        // O que está num resgate a caminho fica de fora: o PIX já vai pagar.
         var abertos = await db.Database.SqlQuery<CreditoAberto>($"""
             SELECT id AS "Id", valor_centavos AS "ValorCentavos" FROM retirada.repasse_credito
-            WHERE tecnico_id = {tecnicoId} AND pagamento_id IS NULL FOR UPDATE
+            WHERE tecnico_id = {tecnicoId} AND pagamento_id IS NULL AND resgate_id IS NULL FOR UPDATE
             """).ToListAsync(ct);
 
         var observacao = string.IsNullOrWhiteSpace(pedido.Observacao) ? null : pedido.Observacao.Trim();

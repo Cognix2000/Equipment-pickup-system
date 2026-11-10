@@ -52,6 +52,9 @@ services:
       Fotos__S3__Bucket: retirada-fotos
       Fotos__S3__Chave: ${FOTOS_CHAVE}
       Fotos__S3__Segredo: ${FOTOS_SEGREDO}
+      # ADR-014: resgate do técnico terceiro por PIX. Na homologação o PIX é simulado: "cai" na hora e nenhum dinheiro sai.
+      Pagamentos__Gateway: simulado
+      Pagamentos__ResgateMinimoCentavos: "500"
     volumes:
       # ADR-010: chaves que cifram a sessão e o 2FA. Perder este volume derruba sessões e todo 2FA: entra no backup.
       - chaves:/chaves

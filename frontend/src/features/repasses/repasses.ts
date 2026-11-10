@@ -19,6 +19,7 @@ export const tecnicoNaLista = z.object({
   id: z.uuid(),
   nome: z.string(),
   situacao: z.string(),
+  vinculo: z.enum(['clt', 'terceiro']),
   quantidade: z.number().int(),
   valorCentavos: z.number().int(),
   ultimoPagamentoEm: dataHora.nullable(),

@@ -26,6 +26,7 @@ export const usuarioNaLista = z.object({
   nome: z.string(),
   email: z.string(),
   papel,
+  vinculo: z.enum(['clt', 'terceiro']).nullable(),
   situacao: z.enum(['pendente', 'ativo', 'suspenso', 'revogado']),
   doisFatores: z.boolean(),
   ultimoLoginEm: z.iso.datetime({ offset: true }).nullable(),

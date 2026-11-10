@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OtpNet;
@@ -13,6 +15,7 @@ using Retirada.Banco;
 using Retirada.Comum;
 using Retirada.Ordens.Dominio;
 using Retirada.Ordens.Infraestrutura;
+using Retirada.Ordens.Portas;
 using Shouldly;
 
 namespace Retirada.Api.Testes;
@@ -31,6 +34,10 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public static string? Conexao => Environment.GetEnvironmentVariable("RETIRADA_TESTE_BANCO");
     public const string Senha = "senha de teste bem comprida";
+    public const string TokenDoWebhook = "token-do-webhook-de-teste";
+
+    /// <summary>O gateway de PIX dos testes: guarda os pedidos e responde o que cada teste mandar.</summary>
+    internal GatewayDeTeste Gateway { get; } = new();
     public static readonly string PastaDasFotos = Path.Combine(Path.GetTempPath(), $"retirada-fotos-testes-{Guid.NewGuid():N}");
 
     /// <summary>RN14: envia uma foto como o app faz (multipart, campo "foto") e devolve a resposta.</summary>
@@ -63,6 +70,10 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Ordens:Rotinas:Ativas", "false");
         builder.UseSetting("Fotos:Pasta", PastaDasFotos); // RN14: fotos numa pasta temporária, como no desenvolvimento  // os testes rodam as rotinas na mão, com o relógio que quiserem
         builder.UseSetting("DataProtection:Pasta", Path.Combine(Path.GetTempPath(), "retirada-chaves-testes"));
+        builder.UseSetting("Pagamentos:Gateway", "simulado");
+        builder.UseSetting("Pagamentos:ResgateMinimoCentavos", "1000");
+        builder.UseSetting("Pagamentos:Asaas:TokenDoWebhook", TokenDoWebhook);
+        builder.ConfigureTestServices(s => s.AddSingleton<IGatewayDePagamento>(Gateway));
     }
 
     public async Task InitializeAsync()
@@ -175,6 +186,15 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     /// <summary>Primeira coluna da primeira linha de uma consulta ao banco de teste.</summary>
+    /// <summary>Roda a conciliação dos resgates na hora, como a rotina faz a cada 5 minutos.</summary>
+    public async Task<int> ConciliarResgatesAsync()
+    {
+        await using var escopo = Services.CreateAsyncScope();
+        var db = escopo.ServiceProvider.GetRequiredService<OrdensDbContext>();
+        return await Retirada.Ordens.Rotinas.ConciliacaoDeResgates.ExecutarAsync(
+            db, Gateway, DateTimeOffset.UtcNow, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance, CancellationToken.None);
+    }
+
     public async Task<T?> EscalarAsync<T>(string sql, params (string Nome, object Valor)[] parametros)
     {
         await using var conexao = new NpgsqlConnection(Conexao);

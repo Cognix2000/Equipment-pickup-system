@@ -156,6 +156,23 @@ public class UsuarioTestes
     [Fact]
     public void Ativar_2FA_exige_segredo_preparado() =>
         DeveViolar(() => Ativo(Papeis.Financeiro).AtivarTotp(1, Agora), "2FA_SEM_SEGREDO");
+
+    [Fact]
+    public void Tecnico_entra_como_clt_e_o_gestor_muda_para_terceiro_so_no_tecnico()
+    {
+        Usuario.Cadastrar("Técnico", "t@exemplo.invalid", Papeis.Tecnico, Gestor, Agora).Vinculo.ShouldBe(Vinculos.Clt);
+        Usuario.Cadastrar("Técnico", "t@exemplo.invalid", Papeis.Tecnico, Gestor, Agora, Vinculos.Terceiro).Vinculo.ShouldBe(Vinculos.Terceiro);
+        Usuario.Cadastrar("Estoque", "e@exemplo.invalid", Papeis.Estoque, Gestor, Agora).Vinculo.ShouldBeNull();
+
+        DeveViolar(() => Usuario.Cadastrar("Estoque", "e@exemplo.invalid", Papeis.Estoque, Gestor, Agora, Vinculos.Clt), "USUARIO_VINCULO");
+        DeveViolar(() => Usuario.Cadastrar("Técnico", "t@exemplo.invalid", Papeis.Tecnico, Gestor, Agora, "pj"), "USUARIO_VINCULO");
+
+        var tecnico = Ativo();
+        tecnico.DefinirVinculo(Vinculos.Terceiro, Agora.AddDays(1));
+        tecnico.Vinculo.ShouldBe(Vinculos.Terceiro);
+        tecnico.AtualizadoEm.ShouldBe(Agora.AddDays(1));
+        DeveViolar(() => Ativo(Papeis.Financeiro).DefinirVinculo(Vinculos.Terceiro, Agora), "USUARIO_VINCULO");
+    }
 }
 
 public class ConviteTestes

@@ -50,7 +50,7 @@ Os testes de arquitetura (NetArchTest, `tests/Retirada.Arquitetura.Testes`) gara
 flowchart TB
     Host["Retirada.Api<br/>host: Program.cs, CSRF, sessão, limite de requisições, erros"]
     Acesso["Retirada.Acesso<br/>login, 2FA, chave de acesso, usuários, convites"]
-    Ordens["Retirada.Ordens<br/>ordens, importação, contato, fotos, conferência, repasse, localização"]
+    Ordens["Retirada.Ordens<br/>ordens, importação, contato, fotos, conferência, repasse, resgate por PIX, localização"]
     Comum["Retirada.Comum<br/>Entidade, RegraDeNegocioException, papéis e políticas"]
     BancoProj["Retirada.Banco<br/>migrações (Scripts/NNNN_*.sql)"]
 
@@ -173,6 +173,29 @@ flowchart LR
   Sem geocodificação: a planilha do HubSoft não traz coordenada, e o Nominatim público proíbe dado pessoal e uso recorrente. A rota abre o Google Maps ou o Waze pelo endereço escrito, e a ordem ganha o pino no primeiro GPS registrado (retirada ou visita sem sucesso).
 - **Localização do técnico:** `useCompartilharPosicao` (em `LayoutTecnico`) usa `watchPosition` só com o app visível e manda para `POST /api/localizacao/minha` a cada 30 s, ou antes se andou 75 m. O gestor vê em `/gestao/equipe` (`GET /api/localizacao/equipe`, atualiza a cada 15 s). Estoque e financeiro não têm acesso.
 
+## Resgate por PIX (ADR-014)
+
+O técnico terceiro resgata o saldo das retiradas conferidas. O dinheiro sai pelo Asaas, atrás da porta `IGatewayDePagamento`; na homologação, o adaptador é o simulado. Quem diz que o PIX caiu é o aviso do gateway, e não a resposta do pedido:
+
+```mermaid
+sequenceDiagram
+    participant T as App do técnico
+    participant A as API
+    participant BD as PostgreSQL
+    participant G as Asaas
+    T->>A: POST /api/resgates
+    A->>BD: grava o resgate "solicitado" e reserva os créditos (uma transação)
+    A->>G: POST /v3/transfers (externalReference = id do resgate)
+    G-->>A: transferência PENDENTE → resgate "enviado"
+    G->>A: POST /api/webhooks/asaas/validacao
+    A-->>G: APPROVED só se bate com um resgate em andamento
+    G->>A: POST /api/webhooks/asaas/eventos (TRANSFER_DONE + ID de Fim a Fim)
+    A->>BD: resgate "pago" vira repasse_pagamento (ou "falhou" e o crédito volta)
+    T->>A: GET /api/resgates/meu (a cada 5 s enquanto está a caminho)
+```
+
+Os webhooks não têm sessão nem o cabeçalho anti-CSRF: o token `asaas-access-token` é que autentica. A rotina de 5 min concilia o resgate que ficou parado.
+
 ## Onde mexer para…
 
 | Quero… | Onde |
@@ -180,5 +203,6 @@ flowchart LR
 | Uma ação nova na ordem | O método em `Dominio/Ordem.cs`, um arquivo em `Casos/` usando `ComandoDaOrdem`, o mapeamento em `ModuloOrdens.cs`, os testes de domínio e de API, e o contrato |
 | Uma consulta nova | Um arquivo em `Casos/` (SQL ou EF, sem passar pelo agregado), o mapeamento e o contrato |
 | Uma tabela nova | Uma migração SQL nova ([comandos.md](comandos.md#banco)) e o [modelo-de-dados.md](modelo-de-dados.md) |
+| Um gateway de pagamento novo | Um adaptador de `Portas/IGatewayDePagamento.cs` em `Infraestrutura/Pagamentos/` e a escolha em `ModuloOrdens.cs` (`Pagamentos:Gateway`). Os avisos dele entram como `Casos/WebhooksDoAsaas.cs` |
 | Um parâmetro ajustável | `ParametrosDasOrdens` em `ComandoDaOrdem.cs` e a leitura da configuração em `ModuloOrdens.cs` (ex.: `Ordens:ValorPorRetiradaCentavos`) |
 | Uma tela nova | A tela em `paginas/`, a consulta em `features/`, a rota em `rotas.tsx` e o teste em `e2e/telas.spec.ts` (acessibilidade e larguras) |

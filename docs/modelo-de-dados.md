@@ -29,12 +29,18 @@ erDiagram
     repasse_pagamento ||--|{ repasse_credito : "quita"
     usuario ||--o{ repasse_pagamento : "técnico"
     usuario ||--o| posicao_tecnico : "última posição"
+    usuario ||--o{ chave_pix : "terceiro cadastra"
+    usuario ||--o{ resgate : "terceiro resgata"
+    chave_pix ||--o{ resgate : "PIX vai para"
+    resgate |o--o{ repasse_credito : "reserva"
+    resgate |o--o| repasse_pagamento : "pago vira"
 
     usuario {
         uuid id PK
         text nome
         text email UK "sempre minúsculo"
         text papel "admin, financeiro, tecnico, parceiro, estoque"
+        text vinculo "só do técnico: clt ou terceiro"
         text situacao "pendente, ativo, suspenso, revogado"
         text senha_hash "Argon2id"
         text totp_segredo_cifrado "2FA por aplicativo"
@@ -154,6 +160,25 @@ erDiagram
         timestamptz pago_em
         uuid registrado_por FK
     }
+    chave_pix {
+        uuid id PK
+        uuid tecnico_id FK
+        text tipo "cpf, cnpj, email, telefone, aleatoria"
+        text chave
+        text situacao "pendente, aprovada, recusada, substituida"
+        uuid decidida_por FK "financeiro que aprovou"
+    }
+    resgate {
+        uuid id PK
+        uuid tecnico_id FK
+        uuid chave_pix_id FK
+        int valor_centavos
+        text situacao "solicitado, enviado, pago, falhou"
+        text gateway_id UK "id no Asaas"
+        text id_fim_a_fim "prova do Banco Central"
+        text comprovante_url
+        uuid pagamento_id FK
+    }
     posicao_tecnico {
         uuid tecnico_id PK "uma linha por técnico"
         geography local "Point 4326"
@@ -167,7 +192,7 @@ erDiagram
 
 | Tabela | Guarda | Módulo | Migração |
 | --- | --- | --- | --- |
-| `usuario` | Quem entra no sistema: papel, situação, senha (Argon2id) e 2FA por aplicativo | Acesso | 0001, 0002 |
+| `usuario` | Quem entra no sistema: papel, situação, senha (Argon2id), 2FA por aplicativo e, no técnico, o vínculo (CLT ou terceiro) | Acesso | 0001, 0002, 0007 |
 | `convite_usuario` | Link de primeiro acesso ou de nova senha (vale 48 h e uma vez) | Acesso | 0002 |
 | `chave_de_acesso` | Chaves de acesso (passkeys): só a chave pública | Acesso | 0004 |
 | `auditoria_acesso` | Entrar, errar a senha, sair e mudar acessos (RNF05) | Acesso | 0001 |
@@ -182,6 +207,8 @@ erDiagram
 | `tentativa_contato` | Ligações e WhatsApp registrados, com o resultado | Ordens | 0001 |
 | `repasse_credito` | R$ por retirada conferida, para o técnico que retirou | Ordens | 0005 |
 | `repasse_pagamento` | Pagamento registrado pelo financeiro, quitando os créditos em aberto | Ordens | 0005 |
+| `chave_pix` | Chave PIX do técnico terceiro. Só vale depois que o financeiro aprova; uma aprovada e uma pendente por técnico | Ordens | 0007 |
+| `resgate` | Cada PIX que o técnico terceiro pediu: valor, situação, id no gateway, ID de Fim a Fim e comprovante. Um em andamento por técnico (ADR-014) | Ordens | 0007 |
 | `posicao_tecnico` | Só a **última** posição de cada técnico, mandada com o app aberto. Não guarda trajeto; só o gestor vê | Ordens | 0006 |
 
 ### Reservadas para depois (já existem, sem uso no código)
@@ -211,6 +238,7 @@ erDiagram
 - **Idempotência:** `evento_ordem.chave_idempotencia` é única. O celular reenvia sem duplicar.
 - **Dinheiro em centavos** (`integer`), nunca `float`.
 - **Datas** em `timestamptz` (UTC no banco). A tela mostra no horário de Brasília.
+- **Resgate e repasse:** o crédito reservado num resgate em andamento (`repasse_credito.resgate_id`) não entra em outro resgate nem no pagamento manual. Se o PIX falha, a reserva cai e o crédito volta ao saldo. Quando o PIX cai, o resgate vira um `repasse_pagamento`.
 - **Posição do técnico:** é sobrescrita (`ON CONFLICT … DO UPDATE`), e uma leitura que chega atrasada não volta o técnico para trás (`registrada_em` mais antiga é ignorada). Apagar o usuário apaga a posição.
 - **Expurgo e dinheiro:** apagar uma ordem no expurgo **não** apaga o repasse (`ordem_id` vira nulo).
 

@@ -15,6 +15,7 @@ import { Usuarios } from '@/paginas/painel/Usuarios'
 import { Conferir } from '@/paginas/estoque/Conferir'
 import { DetalheOrdem } from '@/paginas/tecnico/DetalheOrdem'
 import { RegistrarRetirada } from '@/paginas/tecnico/RegistrarRetirada'
+import { Resgate } from '@/paginas/tecnico/Resgate'
 import { VisitaSemSucesso } from '@/paginas/tecnico/VisitaSemSucesso'
 import { Envios } from '@/paginas/tecnico/Envios'
 import { LayoutTecnico } from '@/paginas/tecnico/LayoutTecnico'
@@ -39,6 +40,7 @@ export const rotas = createBrowserRouter([
       { path: 'ordens/:id/retirada', element: <RegistrarRetirada /> },
       { path: 'ordens/:id/visita', element: <VisitaSemSucesso /> },
       { path: 'envios', element: <Envios /> },
+      { path: 'resgate', element: <Resgate /> },
     ],
   },
   {

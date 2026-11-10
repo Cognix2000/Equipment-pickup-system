@@ -22,6 +22,18 @@ public static class Papeis
     public const string Estoque = "estoque";
 }
 
+/// <summary>
+/// Vínculo do técnico: decide como ele recebe o repasse. O CLT recebe na folha; o terceiro resgata por PIX.
+/// Os textos batem com o CHECK de usuario.vinculo. Técnico sem vínculo gravado conta como CLT.
+/// </summary>
+public static class Vinculos
+{
+    public const string Clt = "clt";
+    public const string Terceiro = "terceiro";
+
+    public static bool Valido(string? vinculo) => vinculo is Clt or Terceiro;
+}
+
 /// <summary>Em que ponto do login a sessão está. Só "completo" acessa o sistema.</summary>
 public static class EtapasDeAcesso
 {
