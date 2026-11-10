@@ -35,6 +35,7 @@ Stack:
 - **As regras de negócio detalhadas ficam fora do repositório**, no documento do projeto. Aqui ficam os códigos (RN01…RN16) e o comportamento implementado.
 - **Mudança grande** (esquema, contrato da API, autenticação, dependência nova): explique o impacto e peça confirmação antes.
 - **Não comece funcionalidade nova sem pedido.** Na dúvida sobre uma regra, pergunte.
+- **Tudo o que é novo fica documentado no mesmo PR:** o [CLAUDE.md](CLAUDE.md) (requisitos e "Onde paramos") e os `docs/` que a mudança toca. A lista está em [docs/README.md, "Manter atualizado"](docs/README.md#manter-atualizado).
 
 ## Antes de dizer que terminou
 

@@ -32,11 +32,16 @@ Mapa de tudo o que está escrito sobre o projeto, para uma pessoa ou um agente d
 
 ## Manter atualizado
 
-A documentação muda no **mesmo PR** do código:
+**Regra do Pedro: tudo o que é novo na aplicação fica registrado na documentação, no mesmo PR do código.** Sem a documentação, o PR não está pronto. Isso vale para pessoas e para agentes de IA.
 
 | Se o PR... | Atualize |
 | --- | --- |
-| Cria uma tabela | [modelo-de-dados.md](modelo-de-dados.md) |
-| Cria um módulo ou muda o caminho de um comando | [arquitetura.md](arquitetura.md) |
+| Entrega qualquer coisa nova (funcionalidade, tela, regra, integração) | [CLAUDE.md](../CLAUDE.md): a tabela de requisitos e "Onde paramos" |
+| Cria uma tela ou um endereço | [ambiente.md](ambiente.md) (tabela de endereços) e [arquitetura.md](arquitetura.md) se mudar o fluxo |
+| Cria uma tabela ou uma coluna | [modelo-de-dados.md](modelo-de-dados.md) (diagrama e tabelas) |
+| Cria um módulo, uma integração externa ou muda o caminho de um comando | [arquitetura.md](arquitetura.md) |
 | Muda um comando ou uma porta | [comandos.md](comandos.md) ou [ambiente.md](ambiente.md) |
-| Toma uma decisão técnica | Uma ADR nova |
+| Cria uma variável no `.env` ou um passo no servidor | [implantacao.md](implantacao.md) e `ferramentas/criar-env.sh` |
+| Toma uma decisão técnica | Uma ADR nova em [adr/](adr/README.md) |
+| Cria ou muda uma regra de negócio | O resumo no [CLAUDE.md](../CLAUDE.md) e a explicação no **documento do projeto**, fora do repositório (abas de regras de negócio e de ADR). Sem acesso ao documento, escreva no PR o que precisa entrar lá |
+| Muda o jeito de trabalhar (branch, PR, teste) | [CONTRIBUTING.md](../CONTRIBUTING.md) e [AGENTS.md](../AGENTS.md) |

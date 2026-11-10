@@ -17,4 +17,6 @@
 - [ ] Mudança na API aparece no contrato (`Contrato/openapi.v1.json`)
 - [ ] Nenhum dado de cliente em log, rastro ou teste (só os fictícios)
 - [ ] Conferido em homologação
-- [ ] Documento e ADR atualizados, se alguma decisão mudou
+- [ ] Tudo o que é novo está documentado: `CLAUDE.md` (requisitos e "Onde paramos") e os `docs/` que a mudança toca (lista em `docs/README.md`, "Manter atualizado")
+- [ ] Regra de negócio nova ou alterada: anotado aqui o que entra no documento do projeto (fora do repositório)
+- [ ] ADR nova, se alguma decisão técnica mudou
