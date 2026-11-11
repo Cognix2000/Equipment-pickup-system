@@ -91,7 +91,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | Código | O que é |
 | --- | --- |
 | RF01–RF02 | Login com 2FA (aplicativo ou chave de acesso); gestão de usuários com convite, revogação e zerar o 2FA |
-| RF03–RF05 | Importação da planilha com prévia e gravação |
+| RF03–RF05 | Importação da planilha com prévia e gravação; aceita qualquer planilha com cliente+endereço+cidade e preenche o resto com padrão (atualizado em nov/2026) |
 | RF06–RF07 | Lista e detalhe da ordem |
 | RF08 | Gestor designa ao técnico |
 | RF09 | Financeiro cancela com motivo |
@@ -138,6 +138,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #47 | Node 26 no CI e no guia do ambiente, igual ao Docker |
   | #48 | Backup diário cifrado (age), com cópia fora do servidor (rclone) e restauração (ADR-013) |
   | #50 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
+  | #52 | Importação tolerante: aceita planilha com só cliente+endereço+cidade (RF04 revisado) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**

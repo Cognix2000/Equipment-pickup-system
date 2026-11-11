@@ -71,7 +71,7 @@ public class ImportacaoTestes(ApiDeTeste api)
             Linha(a, "ANA EXEMPLO", equipamento: "Roteador"),            // mesma OS: mais um equipamento
             Linha(b, "BETO EXEMPLO"),
             Linha(c, "CAIO EXEMPLO", tipoOs: "REMOÇÃO EQUIP BLOQUEIO TEMPORARIO"), // RN02: pendência
-            Linha(d, "DUDA EXEMPLO", bairro: ""));                        // erro: fica fora
+            Linha(d, "DUDA EXEMPLO", tipoOs: "TROCA DE PLANO"));          // tipo desconhecido: erro, fica fora
 
         var previa = await PreverAsync(financeiro, arquivo);
 
@@ -183,9 +183,10 @@ public class ImportacaoTestes(ApiDeTeste api)
     public async Task Arquivo_recusado_inteiro_diz_o_motivo() // RF04 e RN15
     {
         var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);
-        var semBairro = Encoding.UTF8.GetBytes(Cabecalho.Replace("bairro;", string.Empty) + "\nANA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CIDADE;MG;00912345678;1;;;");
+        // Faltar o cliente barra o arquivo inteiro (único obrigatório junto com logradouro e cidade, após RF04 de nov/2026).
+        var semCliente = Encoding.UTF8.GetBytes(Cabecalho.Replace("nome_razaosocial;", string.Empty) + "\n15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;00912345678;1;;;");
 
-        await DeveRecusarAsync(await financeiro.PostAsync("/api/importacoes/previa", Formulario(semBairro)), HttpStatusCode.UnprocessableEntity, "RF04");
+        await DeveRecusarAsync(await financeiro.PostAsync("/api/importacoes/previa", Formulario(semCliente)), HttpStatusCode.UnprocessableEntity, "RF04");
         await DeveRecusarAsync(await financeiro.PostAsync("/api/importacoes/previa", Formulario("SELECT 1"u8.ToArray(), "backup.sql")), HttpStatusCode.UnprocessableEntity, "RN15");
     }
 

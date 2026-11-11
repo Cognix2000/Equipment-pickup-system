@@ -28,22 +28,33 @@ internal static class Colunas
 {
     private static readonly Dictionary<string, Campo> Sinonimos = new()
     {
-        // Nomes do HubSoft (exportação real) e da planilha do financeiro, já normalizados.
-        ["nome_razaosocial"] = Campo.Cliente, ["cliente"] = Campo.Cliente, ["nome"] = Campo.Cliente, ["razao_social"] = Campo.Cliente,
+        // Nomes do HubSoft (exportação real), da planilha do financeiro, e os que a gente ouve no dia a dia.
+        // Tudo já normalizado (minúsculo, sem acento, sem pontuação).
+        ["nome_razaosocial"] = Campo.Cliente, ["cliente"] = Campo.Cliente, ["nome"] = Campo.Cliente,
+        ["nome_cliente"] = Campo.Cliente, ["nome_completo"] = Campo.Cliente, ["razao_social"] = Campo.Cliente,
+        ["destinatario"] = Campo.Cliente, ["fulano"] = Campo.Cliente, ["assinante"] = Campo.Cliente,
         ["tipo_ordem_servico"] = Campo.TipoOs, ["tipo_de_os"] = Campo.TipoOs, ["tipo_os"] = Campo.TipoOs,
-        ["endereco"] = Campo.Logradouro, ["logradouro"] = Campo.Logradouro,
-        ["numero"] = Campo.Numero,
-        ["complemento"] = Campo.Complemento,
-        ["referencia"] = Campo.Referencia,
-        ["bairro"] = Campo.Bairro,
-        ["cidade"] = Campo.Cidade,
+        ["tipo"] = Campo.TipoOs, ["servico"] = Campo.TipoOs,
+        ["endereco"] = Campo.Logradouro, ["logradouro"] = Campo.Logradouro, ["rua"] = Campo.Logradouro,
+        ["endereco_completo"] = Campo.Logradouro, ["local"] = Campo.Logradouro, ["via"] = Campo.Logradouro,
+        ["avenida"] = Campo.Logradouro,
+        ["numero"] = Campo.Numero, ["no"] = Campo.Numero, ["n"] = Campo.Numero, ["num"] = Campo.Numero,
+        ["complemento"] = Campo.Complemento, ["compl"] = Campo.Complemento, ["apto"] = Campo.Complemento,
+        ["apartamento"] = Campo.Complemento,
+        ["referencia"] = Campo.Referencia, ["ponto_de_referencia"] = Campo.Referencia, ["ponto_referencia"] = Campo.Referencia,
+        ["bairro"] = Campo.Bairro, ["vila"] = Campo.Bairro, ["localidade"] = Campo.Bairro, ["setor"] = Campo.Bairro,
+        ["cidade"] = Campo.Cidade, ["municipio"] = Campo.Cidade,
         ["estado"] = Campo.Uf, ["uf"] = Campo.Uf,
-        ["cep"] = Campo.Cep,
+        ["cep"] = Campo.Cep, ["codigo_postal"] = Campo.Cep,
         ["telefone_primario"] = Campo.Telefone1, ["telefone_1"] = Campo.Telefone1, ["telefone"] = Campo.Telefone1,
+        ["celular"] = Campo.Telefone1, ["fone"] = Campo.Telefone1, ["contato"] = Campo.Telefone1,
+        ["tel"] = Campo.Telefone1, ["tel_1"] = Campo.Telefone1, ["whatsapp"] = Campo.Telefone1, ["zap"] = Campo.Telefone1,
         ["telefone_secundario"] = Campo.Telefone2, ["telefone_2"] = Campo.Telefone2,
-        ["telefone_terciario"] = Campo.Telefone3, ["telefone_3"] = Campo.Telefone3,
+        ["celular_2"] = Campo.Telefone2, ["tel_2"] = Campo.Telefone2,
+        ["telefone_terciario"] = Campo.Telefone3, ["telefone_3"] = Campo.Telefone3, ["tel_3"] = Campo.Telefone3,
         ["observacao"] = Campo.Observacao, ["observacoes"] = Campo.Observacao, ["obs"] = Campo.Observacao,
-        ["data_inicio_programado"] = Campo.DataProgramada, ["data_programada"] = Campo.DataProgramada,
+        ["anotacoes"] = Campo.Observacao, ["anotacao"] = Campo.Observacao,
+        ["data_inicio_programado"] = Campo.DataProgramada, ["data_programada"] = Campo.DataProgramada, ["data"] = Campo.DataProgramada,
         ["hora_inicio_programado"] = Campo.HoraProgramada, ["hora_programada"] = Campo.HoraProgramada,
         ["id_ordem_servico"] = Campo.IdOrdemServico,
         ["protocolo"] = Campo.Protocolo,
@@ -60,12 +71,15 @@ internal static class Colunas
         ["valor_equipamento"] = Campo.ValorEquipamento,
     };
 
-    /// <summary>Nome que aparece na mensagem de coluna faltando (o do HubSoft, que o financeiro reconhece).</summary>
+    /// <summary>
+    /// Só o essencial para a ordem servir para alguma coisa: o cliente, onde buscar e em qual cidade.
+    /// O resto (tipo da OS, telefone, bairro, UF, número) o sistema preenche com um padrão e avisa na prévia (RF04).
+    /// </summary>
     private static readonly Dictionary<Campo, string> NomeNaPlanilha = new()
     {
-        [Campo.Cliente] = "nome_razaosocial", [Campo.TipoOs] = "tipo_ordem_servico", [Campo.Logradouro] = "endereco",
-        [Campo.Numero] = "numero", [Campo.Bairro] = "bairro", [Campo.Cidade] = "cidade", [Campo.Uf] = "estado",
-        [Campo.Telefone1] = "telefone_primario",
+        [Campo.Cliente] = "cliente (nome/nome_razaosocial/destinatario)",
+        [Campo.Logradouro] = "endereço (endereco/logradouro/rua)",
+        [Campo.Cidade] = "cidade",
     };
 
     public static MapaDeColunas Mapear(IReadOnlyList<string> cabecalhos)
@@ -95,11 +109,6 @@ internal static class Colunas
         }
 
         var faltando = NomeNaPlanilha.Keys.Where(c => !indices.ContainsKey(c)).Select(c => NomeNaPlanilha[c]).ToList();
-        // RN01: a chave é o id da OS ou o protocolo; sem nenhum dos dois, a provisória precisa de data e hora.
-        var temChave = indices.ContainsKey(Campo.IdOrdemServico) || indices.ContainsKey(Campo.Protocolo)
-            || (indices.ContainsKey(Campo.DataProgramada) && indices.ContainsKey(Campo.HoraProgramada));
-        if (!temChave) faltando.Add("id_ordem_servico ou protocolo (ou data_inicio_programado e hora_inicio_programado)");
-
         if (faltando.Count > 0)
             throw new RegraDeNegocioException("RF04", faltando.Count == 1
                 ? $"Falta a coluna {faltando[0]}. Confira o cabeçalho e envie de novo."
