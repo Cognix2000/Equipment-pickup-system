@@ -42,6 +42,7 @@ export const comandos = {
   registrarDevolucaoNaLoja: (id: string, itens: string[], chave: string) => comando(id, 'devolucao-na-loja', { itens }, chave),
   registrarContato: (id: string, contato: Contato, chave: string) => comando(id, 'contatos', contato, chave),
   liberar: (id: string, chave: string) => comando(id, 'liberar', {}, chave),
+  ajustarCarencia: (id: string, liberarEm: Date, chave: string) => comando(id, 'carencia', { liberarEm: liberarEm.toISOString() }, chave),
   designar: (id: string, tecnicoId: string, chave: string) => comando(id, 'designar', { tecnicoId }, chave),
   cancelar: (id: string, motivo: MotivoDeCancelamento, chave: string) => comando(id, 'cancelar', { motivo }, chave),
   marcarBaixa: (id: string, chave: string) => comando(id, 'baixa-hubsoft', {}, chave),

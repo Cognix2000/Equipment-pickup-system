@@ -151,6 +151,21 @@ public sealed class Ordem : Entidade
         Mudar(StatusOrdem.Disponivel, "liberada", agora);
     }
 
+    /// <summary>
+    /// RN03 (ajustável): o financeiro muda quando a ordem sai da carência. Se a nova data já passou ou é agora, a
+    /// ordem fica <see cref="StatusOrdem.Disponivel"/> no ato. Mais no futuro, a rotina libera quando o prazo vencer.
+    /// Só vale enquanto a ordem está em carência (Nova); depois disso, não há o que ajustar.
+    /// </summary>
+    public void AjustarCarencia(DateTimeOffset liberarEm, DateTimeOffset agora)
+    {
+        Exigir(Status == StatusOrdem.Nova, "RN03", "Só ordem em carência pode ter o prazo ajustado.");
+        var limite = agora + TimeSpan.FromDays(365);
+        Exigir(liberarEm <= limite, "RN03", "A nova carência não pode passar de um ano daqui.");
+        CarenciaAte = liberarEm;
+        if (liberarEm <= agora) Mudar(StatusOrdem.Disponivel, "liberada", agora);
+        else { Tocar(agora); Registrar("carencia_ajustada", agora); }
+    }
+
     /// <summary>Rotina periódica: fim da carência torna a ordem Disponível.</summary>
     public bool LiberarSeCarenciaVenceu(DateTimeOffset agora)
     {

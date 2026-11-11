@@ -979,3 +979,26 @@ test('gestor cadastra técnico terceiro', async ({ page }) => {
   await page.getByLabel('Papel').selectOption('financeiro')
   await expect(page.getByLabel('Vínculo')).toHaveCount(0) // só o técnico tem vínculo
 })
+
+test('financeiro ajusta a carência da ordem para uma data no futuro (RN03 ajustável)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  let atual: Ordem = ordemCarlos
+  let recebido: { chave?: string; corpo: { liberarEm: string } } | null = null
+  const daquiTresDias = new Date(Date.now() + 3 * 86_400_000)
+  await page.route(`**/api/ordens/${ordemCarlos.id}`, (rota) => rota.fulfill({ json: atual }))
+  await page.route(`**/api/ordens/${ordemCarlos.id}/carencia`, async (rota) => {
+    recebido = { chave: rota.request().headers()['idempotency-key'], corpo: rota.request().postDataJSON() as { liberarEm: string } }
+    atual = { ...atual, carenciaAte: recebido.corpo.liberarEm }
+    await rota.fulfill({ json: atual })
+  })
+
+  await page.goto(`/financeiro/ordens/${ordemCarlos.id}`)
+  // Formato que o input datetime-local exige (AAAA-MM-DDTHH:mm sem fuso).
+  const local = new Date(daquiTresDias)
+  local.setMinutes(local.getMinutes() - local.getTimezoneOffset())
+  await page.getByLabel('Liberar em').fill(local.toISOString().slice(0, 16))
+  await page.getByRole('button', { name: 'Ajustar', exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText('Carência ajustada no histórico.')
+  expect(recebido!.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(new Date(recebido!.corpo.liberarEm).getTime()).toBeGreaterThan(Date.now() + 2.5 * 86_400_000)
+})
