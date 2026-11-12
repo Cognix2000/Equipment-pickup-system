@@ -10,7 +10,9 @@ namespace Retirada.Api.Testes;
 [Collection(ColecaoDaApi.Nome)]
 public class CadastroManualDeOrdemTestes(ApiDeTeste api)
 {
-    private static object PedidoValido() => new
+    // A série única por chamada evita colisão com o índice de série aberta (RN11), já que os testes
+    // compartilham o banco e várias ordens com SIMU0001 existiriam ao mesmo tempo.
+    private static object PedidoValido(string? serie = null) => new
     {
         cliente = "ASSINANTE SIMULADO 7",
         enderecoClienteHubsoft = (int?)null,
@@ -33,7 +35,7 @@ public class CadastroManualDeOrdemTestes(ApiDeTeste api)
             {
                 tipo = "ONT",
                 modelo = "HG8145V5",
-                serie = "SIMU0001",
+                serie = serie ?? "SIMU" + Guid.NewGuid().ToString("N").ToUpperInvariant()[..8],
                 mac = "aa:bb:cc:dd:ee:ff",
                 valor = 350m,
             },
@@ -70,11 +72,12 @@ public class CadastroManualDeOrdemTestes(ApiDeTeste api)
     {
         var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);
         var chave = Guid.NewGuid();
-        var primeira = await CadastrarAsync(financeiro, PedidoValido(), chave);
+        var pedido = PedidoValido(); // o mesmo objeto nas duas chamadas (mesma série)
+        var primeira = await CadastrarAsync(financeiro, pedido, chave);
         primeira.StatusCode.ShouldBe(HttpStatusCode.OK);
         var idPrimeira = JsonDocument.Parse(await primeira.Content.ReadAsStringAsync()).RootElement.GetProperty("id").GetGuid();
 
-        var segunda = await CadastrarAsync(financeiro, PedidoValido(), chave);
+        var segunda = await CadastrarAsync(financeiro, pedido, chave);
         segunda.StatusCode.ShouldBe(HttpStatusCode.OK);
         var idSegunda = JsonDocument.Parse(await segunda.Content.ReadAsStringAsync()).RootElement.GetProperty("id").GetGuid();
         idSegunda.ShouldBe(idPrimeira);
