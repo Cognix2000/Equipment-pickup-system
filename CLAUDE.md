@@ -125,7 +125,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 
 ## Onde paramos (nov/2026)
 
-- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro.
+- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro. O workflow **"Implantar na produção"** ([.github/workflows/implantar.yml](.github/workflows/implantar.yml)) atualiza o servidor por SSH quando uma release é publicada — aprovação do Pedro pelo Environment `producao` no GitHub.
 - **Entregue depois do incremento 1:**
 
   | PR | O que entrou |
@@ -144,6 +144,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #55 | Cadastro manual de ordem pelo financeiro em `/financeiro/nova-ordem` (POST `/api/ordens`, RF03 estendido) |
   | #56 | Ordenação da lista do técnico por proximidade (GPS), por urgência e por bairro |
   | #57 | Mapa 3D no técnico: prédios extrudados via OpenMapTiles sobre o mapa real, botão 2D/3D no canto, preferência salva por sessão |
+  | #59 | Deploy automático em produção: workflow "Implantar na produção" (SSH no servidor, dispara em `release.published`, Environment `producao` pede aprovação do Pedro) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Pagamento pelo cliente:** fica **manual** (decisão de nov/2026, Pedro). O cliente paga por fora do sistema — nada de integrar PIX do cliente pelo app. Mantido o resgate ao técnico por PIX (ADR-014), que é outro fluxo.
