@@ -10,6 +10,11 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Otp.NET" Version="1.4.1" />
+    <!-- Força a 11.0.0, que corrige GHSA-vmv3-wvjp-wqpj (DoS por recursão em
+         CBOR profundo). O Fido2 4.3.2 ainda puxa a 9.0.0 por transitivo, e o
+         NuGetAudit do CI trata o advisory como erro. Pode sair quando o Fido2
+         subir a dependência. -->
+    <PackageReference Include="System.Formats.Cbor" Version="11.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
