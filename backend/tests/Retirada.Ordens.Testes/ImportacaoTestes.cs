@@ -192,11 +192,32 @@ public class ImportacaoTestes
     // ------------------------------------------------------------------ colunas e linhas
 
     [Fact]
-    public void Coluna_obrigatoria_faltando_recusa_o_arquivo_com_o_nome_dela() // RF04 e C18
+    public void Coluna_obrigatoria_faltando_recusa_o_arquivo_com_o_nome_dela() // RF04 revisado em nov/2026
     {
-        var semBairro = "protocolo;nome_razaosocial;tipo_ordem_servico;endereco;numero;cidade;estado;telefone_primario\n"
-            + "20260914101500123456;ANA;REMOÇÃO EQUIP FTTH;RUA;1;CIDADE;MG;00912345678";
-        DeveRecusar(() => Prever(Encoding.UTF8.GetBytes(semBairro), "ordens.csv"), "RF04", "Falta a coluna bairro");
+        // Só cliente, endereço e cidade são obrigatórios. Faltar o resto vira aviso e padrão.
+        var semCliente = "protocolo;tipo_ordem_servico;endereco;numero;bairro;cidade;estado;telefone_primario\n"
+            + "20260914101500123456;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;00912345678";
+        DeveRecusar(() => Prever(Encoding.UTF8.GetBytes(semCliente), "ordens.csv"), "RF04", "Falta a coluna cliente");
+    }
+
+    [Fact]
+    public void Planilha_so_com_cliente_endereco_e_cidade_entra_com_padroes_e_avisos()
+    {
+        // Pouca coluna, qualquer sinônimo: cliente+endereço+cidade bastam.
+        var csv = "nome;rua;cidade\n" + "ANA EXEMPLO;RUA DOS IPÊS;CIDADE SIMULADA";
+        var previa = Prever(Encoding.UTF8.GetBytes(csv), "basica.csv");
+
+        previa.Novas.Count.ShouldBe(1);
+        var ordem = previa.Novas[0].Dados;
+        ordem.Cliente.ShouldBe("ANA EXEMPLO");
+        ordem.Endereco.Numero.ShouldBe("s/n");
+        ordem.Endereco.Bairro.ShouldBe("(não informado)");
+        ordem.Endereco.Uf.ShouldBe("");
+        ordem.TipoOs.ShouldBe("RETIRADA DE EQUIPAMENTO");
+        previa.AvisosDoArquivo.ShouldContain(a => a.Contains("tipo de OS"));
+        previa.AvisosDoArquivo.ShouldContain(a => a.Contains("número"));
+        previa.AvisosDoArquivo.ShouldContain(a => a.Contains("UF"));
+        previa.AvisosDoArquivo.ShouldContain(a => a.Contains("telefone"));
     }
 
     [Fact]
@@ -222,8 +243,9 @@ public class ImportacaoTestes
             "CAIO;15/09/2026;09:00:00;TROCA DE PLANO;RUA;3;CENTRO;CIDADE;MG;00912345678;9503;ONU;Modelo;SIMU0000DDDD",
             "DUDA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;4;CENTRO;CIDADE;MG;00912345678;9504;ONU;Modelo;")), "ordens.csv");
 
-        previa.Novas.Select(g => g.Dados.Chave).ShouldBe(["os:9501"]);
-        previa.Linhas.Single(l => l.Numero == 3).Detalhes.ShouldContain("falta o bairro");
+        // Linha 2 (BIA) entra também: bairro vazio virou aviso, não erro (RF04 revisado).
+        previa.Novas.Select(g => g.Dados.Chave).OrderBy(c => c).ShouldBe(["os:9501", "os:9502"]);
+        previa.Linhas.Single(l => l.Numero == 3).Detalhes.ShouldContain(d => d.Contains("sem bairro"));
         previa.Linhas.Single(l => l.Numero == 4).Detalhes.ShouldContain(d => d.StartsWith("tipo da OS desconhecido"));
         previa.Linhas.Single(l => l.Numero == 5).Detalhes.ShouldContain(d => d.StartsWith("falta o número de série"));
     }

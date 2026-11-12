@@ -58,24 +58,28 @@ internal static partial class Interpretador
         var alertas = new List<string>();
         string? V(Campo c) => mapa.Valor(linha, c) is { } v ? EspacosRepetidos().Replace(v, " ") : null;
 
+        // RF04 revisado (nov/2026): só cliente, logradouro e cidade são obrigatórios. O resto ganha padrão e alerta
+        // na prévia, para o financeiro ver e decidir. Planilhas vêm de mil jeitos; a importação não deveria barrar
+        // por falta de telefone ou UF.
         var cliente = Obrigatorio(V(Campo.Cliente), "falta o cliente", erros);
-        var logradouro = Obrigatorio(V(Campo.Logradouro), "falta o logradouro", erros);
-        var bairro = Obrigatorio(V(Campo.Bairro), "falta o bairro", erros);
+        var logradouro = Obrigatorio(V(Campo.Logradouro), "falta o logradouro (endereço)", erros);
         var cidade = Obrigatorio(V(Campo.Cidade), "falta a cidade", erros);
+        var bairro = V(Campo.Bairro);
+        if (bairro is null) { bairro = "(não informado)"; alertas.Add("sem bairro: entrou como \"(não informado)\""); }
         var uf = V(Campo.Uf)?.ToUpperInvariant();
-        if (uf is null || !Regex.IsMatch(uf, "^[A-Z]{2}$")) erros.Add(uf is null ? "falta a UF" : $"UF inválida: {uf}");
+        if (uf is not null && !Regex.IsMatch(uf, "^[A-Z]{2}$")) { alertas.Add($"UF fora do padrão: {uf}"); uf = null; }
+        if (uf is null) { uf = ""; alertas.Add("sem UF: aparece vazio na ordem"); }
         var numero = V(Campo.Numero);
-        if (numero is null) alertas.Add("sem número no endereço");
+        if (numero is null) { numero = "s/n"; alertas.Add("sem número no endereço: entrou como \"s/n\""); }
 
         // RN02: só vira ordem o cliente rescindido. Bloqueio temporário e serviço ainda suspenso viram pendência.
-        var tipoOs = Obrigatorio(V(Campo.TipoOs), "falta o tipo da OS", erros);
+        // Sem tipo na planilha, o padrão é retirada de equipamento (que é o que o sistema faz).
+        var tipoOs = V(Campo.TipoOs);
+        if (tipoOs is null) { tipoOs = "RETIRADA DE EQUIPAMENTO"; alertas.Add("sem tipo de OS: entrou como \"RETIRADA DE EQUIPAMENTO\""); }
         MotivoDePendencia? pendencia = null;
-        if (tipoOs is not null)
-        {
-            var tipo = SemAcento(tipoOs).ToUpperInvariant();
-            if (tipo.Contains("BLOQUEIO")) pendencia = MotivoDePendencia.BloqueioTemporario;
-            else if (!tipo.Contains("REMOC")) erros.Add($"tipo da OS desconhecido: {tipoOs}");
-        }
+        var tipo = SemAcento(tipoOs).ToUpperInvariant();
+        if (tipo.Contains("BLOQUEIO")) pendencia = MotivoDePendencia.BloqueioTemporario;
+        else if (!tipo.Contains("REMOC") && !tipo.Contains("RETIRADA")) erros.Add($"tipo da OS desconhecido: {tipoOs}");
         if (pendencia is null && V(Campo.SituacaoDoServico) is { } situacao && !SemAcento(situacao).Contains("CANCEL", StringComparison.OrdinalIgnoreCase))
             pendencia = MotivoDePendencia.SemRescisao;
 
@@ -96,13 +100,16 @@ internal static partial class Interpretador
         var codigoCliente = Inteiro(V(Campo.CodigoCliente), "código do cliente", alertas);
         var idClienteServico = Inteiro(V(Campo.IdClienteServico), "id do serviço do cliente", alertas);
 
-        // RN01: id da OS, depois protocolo; sem nenhum dos dois, a chave provisória junta nome, endereço e data e hora.
+        // RN01: id da OS, depois protocolo; sem eles, a chave provisória junta cliente, endereço e data (programada
+        // ou rescisão). Se nem data vier, cai na chave de cliente+endereço+cidade: reimportar a mesma linha não
+        // duplica, mas duas rescisões do mesmo cliente no mesmo endereço precisarão de data ou protocolo para serem
+        // tratadas como ordens diferentes.
         string? chave = idOs is not null ? $"os:{idOs}" : protocolo is not null ? $"protocolo:{protocolo}" : null;
-        if (chave is null && !erros.Any(e => e.StartsWith("protocolo")))
+        if (chave is null && !erros.Any(e => e.StartsWith("protocolo")) && cliente is not null && logradouro is not null && cidade is not null)
         {
-            if (dataProgramada is null) erros.Add("sem id da OS nem protocolo, a data e a hora programadas são obrigatórias");
-            else if (cliente is not null && logradouro is not null)
-                chave = "provisoria:" + Resumo($"{cliente}|{logradouro}|{numero}|{dataProgramada:O}");
+            if (dataProgramada is { } dp) chave = "provisoria:" + Resumo($"{cliente}|{logradouro}|{numero}|{dp:O}");
+            else if (dataRescisao is { } dr) chave = "provisoria:" + Resumo($"{cliente}|{logradouro}|{numero}|{dr:O}");
+            else { chave = "provisoria:" + Resumo($"{cliente}|{logradouro}|{numero}|{bairro}|{cidade}|{uf}"); alertas.Add("sem protocolo nem id da OS: reimportar a mesma linha não duplica, mas uma segunda ordem para o mesmo endereço vai precisar de data ou protocolo"); }
         }
 
         var cep = V(Campo.Cep) is { } textoCep ? Cep(textoCep, alertas) : null;
