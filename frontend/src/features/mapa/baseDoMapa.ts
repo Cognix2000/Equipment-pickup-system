@@ -38,7 +38,55 @@ export function criarMapa(container: HTMLElement, estilo: EstiloDoMapa) {
     // A atribuição do OpenStreetMap é obrigatória no mapa real; a cidade simulada não usa dado de ninguém.
     attributionControl: estilo === 'real' ? { compact: true } : false,
     cooperativeGestures: true, // rolar a página não dá zoom sem querer
+    maxPitch: 75, // deixa o 3D funcionar; o default do MapLibre é 60°
   })
+}
+
+/**
+ * Prédios 3D sobre o mapa real (OpenFreeMap / OpenMapTiles). Puxa a extrusão da altura "render_height"
+ * quando o OpenMapTiles traz, senão estima pelo número de andares (3 m por andar) ou usa 6 m como mínimo.
+ *
+ * Só vale no estilo real: a cidade simulada não tem prédios. Esconder o layer plano "building" do estilo
+ * evita o duplicado visual (uma camada plana por baixo e a extrusão por cima). Chamar duas vezes é inócuo:
+ * o addLayer só entra quando o layer ainda não existe.
+ */
+export function habilitarEdificios3D(mapa: MapaMapLibre, estilo: EstiloDoMapa) {
+  if (estilo !== 'real') return
+  const aplicar = () => {
+    if (mapa.getLayer('building')) mapa.setLayoutProperty('building', 'visibility', 'none')
+    if (mapa.getLayer('edificios-3d')) return
+    if (!mapa.getSource('openmaptiles')) return // o estilo mudou; nada a fazer
+    mapa.addLayer({
+      id: 'edificios-3d',
+      source: 'openmaptiles',
+      'source-layer': 'building',
+      type: 'fill-extrusion',
+      minzoom: 14,
+      paint: {
+        'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#e3e8ed', 10, '#d5dde3', 50, '#a9b6c1'],
+        // Prefere a altura real; cai para 3 m × andares; se nada vier, assume 6 m (uma casa térrea com telhado).
+        'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['*', ['coalesce', ['get', 'building:levels'], 2], 3]],
+        'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+        'fill-extrusion-opacity': 0.9,
+      },
+    })
+    // Luz suave vindo do nordeste para desenhar sombras discretas nos prédios.
+    mapa.setLight({ anchor: 'map', position: [1.5, 60, 60], intensity: 0.25 })
+  }
+  if (mapa.isStyleLoaded()) aplicar()
+  else mapa.once('load', aplicar)
+}
+
+/** Desliga o 3D (volta ao mapa plano): esconde a extrusão e mostra de novo o prédio 2D do estilo. */
+export function desabilitarEdificios3D(mapa: MapaMapLibre) {
+  if (mapa.getLayer('edificios-3d')) mapa.setLayoutProperty('edificios-3d', 'visibility', 'none')
+  if (mapa.getLayer('building')) mapa.setLayoutProperty('building', 'visibility', 'visible')
+}
+
+/** Religa o 3D sem recriar o layer, quando o técnico volta a inclinar o mapa. */
+export function reabilitarEdificios3D(mapa: MapaMapLibre) {
+  if (mapa.getLayer('edificios-3d')) mapa.setLayoutProperty('edificios-3d', 'visibility', 'visible')
+  if (mapa.getLayer('building')) mapa.setLayoutProperty('building', 'visibility', 'none')
 }
 
 /** Enquadra os pontos; com um só, centraliza nele. */

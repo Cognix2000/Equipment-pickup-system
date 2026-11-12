@@ -143,6 +143,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #54 | Carência ajustável por ordem: botão "Ajustar carência" no detalhe da ordem (RN03 revisada) |
   | #55 | Cadastro manual de ordem pelo financeiro em `/financeiro/nova-ordem` (POST `/api/ordens`, RF03 estendido) |
   | #56 | Ordenação da lista do técnico por proximidade (GPS), por urgência e por bairro |
+  | #57 | Mapa 3D no técnico: prédios extrudados via OpenMapTiles sobre o mapa real, botão 2D/3D no canto, preferência salva por sessão |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Próximos pedidos do Pedro, nesta ordem:**
