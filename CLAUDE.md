@@ -146,9 +146,9 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #57 | Mapa 3D no técnico: prédios extrudados via OpenMapTiles sobre o mapa real, botão 2D/3D no canto, preferência salva por sessão |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
+- **Pagamento pelo cliente:** fica **manual** (decisão de nov/2026, Pedro). O cliente paga por fora do sistema — nada de integrar PIX do cliente pelo app. Mantido o resgate ao técnico por PIX (ADR-014), que é outro fluxo.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Pagamento pelo cliente (AbacatePay).** Está **aguardando** a decisão do financeiro: o que o cliente paga, e se o HubSoft já gera o PIX.
-  2. **Outras formas de login:** código por e-mail e entrar com Microsoft 365 e com Google. Faltam o remetente de e-mail e o acesso de admin do M365.
+  1. **Login com várias formas** (em andamento): deixar o usuário entrar de mais de uma maneira — senha, código do aplicativo, chave de acesso (digital/rosto), Microsoft 365, Google. No desktop sem digital, a senha ou o código bastam. Sessão persistida entre recarregamentos. Microsoft/Google dependem do admin do M365 e do console do Google Cloud.
 - **Backup na produção:** o script está pronto, mas falta o Pedro gerar a chave do age, preencher `BACKUP_*` no `.env`, configurar o rclone (ou o Veeam) e agendar no cron ([docs/implantacao.md](docs/implantacao.md#backup-automático)).
 - **Resgate na produção:** o código está pronto e desligado. Falta a Netwise abrir a conta no Asaas (CNPJ, só para os resgates), pôr a chave e o token no `.env` e configurar os dois webhooks ([docs/implantacao.md](docs/implantacao.md#resgate-por-pix-asaas)). Conferir no ambiente de testes do Asaas o formato da chave de celular.
 - **Pendências opcionais, para antes da tag `v1.0.0`:** versionar as capturas de referência das telas e incluir a telemetria do navegador (Faro, ADR-008).
