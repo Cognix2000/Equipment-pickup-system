@@ -1,0 +1,118 @@
+# Implanta automaticamente no servidor quando uma versão é publicada.
+# ADR-006: a produção só recebe tag. O workflow entra em cena só depois que a release é publicada
+# e que o "Publicar imagens" já subiu as imagens daquela tag no GHCR.
+#
+# Como rodar sozinho (Actions › "Implantar na produção" › Run workflow): informe a tag (ex.: v0.2.0).
+# Isso serve para repetir um deploy que falhou sem precisar republicar a release.
+name: Implantar na produção
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Tag a implantar (ex.: v0.2.0). Precisa já existir no repo e no GHCR."
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: implantar-producao
+  cancel-in-progress: false # dois deploys ao mesmo tempo quebrariam o compose; o segundo espera
+
+jobs:
+  implantar:
+    name: Atualizar o servidor na tag
+    runs-on: ubuntu-latest
+    # Segurança: só roda com a aprovação do dono do ambiente no painel de Environments do GitHub.
+    # Crie o Environment "producao" em Settings › Environments e marque "Required reviewers" com você mesmo.
+    environment:
+      name: producao
+      url: https://pedro.devioslab.com.br
+    steps:
+      - name: Descobrir a versão
+        id: versao
+        run: |
+          versao="${{ github.event.inputs.versao || github.ref_name }}"
+          case "$versao" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Versão inválida: $versao. Use vX.Y.Z." >&2; exit 1 ;;
+          esac
+          echo "versao=$versao" >> "$GITHUB_OUTPUT"
+
+      - name: Esperar as imagens no GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          # O workflow "Publicar imagens" pode estar ainda rodando quando a release publica.
+          # Tenta por até 15 minutos; se nem assim, o deploy falha com uma mensagem clara.
+          dono="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          for imagem in retirada-api retirada-web; do
+            achou=false
+            for tentativa in $(seq 1 45); do
+              if gh api --silent "/orgs/$dono/packages/container/$imagem/versions" >/dev/null 2>&1 \
+                  || gh api --silent "/users/$dono/packages/container/$imagem/versions" >/dev/null 2>&1; then
+                # Baixa só o manifest para ver se a tag existe (sem puxar o conteúdo).
+                if docker manifest inspect "ghcr.io/$dono/$imagem:$VERSAO" >/dev/null 2>&1; then
+                  achou=true; break
+                fi
+              fi
+              echo "Tentativa $tentativa/45: ainda sem $imagem:$VERSAO no GHCR. Esperando 20 s."
+              sleep 20
+            done
+            if [ "$achou" != true ]; then
+              echo "A imagem ghcr.io/$dono/$imagem:$VERSAO não apareceu em 15 min. Confira o workflow 'Publicar imagens'." >&2
+              exit 1
+            fi
+          done
+
+      - name: Checar os secrets de SSH
+        run: |
+          faltando=""
+          [ -z "${{ secrets.IMPLANTACAO_HOST }}" ] && faltando="$faltando IMPLANTACAO_HOST"
+          [ -z "${{ secrets.IMPLANTACAO_USUARIO }}" ] && faltando="$faltando IMPLANTACAO_USUARIO"
+          [ -z "${{ secrets.IMPLANTACAO_CHAVE_PRIVADA }}" ] && faltando="$faltando IMPLANTACAO_CHAVE_PRIVADA"
+          if [ -n "$faltando" ]; then
+            echo "Faltam secrets:$faltando. Veja docs/implantacao.md, 'Implantação automática'." >&2
+            exit 1
+          fi
+
+      - name: Atualizar via SSH
+        # Pin por SHA: ação de terceiro não pode mudar embaixo da gente.
+        uses: appleboy/ssh-action@2ead5a36573f08b82fbfce1504f1a4b05a647c6f # v1.2.0
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        with:
+          host: ${{ secrets.IMPLANTACAO_HOST }}
+          username: ${{ secrets.IMPLANTACAO_USUARIO }}
+          port: ${{ secrets.IMPLANTACAO_PORTA || 22 }}
+          key: ${{ secrets.IMPLANTACAO_CHAVE_PRIVADA }}
+          envs: VERSAO
+          # O caminho no servidor pode mudar: o secret IMPLANTACAO_PASTA sobrescreve o default.
+          script_stop: true
+          script: |
+            set -eu
+            pasta="${IMPLANTACAO_PASTA:-$HOME/retirada}"
+            cd "$pasta"
+            if [ ! -f .env ]; then
+              echo "Sem .env em $pasta. Faça a primeira vez manualmente (docs/implantacao.md)." >&2
+              exit 1
+            fi
+            # Guarda um .env de segurança antes de alterar, para voltar se algo der errado.
+            cp .env ".env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+            sed -i "s/^VERSAO=.*/VERSAO=${VERSAO}/" .env
+            # Puxa a tag e deixa o atualizar.sh cuidar do resto (checa VERSAO, pull, up -d, prune).
+            git fetch --quiet --tags --force origin
+            sh deploy/atualizar.sh
+
+      - name: Marcar na release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          # Deixa um comentário no deploy aparecer no resumo da Action.
+          echo "✅ Produção atualizada para $VERSAO." >> "$GITHUB_STEP_SUMMARY"

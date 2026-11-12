@@ -116,7 +116,7 @@ O caminho de um merge até a produção, sempre com uma decisão sua no meio:
    git tag v0.2.0 origin/main && git push origin v0.2.0
    ```
 4. **Espere** o workflow "Publicar imagens" da tag terminar verde (aba Actions). Ele publica `retirada-api:v0.2.0` e `retirada-web:v0.2.0`.
-5. **No servidor:**
+5. **O deploy anda sozinho** quando a [implantação automática](#implantação-automática) está configurada: o workflow "Implantar na produção" entra em cena, pede sua aprovação no Environment `producao` e atualiza o servidor. Sem ela, no servidor:
    ```bash
    cd ~/retirada
    sed -i 's/^VERSAO=.*/VERSAO=v0.2.0/' .env
@@ -129,6 +129,41 @@ O script faz cinco coisas:
 - baixa as imagens dessa versão e sobe o migrador, que aplica as migrações novas antes da API;
 - troca os contêineres;
 - apaga as imagens antigas, porque o disco é pequeno.
+
+### Implantação automática
+
+Depois de configurada, publicar uma release no GitHub já atualiza o servidor — você aprova no painel do GitHub e pronto. Mantém a regra do ADR-006: só tag entra em produção.
+
+1. **Gere uma chave SSH só para o deploy**, no seu computador:
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/retirada-deploy -C "retirada-deploy" -N ""
+   ```
+   A chave privada é `~/.ssh/retirada-deploy`; a pública é `~/.ssh/retirada-deploy.pub`.
+
+2. **Autorize no servidor** (como `cladmin`):
+   ```bash
+   cat ~/.ssh/retirada-deploy.pub | ssh cladmin@seu-servidor \
+     'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
+   ```
+   Confirme com `ssh -i ~/.ssh/retirada-deploy cladmin@seu-servidor 'echo ok'`.
+
+3. **Cadastre os secrets no GitHub** (Settings › Secrets and variables › Actions › New repository secret):
+
+   | Nome | Conteúdo |
+   | --- | --- |
+   | `IMPLANTACAO_HOST` | o endereço do servidor (ex.: `pedro.devioslab.com.br`) |
+   | `IMPLANTACAO_USUARIO` | `cladmin` |
+   | `IMPLANTACAO_CHAVE_PRIVADA` | o conteúdo de `~/.ssh/retirada-deploy` (a privada, inteirinha) |
+   | `IMPLANTACAO_PORTA` | opcional, só se não for 22 |
+   | `IMPLANTACAO_PASTA` | opcional, só se o repo no servidor não estiver em `~/retirada` |
+
+4. **Crie o Environment `producao`** (Settings › Environments › New environment › `producao`), marque **Required reviewers** e inclua você mesmo. É o freio: cada deploy precisa do seu "Approve and run" no painel.
+
+5. **Teste**: Actions › "Implantar na produção" › Run workflow › informe `v0.1.0` (ou a tag atual). Aprove e acompanhe o resumo.
+
+Depois disso, toda release publicada dispara o workflow. Se precisar repetir um deploy, use o botão "Run workflow" do mesmo workflow (ele reaproveita a mesma tag).
+
+**Para desligar o automático**: apague `IMPLANTACAO_CHAVE_PRIVADA` ou desabilite o workflow em Actions. O script `sh deploy/atualizar.sh` manual continua funcionando normalmente.
 
 **Qual número usar** (SemVer, ADR-006):
 
