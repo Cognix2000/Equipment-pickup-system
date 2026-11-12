@@ -57,7 +57,9 @@ export function Importar() {
     <>
       <div>
         <h1 className="text-[28px] font-bold text-marinho">Importar planilha</h1>
-        <p className="mt-1 text-[15px] text-texto-suave">Confira a prévia antes de gravar. Nada entra sem a sua confirmação.</p>
+        <p className="mt-1 text-[15px] text-texto-suave">
+          Aceita qualquer planilha com pelo menos <strong>cliente</strong>, <strong>endereço</strong> e <strong>cidade</strong>. O resto (telefone, bairro, UF, número) entra com padrão e aparece como aviso na prévia. Confira antes de gravar.
+        </p>
       </div>
 
       <ol aria-label="Etapas da importação" className="flex flex-wrap gap-x-6 gap-y-1 text-sm">

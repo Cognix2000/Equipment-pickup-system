@@ -193,6 +193,26 @@ public static class ModuloAcesso
         return await comando.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>
+    /// Cria um usuário já ativo, com a senha definida e sem link de convite. Para o começo da operação: o gestor
+    /// quer poder abrir o sistema como cada papel sem passar pelo convite. A senha passa pela mesma política do
+    /// login (mínimo 12 caracteres, sem conter o e-mail).
+    /// </summary>
+    public static async Task CriarUsuarioAtivoAsync(string connectionString, string nome, string email, string papel, string senha, string? vinculo, CancellationToken ct = default)
+    {
+        HashDeSenha.ValidarPolitica(senha, email);
+        var opcoes = new DbContextOptionsBuilder<AcessoDbContext>().UseNpgsql(connectionString).Options;
+        await using var db = new AcessoDbContext(opcoes);
+        var agora = DateTimeOffset.UtcNow;
+        var emailNormalizado = Usuario.NormalizarEmail(email);
+        if (await db.Usuarios.AnyAsync(u => u.Email == emailNormalizado, ct))
+            throw new RegraDeNegocioException("USUARIO_DUPLICADO", $"Já existe um usuário com o e-mail {emailNormalizado}.");
+        var usuario = Usuario.CadastrarAutoaprovadoComVinculo(nome, email, papel, agora, vinculo);
+        usuario.DefinirSenha(HashDeSenha.Gerar(senha), agora);
+        db.Usuarios.Add(usuario);
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>Produção: cria o primeiro gestor e devolve o link de primeiro acesso (vale 48 h).</summary>
     public static async Task<string> ConvidarPrimeiroGestorAsync(string connectionString, string nome, string email, CancellationToken ct = default)
     {

@@ -175,9 +175,19 @@ internal static class MontadorDaPrevia
 
         var avisos = new List<string>();
         if (!colunas.Tem(Campo.IdOrdemServico) && !colunas.Tem(Campo.Protocolo))
-            avisos.Add("Sem id_ordem_servico nem protocolo no arquivo: a chave é provisória (nome, endereço, número, data e hora). Enviar de novo não duplica.");
+            avisos.Add("Sem id_ordem_servico nem protocolo no arquivo: a chave é provisória. Enviar a mesma linha de novo não duplica.");
+        if (!colunas.Tem(Campo.TipoOs))
+            avisos.Add("Sem coluna de tipo de OS: todas entraram como \"RETIRADA DE EQUIPAMENTO\".");
+        if (!colunas.Tem(Campo.Bairro))
+            avisos.Add("Sem coluna de bairro: as ordens entram sem bairro (aparece como \"(não informado)\").");
+        if (!colunas.Tem(Campo.Uf))
+            avisos.Add("Sem coluna de UF: o estado fica vazio nas ordens.");
+        if (!colunas.Tem(Campo.Numero))
+            avisos.Add("Sem coluna de número: todas entram como \"s/n\".");
+        if (!colunas.Tem(Campo.Telefone1) && !colunas.Tem(Campo.Telefone2) && !colunas.Tem(Campo.Telefone3))
+            avisos.Add("Sem colunas de telefone: o contato fica só pela visita ao endereço.");
         if (!colunas.Tem(Campo.Latitude) || !colunas.Tem(Campo.Longitude))
-            avisos.Add("O arquivo não traz latitude e longitude: as ordens novas aparecem só na lista, até o mapa ser ligado.");
+            avisos.Add("O arquivo não traz latitude e longitude: as ordens novas aparecem só na lista, até o técnico passar o GPS em campo.");
         if (!colunas.Tem(Campo.EquipamentoTipo))
             avisos.Add("O arquivo não traz os equipamentos: o técnico registra tipo, modelo e série em campo.");
 

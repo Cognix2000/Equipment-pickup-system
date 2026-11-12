@@ -91,7 +91,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | Código | O que é |
 | --- | --- |
 | RF01–RF02 | Login com 2FA (aplicativo ou chave de acesso); gestão de usuários com convite, revogação e zerar o 2FA |
-| RF03–RF05 | Importação da planilha com prévia e gravação |
+| RF03–RF05 | Importação da planilha com prévia e gravação; aceita qualquer planilha com cliente+endereço+cidade e preenche o resto com padrão (atualizado em nov/2026) |
 | RF06–RF07 | Lista e detalhe da ordem |
 | RF08 | Gestor designa ao técnico |
 | RF09 | Financeiro cancela com motivo |
@@ -138,6 +138,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #47 | Node 26 no CI e no guia do ambiente, igual ao Docker |
   | #48 | Backup diário cifrado (age), com cópia fora do servidor (rclone) e restauração (ADR-013) |
   | #50 | Resgate do técnico terceiro por PIX pelo Asaas, vínculo CLT/terceiro e folha do mês (ADR-014) |
+  | #52 | Importação tolerante: aceita planilha com só cliente+endereço+cidade (RF04 revisado) |
   | #53 | `System.Formats.Cbor` 11.0.0 para cobrir o advisory GHSA-vmv3-wvjp-wqpj (transitivo do Fido2) |
   | #54 | Carência ajustável por ordem: botão "Ajustar carência" no detalhe da ordem (RN03 revisada) |
 
