@@ -4,8 +4,10 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { useLocation } from 'react-router'
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { AvisoDeLocalizacao } from '@/features/mapa/AvisoDeLocalizacao'
+import { useMinhaPosicao } from '@/features/mapa/minhaPosicao'
 import { useOrdens } from '@/features/ordens/consultas'
 import { OrdemCard } from '@/features/ordens/OrdemCard'
+import { distanciaCurta, ordenarOrdens, type CriterioDeOrdenacao } from '@/features/ordens/ordenacao'
 import { ResumoDoTecnico } from '@/features/ordens/ResumoDoTecnico'
 import { ARecebe } from '@/features/repasses/ARecebe'
 import { caixaDeTitulo } from '@/features/ordens/tipos'
@@ -19,6 +21,8 @@ export function MinhasOrdens() {
   // Sem login ainda (RF01): mostra as atribuídas. Com login, filtra pelo técnico.
   const { data: ordens, isPending, isError, error, refetch } = useOrdens({ status: 'atribuida' })
   const [bairro, setBairro] = useState<string | null>(null)
+  const [criterio, setCriterio] = useState<CriterioDeOrdenacao>('proximidade')
+  const { posicao: minhaPosicao } = useMinhaPosicao()
   const conectado = useConectado()
   const reduzirMovimento = useReducedMotion()
   // Aviso de quem acabou de registrar uma retirada ou visita.
@@ -30,7 +34,11 @@ export function MinhasOrdens() {
     return [...contagem].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
   }, [ordens])
 
-  const visiveis = useMemo(() => (ordens ?? []).filter((o) => !bairro || o.endereco.bairro === bairro), [ordens, bairro])
+  // Filtra por bairro (se marcado) e ordena pelo critério escolhido pelo técnico.
+  const visiveis = useMemo(() => {
+    const filtradas = (ordens ?? []).filter((o) => !bairro || o.endereco.bairro === bairro)
+    return ordenarOrdens(filtradas, criterio, minhaPosicao)
+  }, [ordens, bairro, criterio, minhaPosicao])
 
   return (
     <>
@@ -59,6 +67,20 @@ export function MinhasOrdens() {
               {caixaDeTitulo(nome)} · {total}
             </Filtro>
           ))}
+        </div>
+      )}
+
+      {(ordens?.length ?? 0) > 1 && (
+        <div role="group" aria-label="Ordenar por" className="flex gap-2 overflow-x-auto border-b border-borda bg-superficie px-4 py-3">
+          <Filtro ativo={criterio === 'proximidade'} onClick={() => setCriterio('proximidade')}>
+            {minhaPosicao ? 'Mais próxima' : 'Mais próxima (sem GPS)'}
+          </Filtro>
+          <Filtro ativo={criterio === 'urgencia'} onClick={() => setCriterio('urgencia')}>
+            Mais urgente
+          </Filtro>
+          <Filtro ativo={criterio === 'bairro'} onClick={() => setCriterio('bairro')}>
+            Por bairro
+          </Filtro>
         </div>
       )}
 
@@ -93,7 +115,7 @@ export function MinhasOrdens() {
                 exit={reduzirMovimento ? undefined : { opacity: 0 }}
                 transition={{ duration: 0.18 }}
               >
-                <OrdemCard ordem={o} posicao={i + 1} sugerida={i === 0} />
+                <OrdemCard ordem={o} posicao={i + 1} sugerida={i === 0} distancia={distanciaCurta(o, minhaPosicao)} />
               </motion.li>
             ))}
           </AnimatePresence>

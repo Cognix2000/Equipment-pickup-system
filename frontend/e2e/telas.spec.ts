@@ -1026,3 +1026,14 @@ test('financeiro cadastra uma ordem direto, sem planilha (RF03 estendido)', asyn
   expect(recebido!.corpo.cliente).toBe('ASSINANTE SIMULADO 7')
   expect((recebido!.corpo.equipamentos as Array<{ modelo: string }>)[0].modelo).toBe('HG8145V5')
 })
+
+test('técnico vê os botões de ordenar a lista por próxima, urgente ou bairro', async ({ page }) => {
+  await simularApi(page, 'tecnico')
+  await page.goto('/tecnico/ordens')
+  // Os 3 critérios aparecem como botões aria-pressed.
+  await expect(page.getByRole('group', { name: 'Ordenar por' }).getByRole('button')).toHaveCount(3)
+  await page.getByRole('button', { name: /^Mais urgente$/ }).click()
+  await expect(page.getByRole('button', { name: /^Mais urgente$/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: /^Por bairro$/ }).click()
+  await expect(page.getByRole('button', { name: /^Por bairro$/ })).toHaveAttribute('aria-pressed', 'true')
+})

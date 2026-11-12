@@ -10,10 +10,12 @@ type Props = {
   posicao: number
   /** A primeira da lista ganha destaque e o botão de abrir. */
   sugerida?: boolean
+  /** Distância em linha reta até o técnico, já formatada ("750 m" / "1,2 km"). Só aparece quando há GPS. */
+  distancia?: string | null
   agora?: Date
 }
 
-export function OrdemCard({ ordem, posicao, sugerida = false, agora }: Props) {
+export function OrdemCard({ ordem, posicao, sugerida = false, distancia, agora }: Props) {
   const prazo = descreverPrazo(ordem.carenciaAte, agora)
   const detalhe = `/tecnico/ordens/${ordem.id}`
 
@@ -28,7 +30,8 @@ export function OrdemCard({ ordem, posicao, sugerida = false, agora }: Props) {
             {posicao} · {enderecoCurto(ordem)}
           </span>
           <span className="block text-[13px] text-texto-suave">
-            {caixaDeTitulo(ordem.endereco.bairro)} · {resumoDosItens(ordem)}
+            {caixaDeTitulo(ordem.endereco.bairro)}
+            {distancia ? ` · ${distancia}` : ''} · {resumoDosItens(ordem)}
           </span>
         </span>
         <span className={cn('shrink-0 text-xs', prazo.vencido ? 'font-semibold text-alerta' : 'text-texto-suave')}>{prazo.texto}</span>
@@ -45,7 +48,8 @@ export function OrdemCard({ ordem, posicao, sugerida = false, agora }: Props) {
       <div>
         <h2 className="text-lg font-bold text-marinho">{enderecoCurto(ordem)}</h2>
         <p className="mt-0.5 text-sm text-texto-suave">
-          {caixaDeTitulo(ordem.endereco.bairro)} · OS {ordem.numeroOs ?? 's/ nº'} · {ordem.tipoOs}
+          {caixaDeTitulo(ordem.endereco.bairro)}
+          {distancia ? ` · ${distancia}` : ''} · OS {ordem.numeroOs ?? 's/ nº'} · {ordem.tipoOs}
         </p>
       </div>
       <p className="text-sm">Recolher: {resumoDosItens(ordem)}</p>
