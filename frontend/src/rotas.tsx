@@ -9,6 +9,7 @@ import { DetalheDaOrdem } from '@/paginas/painel/DetalheDaOrdem'
 import { Equipe } from '@/paginas/painel/Equipe'
 import { Importar } from '@/paginas/painel/Importar'
 import { LayoutPainel } from '@/paginas/painel/LayoutPainel'
+import { NovaOrdem } from '@/paginas/painel/NovaOrdem'
 import { OrdensFinanceiro } from '@/paginas/painel/OrdensFinanceiro'
 import { Repasses } from '@/paginas/painel/Repasses'
 import { Usuarios } from '@/paginas/painel/Usuarios'
@@ -53,6 +54,7 @@ export const rotas = createBrowserRouter([
     children: [
       { path: 'ordens', element: <OrdensFinanceiro /> },
       { path: 'ordens/:id', element: <DetalheDaOrdem /> },
+      { path: 'nova-ordem', element: <NovaOrdem /> },
       { path: 'importar', element: <Importar /> },
       { path: 'repasses', element: <Repasses /> },
     ],

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 
 const secoes: { para: string; texto: string; papeis: Papel[] }[] = [
   { para: '/financeiro/ordens', texto: 'Ordens', papeis: ['admin', 'financeiro', 'estoque'] },
+  { para: '/financeiro/nova-ordem', texto: 'Cadastrar ordem', papeis: ['admin', 'financeiro'] },
   { para: '/financeiro/importar', texto: 'Importar', papeis: ['admin', 'financeiro'] },
   { para: '/financeiro/repasses', texto: 'Repasses', papeis: ['admin', 'financeiro'] },
   { para: '/estoque/conferir', texto: 'Conferir', papeis: ['admin', 'estoque'] },

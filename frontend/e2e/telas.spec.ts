@@ -1002,3 +1002,27 @@ test('financeiro ajusta a carência da ordem para uma data no futuro (RN03 ajust
   expect(recebido!.chave).toMatch(/^[0-9a-f-]{36}$/)
   expect(new Date(recebido!.corpo.liberarEm).getTime()).toBeGreaterThan(Date.now() + 2.5 * 86_400_000)
 })
+
+test('financeiro cadastra uma ordem direto, sem planilha (RF03 estendido)', async ({ page }) => {
+  await simularApi(page, 'financeiro')
+  let recebido: { chave?: string; corpo: Record<string, unknown> } | null = null
+  const ordemCriada: Ordem = { ...ordemCarlos, id: '0192f000-0000-7000-8000-000000000f01', status: 'nova' }
+  await page.route(`**/api/ordens/${ordemCriada.id}`, (rota) => rota.fulfill({ json: ordemCriada }))
+  await page.route('**/api/ordens', async (rota) => {
+    if (rota.request().method() !== 'POST') return rota.continue()
+    recebido = { chave: rota.request().headers()['idempotency-key'], corpo: rota.request().postDataJSON() as Record<string, unknown> }
+    await rota.fulfill({ json: ordemCriada })
+  })
+
+  await page.goto('/financeiro/nova-ordem')
+  await page.getByLabel('Nome do cliente').fill('ASSINANTE SIMULADO 7')
+  await page.getByLabel('Logradouro').fill('RUA DOS IPÊS')
+  await page.getByLabel('Número').fill('120')
+  await page.getByLabel('Cidade').fill('CIDADE SIMULADA')
+  await page.getByLabel('Modelo').fill('HG8145V5')
+  await page.getByRole('button', { name: 'Cadastrar ordem', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/financeiro/ordens/${ordemCriada.id}$`))
+  expect(recebido!.chave).toMatch(/^[0-9a-f-]{36}$/)
+  expect(recebido!.corpo.cliente).toBe('ASSINANTE SIMULADO 7')
+  expect((recebido!.corpo.equipamentos as Array<{ modelo: string }>)[0].modelo).toBe('HG8145V5')
+})
