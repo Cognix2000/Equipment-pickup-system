@@ -64,6 +64,7 @@ public static class ModuloOrdens
 
         // Comandos (ADR-009): POST /api/ordens/{id}/<ação>, todos com Idempotency-Key.
         Liberar.Mapear(grupo);
+        AjustarCarencia.Mapear(grupo);
         Designar.Mapear(grupo);
         RegistrarRetirada.Mapear(grupo);
         EnviarFoto.Mapear(grupo);

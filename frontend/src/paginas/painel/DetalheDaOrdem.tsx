@@ -269,6 +269,7 @@ function Acoes({ ordem, papel }: { ordem: Ordem; papel?: Papel }) {
   const financeiro = ehDoFinanceiro(papel)
   const acoes = [
     financeiro && ordem.status === 'nova' && <Liberar key="liberar" ordem={ordem} aoConcluir={setFeito} />,
+    financeiro && ordem.status === 'nova' && <AjustarCarencia key="carencia" ordem={ordem} aoConcluir={setFeito} />,
     papel === 'admin' && ordem.status === 'disponivel' && <Designar key="designar" ordem={ordem} aoConcluir={setFeito} />,
     financeiro && ordem.aguardaBaixaNoHubsoft && <MarcarBaixa key="baixa" ordem={ordem} aoConcluir={setFeito} />,
     financeiro && podeCancelar(ordem) && <Cancelar key="cancelar" ordem={ordem} aoConcluir={setFeito} />,
@@ -332,6 +333,51 @@ function Liberar({ ordem, aoConcluir }: PropsDaAcao) {
         Liberar agora
       </Button>
       <Falha erro={liberar.error} />
+    </Acao>
+  )
+}
+
+/** RN03 ajustável: o financeiro muda quando a ordem sai da carência, caso a caso. */
+function AjustarCarencia({ ordem, aoConcluir }: PropsDaAcao) {
+  const idCampo = useId()
+  // input datetime-local pede o formato "AAAA-MM-DDTHH:mm" sem fuso: começa em +1 dia a partir da carência atual.
+  const [valor, setValor] = useState(() => {
+    const inicio = new Date(Math.max(new Date(ordem.carenciaAte).getTime() + 86_400_000, Date.now() + 3_600_000))
+    inicio.setMinutes(inicio.getMinutes() - inicio.getTimezoneOffset())
+    return inicio.toISOString().slice(0, 16)
+  })
+  const ajustar = useComandoDaOrdem(
+    ordem.id,
+    (data: Date, chave) => comandos.ajustarCarencia(ordem.id, data, chave),
+    () => aoConcluir(new Date(valor) <= new Date() ? 'Ordem liberada: já pode ser designada a um técnico.' : 'Carência ajustada no histórico.'),
+  )
+  return (
+    <Acao titulo="Ajustar carência">
+      <p className="text-sm text-texto-suave">
+        Mude a data em que a ordem sai da carência. Para liberar agora, use o botão acima. Para liberar mais cedo (ou atrasar) escolha a data e hora.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label htmlFor={idCampo} className="flex flex-col gap-1 text-sm">
+          Liberar em
+          <input
+            id={idCampo}
+            type="datetime-local"
+            className={classeDoInput + ' min-w-[220px]'}
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+          />
+        </label>
+        <Button
+          type="button"
+          tamanho="compacto"
+          variante="contorno"
+          disabled={ajustar.isPending || !valor}
+          onClick={() => ajustar.mutate(new Date(valor))}
+        >
+          Ajustar
+        </Button>
+      </div>
+      <Falha erro={ajustar.error} />
     </Acao>
   )
 }

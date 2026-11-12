@@ -266,4 +266,28 @@ public class ComandosDaOrdemTestes(ApiDeTeste api)
             e => e.Motivo.ShouldBe("nao_achou"),
             e => e.ComLocal.ShouldBeTrue());
     }
+
+    [FatoComBanco]
+    public async Task Ajustar_carencia_para_depois_mantem_a_ordem_nova_e_para_agora_libera() // RN03 ajustável
+    {
+        var (financeiro, _) = await api.EntrarComoAsync(Papeis.Financeiro);
+        var ordem = await api.ImportarOrdemAsync();
+
+        var daquiTresDias = DateTimeOffset.UtcNow.AddDays(3);
+        var atrasada = await OkAsync(EnviarAsync(financeiro, ordem.Id, "carencia", new { liberarEm = daquiTresDias }));
+        atrasada.GetProperty("status").GetString().ShouldBe("nova");
+        atrasada.GetProperty("carenciaAte").GetDateTimeOffset().ShouldBe(daquiTresDias, TimeSpan.FromSeconds(1));
+
+        var liberada = await OkAsync(EnviarAsync(financeiro, ordem.Id, "carencia", new { liberarEm = DateTimeOffset.UtcNow }));
+        liberada.GetProperty("status").GetString().ShouldBe("disponivel");
+
+        // Depois de liberada, o ajuste não vale mais.
+        await DeveRecusarAsync(EnviarAsync(financeiro, ordem.Id, "carencia", new { liberarEm = DateTimeOffset.UtcNow.AddDays(1) }),
+            HttpStatusCode.UnprocessableEntity, "RN03");
+
+        // Só financeiro e gestor ajustam.
+        var (tecnico, _) = await api.EntrarComoAsync(Papeis.Tecnico);
+        var outra = await api.ImportarOrdemAsync();
+        (await EnviarAsync(tecnico, outra.Id, "carencia", new { liberarEm = DateTimeOffset.UtcNow })).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
 }
