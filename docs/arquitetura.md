@@ -171,6 +171,8 @@ flowchart LR
   - `simulado` na homologação: a cidade fictícia em `public/dados-ficticios/`, porque as coordenadas dos dados de teste não caem em ruas de verdade.
 
   Sem geocodificação: a planilha do HubSoft não traz coordenada, e o Nominatim público proíbe dado pessoal e uso recorrente. A rota abre o Google Maps ou o Waze pelo endereço escrito, e a ordem ganha o pino no primeiro GPS registrado (retirada ou visita sem sucesso).
+
+  **Modo 3D:** no mapa real (OpenFreeMap / OpenMapTiles), o técnico pode trocar para 3D pelo botão no canto do mapa. Um layer de `fill-extrusion` sobre a source `openmaptiles` eleva os prédios pela `render_height` do OpenMapTiles (ou 3 m × andares, quando só o número de andares vem). A preferência fica em `localStorage` (chave `mapa:modo3d`). A cidade simulada não tem prédios, então o botão não aparece.
 - **Localização do técnico:** `useCompartilharPosicao` (em `LayoutTecnico`) usa `watchPosition` só com o app visível e manda para `POST /api/localizacao/minha` a cada 30 s, ou antes se andou 75 m. O gestor vê em `/gestao/equipe` (`GET /api/localizacao/equipe`, atualiza a cada 15 s). Estoque e financeiro não têm acesso.
 
 ## Resgate por PIX (ADR-014)
