@@ -106,6 +106,45 @@ public sealed class Ordem : Entidade
     }
 
     /// <summary>
+    /// Ordem cadastrada direto pelo financeiro, sem planilha. Nasce Nova e em carência, como a da importação,
+    /// mas o evento diz <c>cadastrada_manualmente</c> para o histórico não confundir com RF04. A chave é um
+    /// identificador que só este caso de uso emite (prefixo <c>manual:</c>), para não colidir com a importação.
+    /// </summary>
+    public static Ordem CriarManual(
+        string chaveImportacao,
+        string tipoOs,
+        Guid clienteId,
+        Endereco endereco,
+        string? cep,
+        string? observacao,
+        IEnumerable<Equipamento> equipamentos,
+        DateTimeOffset agora,
+        TimeSpan carencia)
+    {
+        if (string.IsNullOrWhiteSpace(chaveImportacao))
+            throw new RegraDeNegocioException("RN01", "A ordem precisa de uma chave de identificação.");
+        if (string.IsNullOrWhiteSpace(tipoOs))
+            throw new RegraDeNegocioException("RN02", "Informe o tipo da ordem de serviço.");
+
+        var ordem = new Ordem
+        {
+            ChaveImportacao = chaveImportacao,
+            TipoOs = tipoOs,
+            ClienteId = clienteId,
+            Endereco = endereco,
+            Cep = cep,
+            Observacao = observacao,
+            Status = StatusOrdem.Nova,
+            CarenciaAte = agora + carencia,
+            CriadoEm = agora,
+            AtualizadoEm = agora,
+        };
+        ordem._equipamentos.AddRange(equipamentos);
+        ordem.Registrar("cadastrada_manualmente", agora);
+        return ordem;
+    }
+
+    /// <summary>
     /// RN01: o que a planilha nova mudou nesta ordem (nomes dos campos), sem alterar nada.
     /// A prévia mostra a lista; a confirmação aplica com <see cref="AtualizarPelaImportacao"/>.
     /// </summary>

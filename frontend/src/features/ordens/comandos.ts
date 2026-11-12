@@ -28,6 +28,40 @@ export type Contato =
 const comando = (id: string, acao: string, corpo: unknown, chave: string) =>
   enviar(`/api/ordens/${id}/${acao}`, corpo, ordem, { 'Idempotency-Key': chave })
 
+/** Equipamento que o financeiro adiciona no cadastro manual (série opcional, preenchida depois na retirada). */
+export type EquipamentoACadastrar = {
+  tipo: 'ONT' | 'ONU' | 'Roteador' | 'RepetidorMesh' | 'Fonte'
+  modelo: string
+  serie: string | null
+  mac: string | null
+  valor: number | null
+}
+
+/** O que a tela de nova ordem envia. Campos vazios viram `null`; o servidor completa com os padrões. */
+export type PedidoDeNovaOrdem = {
+  cliente: string
+  codigoClienteHubsoft: number | null
+  observacao: string | null
+  endereco: {
+    logradouro: string
+    numero: string | null
+    complemento: string | null
+    bairro: string | null
+    cidade: string
+    uf: string
+    referencia: string | null
+  }
+  cep: string | null
+  telefones: string[]
+  equipamentos: EquipamentoACadastrar[]
+  tipoOs: string | null
+  carenciaHoras: number | null
+}
+
+/** Cadastro manual pelo financeiro (POST /api/ordens). Usa a mesma convenção de Idempotency-Key dos comandos. */
+export const cadastrarOrdemManual = (pedido: PedidoDeNovaOrdem, chave: string) =>
+  enviar('/api/ordens', pedido, ordem, { 'Idempotency-Key': chave })
+
 export const comandos = {
   registrarRetirada: (
     id: string,
