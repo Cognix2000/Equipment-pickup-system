@@ -98,6 +98,14 @@ public sealed class Usuario : Entidade
         return usuario;
     }
 
+    /// <summary>Como o <see cref="CadastrarAutoaprovado"/>, mas aceita o vínculo do técnico (CLT ou terceiro).</summary>
+    public static Usuario CadastrarAutoaprovadoComVinculo(string nome, string email, string papel, DateTimeOffset agora, string? vinculo)
+    {
+        var usuario = Cadastrar(nome, email, papel, Guid.Empty, agora, vinculo);
+        usuario.AprovadoPor = usuario.Id;
+        return usuario;
+    }
+
     public static string NormalizarEmail(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
 
     /// <summary>Primeiro acesso ou nova senha pelo convite: ativa e derruba sessões antigas.</summary>

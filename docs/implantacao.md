@@ -70,6 +70,19 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
    ```
    O link vale 48 h e uma vez só. A partir daí, o gestor cadastra os outros usuários pela tela de gestão.
 
+6. **Vários usuários de uma vez, com senha definida** (opcional). Se o gestor quiser entrar como cada papel para conferir o sistema, dá para pular o convite:
+   ```bash
+   SENHA_INICIAL='SuaSenhaAqui123!' sh ferramentas/criar-usuarios-netwise.sh   # cria financeiro, estoque e 2 técnicos
+   ```
+   Ou um por vez:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.producao.yml run --rm migrador \
+     criar-usuario --nome "Financeiro" --email financeiro@empresa --papel financeiro --senha 'SuaSenhaAqui123!'
+   docker compose -f docker-compose.yml -f docker-compose.producao.yml run --rm migrador \
+     criar-usuario --nome "Técnico CLT" --email tecnico@empresa --papel tecnico --senha 'SuaSenhaAqui123!' --vinculo clt
+   ```
+   A senha segue a política do login (mínimo 12 caracteres, não pode conter o começo do e-mail). Gestor e financeiro **ainda precisam cadastrar o 2FA** no primeiro login (digital, rosto ou aplicativo autenticador).
+
 ## Antes dos dados reais: zerar o teste
 
 Enquanto o servidor tiver só dado de teste (usuários e ordens fictícias), zere tudo antes do primeiro dado real. Ordens e históricos nunca são apagados pela aplicação (RN12), então o teste não pode ficar misturado com o real. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
