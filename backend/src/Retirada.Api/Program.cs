@@ -16,7 +16,8 @@ using Retirada.Ordens.Infraestrutura;
 // Comandos de manutenção, rodados com o usuário dono do banco (ConnectionStrings:Migracao):
 //   dotnet Retirada.Api.dll migrar [--dados-ficticios caminho.sql]
 //   dotnet Retirada.Api.dll convidar-gestor --nome "Nome" --email gestor@empresa [--url https://endereco-do-app]
-if (args.Length > 0 && args[0] is "migrar" or "convidar-gestor")
+//   dotnet Retirada.Api.dll criar-usuario --nome "Nome" --email .. --papel .. --senha .. [--vinculo clt|terceiro]
+if (args.Length > 0 && args[0] is "migrar" or "convidar-gestor" or "criar-usuario")
 {
     var config = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: true)
@@ -45,6 +46,18 @@ if (args.Length > 0 && args[0] is "migrar" or "convidar-gestor")
 
     var nome = Opcao("--nome") ?? throw new ArgumentException("Informe --nome.");
     var email = Opcao("--email") ?? throw new ArgumentException("Informe --email.");
+
+    if (args[0] == "criar-usuario")
+    {
+        var papel = Opcao("--papel") ?? throw new ArgumentException("Informe --papel (gestor, financeiro, tecnico, estoque).");
+        var senha = Opcao("--senha") ?? throw new ArgumentException("Informe --senha (pelo menos 12 caracteres).");
+        var vinculo = Opcao("--vinculo"); // só vale para o técnico
+        var papelReal = papel == "gestor" ? Papeis.Gestor : papel;
+        await ModuloAcesso.CriarUsuarioAtivoAsync(conexao, nome, email, papelReal, senha, vinculo);
+        Console.WriteLine($"Usuário {email} ({papelReal}{(vinculo is null ? "" : $", {vinculo}")}) criado e ativo.");
+        return;
+    }
+
     var caminho = await ModuloAcesso.ConvidarPrimeiroGestorAsync(conexao, nome, email);
     Console.WriteLine($"Link de primeiro acesso (vale 48 h, uma vez só): {Opcao("--url") ?? "http://localhost:8080"}{caminho}");
     return;
