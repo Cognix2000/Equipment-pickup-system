@@ -82,7 +82,11 @@ jobs:
 
       - name: Atualizar via SSH
         # Pin por SHA: ação de terceiro não pode mudar embaixo da gente.
+<<<<<<< HEAD
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+=======
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+>>>>>>> origin/main
         env:
           VERSAO: ${{ steps.versao.outputs.versao }}
         with:
