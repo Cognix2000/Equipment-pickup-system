@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  packages: read # para o docker manifest inspect ver as imagens privadas do GHCR
 
 concurrency:
   group: implantar-producao
@@ -42,9 +43,13 @@ jobs:
           esac
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
 
+      - name: Entrar no GHCR
+        # O GHCR do projeto é privado (como o repositório); sem login, o docker manifest inspect
+        # abaixo retorna "not found" mesmo quando a imagem existe.
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Esperar as imagens no GHCR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSAO: ${{ steps.versao.outputs.versao }}
         run: |
           # O workflow "Publicar imagens" pode estar ainda rodando quando a release publica.
@@ -53,12 +58,9 @@ jobs:
           for imagem in retirada-api retirada-web; do
             achou=false
             for tentativa in $(seq 1 45); do
-              if gh api --silent "/orgs/$dono/packages/container/$imagem/versions" >/dev/null 2>&1 \
-                  || gh api --silent "/users/$dono/packages/container/$imagem/versions" >/dev/null 2>&1; then
-                # Baixa só o manifest para ver se a tag existe (sem puxar o conteúdo).
-                if docker manifest inspect "ghcr.io/$dono/$imagem:$VERSAO" >/dev/null 2>&1; then
-                  achou=true; break
-                fi
+              # Baixa só o manifest para ver se a tag existe (sem puxar o conteúdo).
+              if docker manifest inspect "ghcr.io/$dono/$imagem:$VERSAO" >/dev/null 2>&1; then
+                achou=true; break
               fi
               echo "Tentativa $tentativa/45: ainda sem $imagem:$VERSAO no GHCR. Esperando 20 s."
               sleep 20
