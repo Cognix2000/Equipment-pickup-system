@@ -107,27 +107,28 @@ public sealed class ApiDeTeste : WebApplicationFactory<Program>, IAsyncLifetime
     public static Task<HttpResponseMessage> EntrarAsync(HttpClient cliente, string email, string senha = Senha) =>
         cliente.PostAsJsonAsync("/api/acesso/entrar", new { email, senha });
 
-    /// <summary>Gestor e financeiro: senha, QR code e primeiro código do aplicativo.</summary>
+    /// <summary>
+    /// Habilita o 2FA no usuário: entra com senha, pede o QR do TOTP e confirma com o primeiro código.
+    /// Depois disso, logins novos desse usuário vêm na etapa "codigo". Útil para testar o fluxo de 2FA.
+    /// </summary>
     public async Task<HttpClient> EntrarCom2FAAsync(Usuario usuario)
     {
         var cliente = NovoCliente();
         var resposta = await EntrarAsync(cliente, usuario.Email);
-        (await EtapaAsync(resposta)).ShouldBe("configurar");
+        // 2FA é opcional (nov/2026): o primeiro login vem "pronto" direto; o 2FA é ligado pelo painel do usuário.
+        (await EtapaAsync(resposta)).ShouldBe("pronto");
 
         var qr = await (await cliente.PostAsync("/api/acesso/2fa/iniciar", null)).Content.ReadFromJsonAsync<JsonElement>();
         var codigo = new Totp(Base32Encoding.ToBytes(qr.GetProperty("segredo").GetString())).ComputeTotp();
         var confirmado = await cliente.PostAsJsonAsync("/api/acesso/2fa/confirmar", new { codigo });
         confirmado.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await EtapaAsync(confirmado)).ShouldBe("pronto");
         return cliente;
     }
 
-    /// <summary>Cria um usuário do papel e devolve a sessão dele já pronta (com 2FA quando o papel exige).</summary>
+    /// <summary>Cria um usuário do papel e devolve a sessão dele já pronta (senha só — 2FA é opcional).</summary>
     public async Task<(HttpClient Cliente, Usuario Usuario)> EntrarComoAsync(string papel)
     {
         var usuario = await CriarUsuarioAsync(papel);
-        if (usuario.Exige2FA) return (await EntrarCom2FAAsync(usuario), usuario);
-
         var cliente = NovoCliente();
         (await EtapaAsync(await EntrarAsync(cliente, usuario.Email))).ShouldBe("pronto");
         return (cliente, usuario);

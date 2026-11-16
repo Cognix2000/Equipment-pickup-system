@@ -20,3 +20,4 @@ Para registrar uma decisão nova: copie `modelo.md`, use o próximo número e ab
 | [012](0012-chave-de-acesso.md) | Chave de acesso (passkey) no lugar do aplicativo autenticador | Aceita |
 | [013](0013-backup.md) | Backup diário cifrado, com cópia fora do servidor | Aceita |
 | [014](0014-resgate-por-pix.md) | Resgate do técnico terceiro por PIX, pelo Asaas | Aceita |
+| [015](0015-login-flexivel.md) | Login flexível (2FA opcional) e sessão longa (30 dias) | Aceita |

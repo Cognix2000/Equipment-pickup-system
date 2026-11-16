@@ -117,12 +117,12 @@ public class UsuarioTestes
     }
 
     [Theory]
-    [InlineData(Papeis.Gestor, true)]
-    [InlineData(Papeis.Financeiro, true)]
-    [InlineData(Papeis.Tecnico, false)]
-    [InlineData(Papeis.Estoque, false)]
-    public void Segundo_fator_e_obrigatorio_para_gestor_e_financeiro(string papel, bool exige) => // RNF03
-        Ativo(papel).Exige2FA.ShouldBe(exige);
+    [InlineData(Papeis.Gestor)]
+    [InlineData(Papeis.Financeiro)]
+    [InlineData(Papeis.Tecnico)]
+    [InlineData(Papeis.Estoque)]
+    public void Usuario_recem_criado_nao_tem_2FA_configurado(string papel) => // RNF03 (nov/2026)
+        Ativo(papel).Tem2FA.ShouldBeFalse();
 
     [Fact]
     public void Codigo_do_2FA_nao_vale_duas_vezes()

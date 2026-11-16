@@ -34,12 +34,13 @@ public class ChaveDeAcessoTestes(ApiDeTeste api)
     private static async Task<string?> CodigoDoErroAsync(HttpResponseMessage resposta) =>
         (await resposta.Content.ReadFromJsonAsync<JsonElement>()).TryGetProperty("codigo", out var c) ? c.GetString() : null;
 
-    /// <summary>Primeiro acesso do financeiro: senha e, no lugar do QR code, a chave do aparelho.</summary>
+    /// <summary>Financeiro entra com a senha (ADR-015: 2FA opcional) e depois cadastra a chave do aparelho pelo painel.</summary>
     private async Task<(Usuario Usuario, AutenticadorDeTeste Aparelho)> FinanceiroComChaveAsync()
     {
         var financeiro = await api.CriarUsuarioAsync(Papeis.Financeiro);
         var cliente = api.NovoCliente();
-        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(cliente, financeiro.Email))).ShouldBe("configurar");
+        // Login vem "pronto" direto — gestor/financeiro não é mais obrigado a configurar segundo fator.
+        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(cliente, financeiro.Email))).ShouldBe("pronto");
 
         var aparelho = new AutenticadorDeTeste();
         var cadastro = await CadastrarAsync(cliente, aparelho);
@@ -181,7 +182,8 @@ public class ChaveDeAcessoTestes(ApiDeTeste api)
         (await zerado.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("doisFatores").GetBoolean().ShouldBeFalse();
 
         (await CodigoDoErroAsync(await EntrarComChaveAsync(api.NovoCliente(), aparelho))).ShouldBe("CHAVE_DESCONHECIDA");
-        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(api.NovoCliente(), financeiro.Email))).ShouldBe("configurar");
+        // Depois de zerar o 2FA e sem chaves, o financeiro entra só com a senha (ADR-015: 2FA opcional).
+        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(api.NovoCliente(), financeiro.Email))).ShouldBe("pronto");
     }
 
     [FatoComBanco]

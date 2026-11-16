@@ -37,9 +37,7 @@ public sealed class Usuario : Entidade
     public DateTimeOffset CriadoEm { get; private set; }
     public DateTimeOffset AtualizadoEm { get; private set; }
 
-    /// <summary>RNF03: gestor e financeiro só entram com o segundo fator.</summary>
-    public bool Exige2FA => Papel is Papeis.Gestor or Papeis.Financeiro;
-
+    /// <summary>RNF03 (nov/2026): o segundo fator é opcional. Quem tem TOTP ativado ou chave de acesso usa na hora de entrar.</summary>
     public bool Tem2FA => TotpAtivadoEm is not null;
 
     private Usuario() { } // EF Core

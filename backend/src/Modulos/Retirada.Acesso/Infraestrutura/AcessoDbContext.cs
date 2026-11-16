@@ -39,7 +39,6 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
             u.Property(x => x.AprovadoEm).HasColumnName("aprovado_em");
             u.Property(x => x.CriadoEm).HasColumnName("criado_em");
             u.Property(x => x.AtualizadoEm).HasColumnName("atualizado_em");
-            u.Ignore(x => x.Exige2FA);
             u.Ignore(x => x.Tem2FA);
             u.Ignore(x => x.PodeEntrarComChave);
         });
