@@ -120,6 +120,9 @@ internal static class DesativarSegundoFator
         usuario.Zerar2FA(relogio.GetUtcNow());
         await db.SaveChangesAsync(ct);
         await db.AuditarAsync(usuario.Id, "2fa_desativado", Sessao.Ip(http), ct);
+        // Zerar2FA renova o CarimboSeguranca para invalidar as outras sessões; reemite a atual com o
+        // carimbo novo para o usuário que acabou de clicar o botão não ser deslogado sem motivo.
+        await Sessao.AbrirAsync(http, usuario, EtapasDeAcesso.Completo);
         return TypedResults.NoContent();
     }
 }
