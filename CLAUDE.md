@@ -125,7 +125,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 
 ## Onde paramos (nov/2026)
 
-- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro. O workflow **"Implantar na produção"** ([.github/workflows/implantar.yml](.github/workflows/implantar.yml)) atualiza o servidor por SSH quando uma release é publicada — aprovação do Pedro pelo Environment `producao` no GitHub.
+- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro. O workflow **"Implantar na produção"** ([.github/workflows/implantar.yml](.github/workflows/implantar.yml)) atualiza o servidor por um **self-hosted runner** instalado no próprio servidor (rótulo `producao`), porque o SSH público é fechado pelo ufw — só a VPN WireGuard entra. Aprovação do Pedro pelo Environment `producao` no GitHub.
 - **Entregue depois do incremento 1:**
 
   | PR | O que entrou |
