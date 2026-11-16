@@ -11,6 +11,7 @@ const eu = z.object({
   nome: z.string(),
   papel,
   etapa: z.enum(['completo', 'codigo_2fa', 'configurar_2fa']),
+  tem2FA: z.boolean(),
 })
 export type Eu = z.infer<typeof eu>
 
@@ -79,6 +80,7 @@ export const acesso = {
   confirmarCodigo: (codigo: string) => enviar('/api/acesso/codigo', { codigo }, respostaDeLogin),
   iniciar2FA: () => enviar('/api/acesso/2fa/iniciar', undefined, qrDoSegundoFator),
   confirmar2FA: (codigo: string) => enviar('/api/acesso/2fa/confirmar', { codigo }, respostaDeLogin),
+  desativar2FA: () => enviar('/api/acesso/2fa/desativar'),
   aceitarConvite: (token: string, senha: string) => enviar('/api/acesso/convite', { token, senha }),
   sair: () => enviar('/api/acesso/sair'),
 }

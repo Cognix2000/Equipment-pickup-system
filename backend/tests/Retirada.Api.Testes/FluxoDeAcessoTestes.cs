@@ -162,4 +162,39 @@ public class FluxoDeAcessoTestes(ApiDeTeste api)
         comando.Parameters.AddWithValue("id", tecnico.Id);
         (await comando.ExecuteScalarAsync()).ShouldBe("login_falhou,login");
     }
+
+    [FatoComBanco]
+    public async Task Usuario_liga_e_desliga_o_2FA_pela_propria_conta() // ADR-015
+    {
+        // Entra sem 2FA. /eu confirma tem2FA = false.
+        var gestor = await api.CriarUsuarioAsync(Papeis.Gestor);
+        var cliente = api.NovoCliente();
+        (await EtapaAsync(await EntrarAsync(cliente, gestor.Email))).ShouldBe("pronto");
+        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("tem2FA").GetBoolean().ShouldBeFalse();
+
+        // Liga o 2FA pela própria conta: /2fa/iniciar + /2fa/confirmar.
+        var qr = await (await cliente.PostAsync("/api/acesso/2fa/iniciar", null)).Content.ReadFromJsonAsync<JsonElement>();
+        var codigo = new Totp(Base32Encoding.ToBytes(qr.GetProperty("segredo").GetString())).ComputeTotp();
+        (await cliente.PostAsJsonAsync("/api/acesso/2fa/confirmar", new { codigo })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("tem2FA").GetBoolean().ShouldBeTrue();
+
+        // No próximo login, agora cai na etapa "codigo".
+        var outro = api.NovoCliente();
+        (await EtapaAsync(await EntrarAsync(outro, gestor.Email))).ShouldBe("codigo");
+
+        // De volta na sessão principal, desliga o 2FA. /eu volta a tem2FA = false.
+        (await cliente.PostAsync("/api/acesso/2fa/desativar", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("tem2FA").GetBoolean().ShouldBeFalse();
+
+        // Sem 2FA de novo, o login direto volta a vir "pronto".
+        var terceiro = api.NovoCliente();
+        (await EtapaAsync(await EntrarAsync(terceiro, gestor.Email))).ShouldBe("pronto");
+    }
+
+    [FatoComBanco]
+    public async Task Sem_estar_logado_desativar_2FA_recusa() // ADR-015
+    {
+        var cliente = api.NovoCliente();
+        (await cliente.PostAsync("/api/acesso/2fa/desativar", null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
 }

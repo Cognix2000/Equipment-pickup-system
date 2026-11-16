@@ -14,13 +14,18 @@ namespace Retirada.Acesso.Casos;
 /// <summary>Quem está logado e em que etapa. O PWA chama ao abrir para decidir a tela.</summary>
 internal static class QuemSouEu
 {
-    internal sealed record Resposta(Guid Id, string Nome, string Papel, string Etapa);
+    internal sealed record Resposta(Guid Id, string Nome, string Papel, string Etapa, bool Tem2FA);
 
     public static void Mapear(IEndpointRouteBuilder grupo) =>
-        grupo.MapGet("/eu", Executar).RequireAuthorization(Politicas.LoginParcial).WithSummary("Usuário da sessão");
+        grupo.MapGet("/eu", ExecutarAsync).RequireAuthorization(Politicas.LoginParcial).WithSummary("Usuário da sessão");
 
-    private static Ok<Resposta> Executar(ClaimsPrincipal sessao) =>
-        TypedResults.Ok(new Resposta(sessao.Id(), sessao.Identity?.Name ?? string.Empty, sessao.Papel(), Sessao.Etapa(sessao)));
+    private static async Task<Ok<Resposta>> ExecutarAsync(ClaimsPrincipal sessao, AcessoDbContext db, CancellationToken ct)
+    {
+        // Lê Tem2FA direto do banco para a tela /conta mostrar o status certo sem outra chamada.
+        var id = sessao.Id();
+        var tem2FA = await db.Usuarios.Where(u => u.Id == id).Select(u => u.TotpAtivadoEm != null).SingleOrDefaultAsync(ct);
+        return TypedResults.Ok(new Resposta(id, sessao.Identity?.Name ?? string.Empty, sessao.Papel(), Sessao.Etapa(sessao), tem2FA));
+    }
 }
 
 internal static class Sair

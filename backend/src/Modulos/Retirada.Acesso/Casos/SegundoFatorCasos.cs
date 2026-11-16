@@ -103,6 +103,27 @@ internal static class ConfirmarConfiguracao2FA
     }
 }
 
+/// <summary>
+/// ADR-015: o próprio usuário desliga o aplicativo autenticador pelo painel (Minha conta). O gestor segue
+/// com o `/api/usuarios/{id}/zerar-2fa` para zerar o 2FA de outra pessoa (ex.: trocou de celular).
+/// </summary>
+internal static class DesativarSegundoFator
+{
+    public static void Mapear(IEndpointRouteBuilder grupo) =>
+        grupo.MapPost("/2fa/desativar", ExecutarAsync)
+            .WithSummary("Desligar o aplicativo autenticador na própria conta (ADR-015)");
+
+    private static async Task<NoContent> ExecutarAsync(
+        ClaimsPrincipal sessao, AcessoDbContext db, TimeProvider relogio, HttpContext http, CancellationToken ct)
+    {
+        var usuario = await db.Usuarios.SingleAsync(u => u.Id == sessao.Id(), ct);
+        usuario.Zerar2FA(relogio.GetUtcNow());
+        await db.SaveChangesAsync(ct);
+        await db.AuditarAsync(usuario.Id, "2fa_desativado", Sessao.Ip(http), ct);
+        return TypedResults.NoContent();
+    }
+}
+
 internal static class Concluir
 {
     public static async Task<Results<Ok<RespostaDeLogin>, ProblemHttpResult>> EntrarAsync(
