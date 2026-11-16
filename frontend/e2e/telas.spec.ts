@@ -78,7 +78,7 @@ const folhaDoMes = {
 async function simularApi(page: Page, papel: Papel) {
   await page.route('**/api/acesso/eu', (rota) =>
     papel
-      ? rota.fulfill({ json: { id: '0192f000-0000-7000-8000-000000000009', nome: 'Pessoa de Teste', papel, etapa: 'completo' } })
+      ? rota.fulfill({ json: { id: '0192f000-0000-7000-8000-000000000009', nome: 'Pessoa de Teste', papel, etapa: 'completo', tem2FA: false } })
       : rota.fulfill({ status: 401, json: { title: 'Não autenticado' } }),
   )
   await page.route('**/api/usuarios', (rota) => rota.fulfill({ json: usuarios }))
@@ -209,7 +209,7 @@ test('login de técnico vai direto para as ordens', async ({ page }) => {
   await simularApi(page, null)
   await page.route('**/api/acesso/eu', (rota) =>
     papel
-      ? rota.fulfill({ json: { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', papel, etapa: 'completo' } })
+      ? rota.fulfill({ json: { id: '0192f000-0000-7000-8000-000000000001', nome: 'Técnico Demonstração', papel, etapa: 'completo', tem2FA: false } })
       : rota.fulfill({ status: 401, json: {} }),
   )
   await page.route('**/api/acesso/entrar', async (rota) => {
@@ -1036,4 +1036,40 @@ test('técnico vê os botões de ordenar a lista por próxima, urgente ou bairro
   await expect(page.getByRole('button', { name: /^Mais urgente$/ })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: /^Por bairro$/ }).click()
   await expect(page.getByRole('button', { name: /^Por bairro$/ })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('usuário liga e desliga o 2FA pela tela /conta (ADR-015)', async ({ page }) => {
+  // A simulação padrão do /eu vem com tem2FA=false; o botão "Ativar o 2FA" aparece.
+  await simularApi(page, 'financeiro')
+
+  // Primeiro: liga o 2FA. O servidor devolve um QR falso, depois aceita qualquer código de 6 dígitos.
+  let tem2FA = false
+  await page.route('**/api/acesso/eu', (rota) =>
+    rota.fulfill({ json: { id: '0192f000-0000-7000-8000-000000000009', nome: 'Pessoa de Teste', papel: 'financeiro', etapa: 'completo', tem2FA } }),
+  )
+  await page.route('**/api/acesso/2fa/iniciar', (rota) =>
+    rota.fulfill({ json: { enderecoOtpAuth: 'otpauth://totp/Retirada:teste?secret=SIMU1234&issuer=Retirada', segredo: 'SIMU1234' } }),
+  )
+  await page.route('**/api/acesso/2fa/confirmar', async (rota) => {
+    tem2FA = true
+    await rota.fulfill({ json: { etapa: 'pronto', usuario: { id: '0192f000-0000-7000-8000-000000000009', nome: 'Pessoa de Teste', email: 'teste@exemplo.invalid', papel: 'financeiro' } } })
+  })
+
+  await page.goto('/conta')
+  await expect(page.getByText('2FA desativado', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Ativar o 2FA', exact: true }).click()
+  await expect(page.getByLabel(/Digite o código/)).toBeVisible()
+  await page.getByLabel(/Digite o código/).fill('123456')
+  await page.getByRole('button', { name: 'Ativar', exact: true }).click()
+  // Depois do confirmar, /eu volta com tem2FA=true e o status muda.
+  await expect(page.getByText('2FA ativo', { exact: false })).toBeVisible()
+
+  // Agora desliga: pede confirmação e só depois chama o endpoint.
+  await page.route('**/api/acesso/2fa/desativar', async (rota) => {
+    tem2FA = false
+    await rota.fulfill({ status: 204 })
+  })
+  await page.getByRole('button', { name: 'Desativar o 2FA', exact: true }).click()
+  await page.getByRole('button', { name: 'Desativar', exact: true }).click()
+  await expect(page.getByText('2FA desativado', { exact: false })).toBeVisible()
 })

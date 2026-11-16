@@ -90,7 +90,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 
 | Código | O que é |
 | --- | --- |
-| RF01–RF02 | Login com 2FA **opcional** (aplicativo ou chave de acesso, ADR-015); gestão de usuários com convite, revogação e zerar o 2FA |
+| RF01–RF02 | Login com 2FA **opcional** (aplicativo ou chave de acesso, ADR-015); o usuário liga/desliga TOTP na `/conta`; gestão de usuários com convite, revogação e zerar o 2FA |
 | RF03–RF05 | Importação da planilha com prévia e gravação; aceita qualquer planilha com cliente+endereço+cidade e preenche o resto com padrão (atualizado em nov/2026). **Também cadastro manual**: o financeiro cria ordem avulsa em `/financeiro/nova-ordem` (POST `/api/ordens`, evento próprio `cadastrada_manualmente` no histórico). |
 | RF06–RF07 | Lista e detalhe da ordem |
 | RF08 | Gestor designa ao técnico |

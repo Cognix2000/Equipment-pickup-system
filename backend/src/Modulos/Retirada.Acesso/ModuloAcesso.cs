@@ -146,6 +146,7 @@ public static class ModuloAcesso
         ConfirmarCodigo.Mapear(grupo);
         IniciarConfiguracao2FA.Mapear(grupo);
         ConfirmarConfiguracao2FA.Mapear(grupo);
+        DesativarSegundoFator.Mapear(grupo);
         ChaveDeAcessoCasos.Mapear(grupo);
         QuemSouEu.Mapear(grupo);
         Sair.Mapear(grupo);

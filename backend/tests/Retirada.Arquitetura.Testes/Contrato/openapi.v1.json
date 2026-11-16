@@ -116,6 +116,19 @@
         }
       }
     },
+    "/api/acesso/2fa/desativar": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Desligar o aplicativo autenticador na pr\u00F3pria conta (ADR-015)",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/acesso/chave/entrar/opcoes": {
       "post": {
         "tags": [

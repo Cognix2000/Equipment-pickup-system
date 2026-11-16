@@ -21,7 +21,7 @@ async function autenticadorVirtual(page: Page) {
 /** API simulada: `logado` diz se a sessão já está completa. */
 async function simularApi(page: Page, estado: { logado: boolean }) {
   await page.route('**/api/acesso/eu', (rota) =>
-    estado.logado ? rota.fulfill({ json: { ...financeiro, etapa: 'completo' } }) : rota.fulfill({ status: 401, json: {} }),
+    estado.logado ? rota.fulfill({ json: { ...financeiro, etapa: 'completo', tem2FA: false } }) : rota.fulfill({ status: 401, json: {} }),
   )
   await page.route('**/api/ordens**', (rota) => rota.fulfill({ json: [] }))
 }
