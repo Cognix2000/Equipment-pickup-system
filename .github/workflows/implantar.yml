@@ -2,6 +2,11 @@
 # ADR-006: a produção só recebe tag. O workflow entra em cena só depois que a release é publicada
 # e que o "Publicar imagens" já subiu as imagens daquela tag no GHCR.
 #
+# Usa um self-hosted runner no próprio servidor (rótulo 'producao'). O SSH do servidor fica
+# fechado para a internet (só pela VPN WireGuard), então o GitHub Actions não entra por fora:
+# o agente roda de dentro e executa o 'atualizar.sh' local. Instruções de instalação do runner
+# em docs/implantacao.md, "Implantação automática".
+#
 # Como rodar sozinho (Actions › "Implantar na produção" › Run workflow): informe a tag (ex.: v0.2.0).
 # Isso serve para repetir um deploy que falhou sem precisar republicar a release.
 name: Implantar na produção
@@ -17,7 +22,6 @@ on:
 
 permissions:
   contents: read
-  packages: read # para o docker manifest inspect ver as imagens privadas do GHCR
 
 concurrency:
   group: implantar-producao
@@ -26,7 +30,8 @@ concurrency:
 jobs:
   implantar:
     name: Atualizar o servidor na tag
-    runs-on: ubuntu-latest
+    # O agente só pega jobs rotulados 'producao', para não confundir com futuros runners em outras máquinas.
+    runs-on: [self-hosted, producao]
     # Segurança: só roda com a aprovação do dono do ambiente no painel de Environments do GitHub.
     # Crie o Environment "producao" em Settings › Environments e marque "Required reviewers" com você mesmo.
     environment:
@@ -43,78 +48,28 @@ jobs:
           esac
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
 
-      - name: Entrar no GHCR
-        # O GHCR do projeto é privado (como o repositório); sem login, o docker manifest inspect
-        # abaixo retorna "not found" mesmo quando a imagem existe.
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Esperar as imagens no GHCR
+      - name: Atualizar na mesma pasta do agente
         env:
           VERSAO: ${{ steps.versao.outputs.versao }}
         run: |
-          # O workflow "Publicar imagens" pode estar ainda rodando quando a release publica.
-          # Tenta por até 15 minutos; se nem assim, o deploy falha com uma mensagem clara.
-          dono="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          for imagem in retirada-api retirada-web; do
-            achou=false
-            for tentativa in $(seq 1 45); do
-              # Baixa só o manifest para ver se a tag existe (sem puxar o conteúdo).
-              if docker manifest inspect "ghcr.io/$dono/$imagem:$VERSAO" >/dev/null 2>&1; then
-                achou=true; break
-              fi
-              echo "Tentativa $tentativa/45: ainda sem $imagem:$VERSAO no GHCR. Esperando 20 s."
-              sleep 20
-            done
-            if [ "$achou" != true ]; then
-              echo "A imagem ghcr.io/$dono/$imagem:$VERSAO não apareceu em 15 min. Confira o workflow 'Publicar imagens'." >&2
-              exit 1
-            fi
-          done
-
-      - name: Checar os secrets de SSH
-        run: |
-          faltando=""
-          [ -z "${{ secrets.IMPLANTACAO_HOST }}" ] && faltando="$faltando IMPLANTACAO_HOST"
-          [ -z "${{ secrets.IMPLANTACAO_USUARIO }}" ] && faltando="$faltando IMPLANTACAO_USUARIO"
-          [ -z "${{ secrets.IMPLANTACAO_CHAVE_PRIVADA }}" ] && faltando="$faltando IMPLANTACAO_CHAVE_PRIVADA"
-          if [ -n "$faltando" ]; then
-            echo "Faltam secrets:$faltando. Veja docs/implantacao.md, 'Implantação automática'." >&2
+          set -eu
+          # O self-hosted runner é instalado por cladmin, dentro de ~/actions-runner/. O repositório
+          # de produção fica ao lado, em ~/retirada (padrão), e pode ser trocado pela variável abaixo.
+          pasta="${IMPLANTACAO_PASTA:-$HOME/retirada}"
+          cd "$pasta"
+          if [ ! -f .env ]; then
+            echo "Sem .env em $pasta. Faça a primeira vez manualmente (docs/implantacao.md)." >&2
             exit 1
           fi
+          # Backup carimbado do .env antes de alterar, para voltar sem drama.
+          cp .env ".env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+          sed -i "s/^VERSAO=.*/VERSAO=${VERSAO}/" .env
+          # O atualizar.sh cuida do resto: confere a tag, pull das imagens, up -d, prune.
+          git fetch --quiet --tags --force origin
+          sh deploy/atualizar.sh
 
-      - name: Atualizar via SSH
-        # Pin por SHA: ação de terceiro não pode mudar embaixo da gente.
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
-        env:
-          VERSAO: ${{ steps.versao.outputs.versao }}
-        with:
-          host: ${{ secrets.IMPLANTACAO_HOST }}
-          username: ${{ secrets.IMPLANTACAO_USUARIO }}
-          port: ${{ secrets.IMPLANTACAO_PORTA || 22 }}
-          key: ${{ secrets.IMPLANTACAO_CHAVE_PRIVADA }}
-          envs: VERSAO
-          # O caminho no servidor pode mudar: o secret IMPLANTACAO_PASTA sobrescreve o default.
-          script_stop: true
-          script: |
-            set -eu
-            pasta="${IMPLANTACAO_PASTA:-$HOME/retirada}"
-            cd "$pasta"
-            if [ ! -f .env ]; then
-              echo "Sem .env em $pasta. Faça a primeira vez manualmente (docs/implantacao.md)." >&2
-              exit 1
-            fi
-            # Guarda um .env de segurança antes de alterar, para voltar se algo der errado.
-            cp .env ".env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
-            sed -i "s/^VERSAO=.*/VERSAO=${VERSAO}/" .env
-            # Puxa a tag e deixa o atualizar.sh cuidar do resto (checa VERSAO, pull, up -d, prune).
-            git fetch --quiet --tags --force origin
-            sh deploy/atualizar.sh
-
-      - name: Marcar na release
+      - name: Marcar no resumo
         if: success()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSAO: ${{ steps.versao.outputs.versao }}
-        run: |
-          # Deixa um comentário no deploy aparecer no resumo da Action.
-          echo "✅ Produção atualizada para $VERSAO." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "✅ Produção atualizada para $VERSAO." >> "$GITHUB_STEP_SUMMARY"

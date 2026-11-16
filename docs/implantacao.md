@@ -134,36 +134,60 @@ O script faz cinco coisas:
 
 Depois de configurada, publicar uma release no GitHub já atualiza o servidor — você aprova no painel do GitHub e pronto. Mantém a regra do ADR-006: só tag entra em produção.
 
-1. **Gere uma chave SSH só para o deploy**, no seu computador:
+O workflow **"Implantar na produção"** usa um **self-hosted runner** no próprio servidor. O SSH do servidor fica fechado para a internet (só via VPN WireGuard), então o GitHub Actions não entra por fora: o agente roda de dentro e executa o `atualizar.sh` local.
+
+#### 1. Instale o agente no servidor (uma vez só)
+
+1. No GitHub, vá em **Settings › Actions › Runners › New self-hosted runner**. Escolha **Linux / x64**.
+
+2. O painel mostra uma sequência de comandos com um **token de registro** (vale só uma vez, por poucas horas). Rode-os no servidor **como `cladmin`**, não como root. O conjunto pedido é parecido com:
    ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/retirada-deploy -C "retirada-deploy" -N ""
+   mkdir ~/actions-runner && cd ~/actions-runner
+   curl -o actions-runner-linux-x64-X.Y.Z.tar.gz -L https://github.com/actions/runner/releases/download/vX.Y.Z/actions-runner-linux-x64-X.Y.Z.tar.gz
+   tar xzf actions-runner-linux-x64-X.Y.Z.tar.gz
    ```
-   A chave privada é `~/.ssh/retirada-deploy`; a pública é `~/.ssh/retirada-deploy.pub`.
 
-2. **Autorize no servidor** (como `cladmin`):
+3. Na hora do `./config.sh`, use os rótulos abaixo (o workflow procura por `producao`):
    ```bash
-   cat ~/.ssh/retirada-deploy.pub | ssh cladmin@seu-servidor \
-     'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
+   ./config.sh --url https://github.com/Cognix2000/Equipment-pickup-system \
+               --token <TOKEN-DO-PAINEL> \
+               --labels producao \
+               --name pedro \
+               --work _work \
+               --unattended
    ```
-   Confirme com `ssh -i ~/.ssh/retirada-deploy cladmin@seu-servidor 'echo ok'`.
 
-3. **Cadastre os secrets no GitHub** (Settings › Secrets and variables › Actions › New repository secret):
+4. **Rodar como serviço** (para o agente voltar sozinho após reboot):
+   ```bash
+   sudo ./svc.sh install cladmin
+   sudo ./svc.sh start
+   sudo ./svc.sh status   # confirma que está "active (running)"
+   ```
 
-   | Nome | Conteúdo |
-   | --- | --- |
-   | `IMPLANTACAO_HOST` | o endereço do servidor (ex.: `pedro.devioslab.com.br`) |
-   | `IMPLANTACAO_USUARIO` | `cladmin` |
-   | `IMPLANTACAO_CHAVE_PRIVADA` | o conteúdo de `~/.ssh/retirada-deploy` (a privada, inteirinha) |
-   | `IMPLANTACAO_PORTA` | opcional, só se não for 22 |
-   | `IMPLANTACAO_PASTA` | opcional, só se o repo no servidor não estiver em `~/retirada` |
+5. No **GHCR**, o `atualizar.sh` precisa puxar as imagens privadas. Dê ao Docker do servidor o login do GHCR, uma vez só (como `cladmin`):
+   ```bash
+   gh auth login                         # ou: echo "$TOKEN" | docker login ghcr.io -u <seu-usuario> --password-stdin
+   gh auth token | docker login ghcr.io -u <seu-usuario> --password-stdin
+   ```
+   Isso grava `~/.docker/config.json`; o agente usa daqui em diante.
 
-4. **Crie o Environment `producao`** (Settings › Environments › New environment › `producao`), marque **Required reviewers** e inclua você mesmo. É o freio: cada deploy precisa do seu "Approve and run" no painel.
+#### 2. Crie o Environment `producao` no GitHub
 
-5. **Teste**: Actions › "Implantar na produção" › Run workflow › informe `v0.1.0` (ou a tag atual). Aprove e acompanhe o resumo.
+Em **Settings › Environments › New environment › `producao`**. Marque **Required reviewers** e inclua você mesmo. É o freio: cada deploy precisa do seu **Approve and run** no painel.
 
-Depois disso, toda release publicada dispara o workflow. Se precisar repetir um deploy, use o botão "Run workflow" do mesmo workflow (ele reaproveita a mesma tag).
+#### 3. Teste
 
-**Para desligar o automático**: apague `IMPLANTACAO_CHAVE_PRIVADA` ou desabilite o workflow em Actions. O script `sh deploy/atualizar.sh` manual continua funcionando normalmente.
+**Actions › Implantar na produção › Run workflow** → informe `v0.1.0` (ou a tag atual). Aprove na pausa do Environment e acompanhe o resumo.
+
+A partir daí, toda release publicada dispara o workflow. Para repetir um deploy, use o botão "Run workflow" do mesmo workflow.
+
+#### Mexer na pasta do deploy
+
+Por padrão o workflow entra em `~/retirada` do `cladmin`. Para mudar, defina a variável `IMPLANTACAO_PASTA` em **Settings › Variables › Actions**.
+
+#### Desligar o automático
+
+Em **Settings › Actions › Runners**, remova o runner — ou pare o serviço (`sudo ./svc.sh stop`). O script `sh deploy/atualizar.sh` manual continua funcionando normalmente.
 
 **Qual número usar** (SemVer, ADR-006):
 
