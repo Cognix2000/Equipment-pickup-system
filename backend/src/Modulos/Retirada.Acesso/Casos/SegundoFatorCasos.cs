@@ -57,7 +57,10 @@ internal static class IniciarConfiguracao2FA
     private static async Task<Results<Ok<Resposta>, ProblemHttpResult>> ExecutarAsync(
         ClaimsPrincipal sessao, AcessoDbContext db, SegundoFator segundoFator, TimeProvider relogio, CancellationToken ct)
     {
-        if (Sessao.Etapa(sessao) != EtapasDeAcesso.Configurar) return Sessao.EtapaErrada();
+        // ADR-015: 2FA é opcional. O usuário entra sem segundo fator e liga depois pelo painel; por isso o
+        // fluxo aceita tanto a etapa "configurar" (primeiro login, legado) quanto "completo" (usuário logado).
+        if (Sessao.Etapa(sessao) is not (EtapasDeAcesso.Configurar or EtapasDeAcesso.Completo))
+            return Sessao.EtapaErrada();
         var usuario = await db.Usuarios.SingleAsync(u => u.Id == sessao.Id(), ct);
 
         var (base32, cifrado) = segundoFator.NovoSegredo();
@@ -81,7 +84,10 @@ internal static class ConfirmarConfiguracao2FA
         PedidoDeCodigo pedido, ClaimsPrincipal sessao, AcessoDbContext db, SegundoFator segundoFator,
         TimeProvider relogio, HttpContext http, CancellationToken ct)
     {
-        if (Sessao.Etapa(sessao) != EtapasDeAcesso.Configurar) return Sessao.EtapaErrada();
+        // Mesma regra do iniciar: pode ativar 2FA no primeiro login (etapa "configurar", legado) ou
+        // depois, já logado (etapa "completo").
+        if (Sessao.Etapa(sessao) is not (EtapasDeAcesso.Configurar or EtapasDeAcesso.Completo))
+            return Sessao.EtapaErrada();
         var agora = relogio.GetUtcNow();
         var usuario = await db.Usuarios.SingleAsync(u => u.Id == sessao.Id(), ct);
 

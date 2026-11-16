@@ -92,15 +92,20 @@ public class FluxoDeAcessoTestes(ApiDeTeste api)
     }
 
     [FatoComBanco]
-    public async Task Financeiro_sem_2FA_nao_passa_da_etapa_de_configurar() // RNF03
+    public async Task Financeiro_sem_2FA_entra_direto_e_pode_ligar_o_2FA_depois() // ADR-015
     {
         var financeiro = await api.CriarUsuarioAsync(Papeis.Financeiro);
         var cliente = api.NovoCliente();
 
-        (await EtapaAsync(await EntrarAsync(cliente, financeiro.Email))).ShouldBe("configurar");
+        // 2FA opcional: o primeiro login do financeiro vem "pronto" direto, sem passar por "configurar".
+        (await EtapaAsync(await EntrarAsync(cliente, financeiro.Email))).ShouldBe("pronto");
+        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("etapa").GetString().ShouldBe(EtapasDeAcesso.Completo);
 
-        (await cliente.GetAsync("/api/ordens")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("etapa").GetString().ShouldBe(EtapasDeAcesso.Configurar);
+        // E tem acesso às ordens, como qualquer financeiro logado.
+        (await cliente.GetAsync("/api/ordens")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Mesmo logado, pode ligar o 2FA depois pelo painel (/api/acesso/2fa/iniciar aceita a etapa Completo).
+        (await cliente.PostAsync("/api/acesso/2fa/iniciar", null)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [FatoComBanco]
