@@ -54,17 +54,19 @@ internal static class Entrar
             return Sessao.Recusa(Incorreto, "LOGIN_INCORRETO");
         }
 
-        if (usuario.Exige2FA)
+        // RNF03 (nov/2026): 2FA é opcional. Quem tem TOTP ou chave de acesso usa como segundo fator;
+        // quem não tem, entra direto com a senha. Sem obrigatoriedade por papel.
+        if (usuario.Tem2FA)
         {
-            // Quem trocou o aplicativo pela chave de acesso confirma com ela. Não abre sessão: a chave já entra sozinha.
-            if (!usuario.Tem2FA && await db.ChavesDeAcesso.AnyAsync(c => c.UsuarioId == usuario.Id, ct))
-                return TypedResults.Ok(new RespostaDeLogin("chave", null));
-
-            var etapa = usuario.Tem2FA ? EtapasDeAcesso.Codigo : EtapasDeAcesso.Configurar;
-            await Sessao.AbrirAsync(http, usuario, etapa);
-            return TypedResults.Ok(new RespostaDeLogin(usuario.Tem2FA ? "codigo" : "configurar", null));
+            await Sessao.AbrirAsync(http, usuario, EtapasDeAcesso.Codigo);
+            return TypedResults.Ok(new RespostaDeLogin("codigo", null));
         }
 
+        // Sem TOTP mas com chave de acesso cadastrada: confirma com ela, sem abrir sessão (a chave fecha o login sozinha).
+        if (await db.ChavesDeAcesso.AnyAsync(c => c.UsuarioId == usuario.Id, ct))
+            return TypedResults.Ok(new RespostaDeLogin("chave", null));
+
+        // Sem nenhum segundo fator: entra direto com a senha.
         usuario.RegistrarEntrada(agora);
         await db.SaveChangesAsync(ct);
         await db.AuditarAsync(usuario.Id, "login", Sessao.Ip(http), ct);

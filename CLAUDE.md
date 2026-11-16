@@ -20,7 +20,7 @@ Sistema de **retirada de equipamentos de clientes inadimplentes** da Netwise, um
 
 Fluxo de status: Em carência → Disponível → Atribuída → Concluída → Conferida. Também existem Encerrada sem retirada, Cancelada e Devolvida na loja.
 
-Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). Gestor e financeiro usam 2FA obrigatório: a chave de acesso (passkey, digital ou rosto do aparelho) ou o código de um aplicativo autenticador (ADR-012).
+Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). O 2FA é opcional para todos (ADR-015, nov/2026): quem configura TOTP ou chave de acesso usa como segundo fator ao entrar; quem não configurou entra só com a senha. A sessão dura 30 dias com rolagem.
 
 ## Regras que não se negociam
 
@@ -90,7 +90,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 
 | Código | O que é |
 | --- | --- |
-| RF01–RF02 | Login com 2FA (aplicativo ou chave de acesso); gestão de usuários com convite, revogação e zerar o 2FA |
+| RF01–RF02 | Login com 2FA **opcional** (aplicativo ou chave de acesso, ADR-015); gestão de usuários com convite, revogação e zerar o 2FA |
 | RF03–RF05 | Importação da planilha com prévia e gravação; aceita qualquer planilha com cliente+endereço+cidade e preenche o resto com padrão (atualizado em nov/2026). **Também cadastro manual**: o financeiro cria ordem avulsa em `/financeiro/nova-ordem` (POST `/api/ordens`, evento próprio `cadastrada_manualmente` no histórico). |
 | RF06–RF07 | Lista e detalhe da ordem |
 | RF08 | Gestor designa ao técnico |

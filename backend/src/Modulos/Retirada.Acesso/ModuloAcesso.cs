@@ -53,7 +53,9 @@ public static class ModuloAcesso
             o.Cookie.HttpOnly = true;
             o.Cookie.SameSite = SameSiteMode.Strict;
             o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS em produção vem do Nginx (cabeçalhos repassados)
-            o.ExpireTimeSpan = TimeSpan.FromHours(12);
+            // Sessão longa com rolagem: 30 dias sem usar o sistema; ao usar, renova para outros 30 dias.
+            // Era 12 h antes de nov/2026, mas o pedido do Pedro é não precisar entrar de novo a cada expediente.
+            o.ExpireTimeSpan = TimeSpan.FromDays(30);
             o.SlidingExpiration = true;
             // API não redireciona para página de login: responde 401 e 403, e o PWA decide.
             o.Events.OnRedirectToLogin = c => { c.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
