@@ -14,7 +14,8 @@ import { CampoDeSenha } from '@/components/ui/campo-de-senha'
 import { classeDoInput } from '@/components/ui/input'
 import { AvisoDeErro, Campo, LayoutDeAcesso } from './LayoutDeAcesso'
 
-type Etapa = 'senha' | 'codigo' | 'configurar' | 'chave'
+// 'chave' saiu em nov/2026 (ADR-015): chave de acesso virou caminho alternativo, não segundo fator.
+type Etapa = 'senha' | 'codigo' | 'configurar'
 
 const formularioDeSenha = z.object({
   email: z.email('Digite um e-mail válido.'),
@@ -51,7 +52,6 @@ export function Entrar() {
 
   if (etapa === 'codigo') return <PassoCodigo aoConcluir={concluir} />
   if (etapa === 'configurar') return <PassoConfigurar aoConcluir={concluir} />
-  if (etapa === 'chave') return <PassoChave aoConcluir={concluir} aoVoltar={() => setEtapa('senha')} />
   return <PassoSenha aoAvancar={setEtapa} aoConcluir={concluir} />
 }
 
@@ -222,25 +222,6 @@ function PassoCodigo({ aoConcluir }: { aoConcluir: (p: Papel) => Promise<void> }
           <BotaoDaChave rotulo="Usar a chave de acesso" aoConcluir={aoConcluir} />
         </>
       )}
-    </LayoutDeAcesso>
-  )
-}
-
-/** Gestor ou financeiro com chave de acesso que digitou a senha: confirma com a chave. */
-function PassoChave({ aoConcluir, aoVoltar }: { aoConcluir: (p: Papel) => Promise<void>; aoVoltar: () => void }) {
-  return (
-    <LayoutDeAcesso
-      titulo="Confirme com a chave de acesso"
-      subtitulo="Use a digital, o rosto ou o PIN do aparelho onde você cadastrou a chave. Em outro computador, escolha usar o celular e leia o QR code."
-    >
-      <BotaoDaChave rotulo="Usar a chave de acesso" variante="principal" aoConcluir={aoConcluir} />
-      {!aparelhoAceitaChave() && (
-        <p className="text-[15px]">Este navegador não aceita chave de acesso. Abra o sistema no celular ou num navegador atualizado.</p>
-      )}
-      <Button type="button" variante="fantasma" onClick={aoVoltar}>
-        Voltar
-      </Button>
-      <p className="text-center text-[13px] text-texto-suave">Perdeu o aparelho? Peça ao gestor para zerar o 2FA.</p>
     </LayoutDeAcesso>
   )
 }

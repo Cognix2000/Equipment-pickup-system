@@ -20,7 +20,7 @@ Sistema de **retirada de equipamentos de clientes inadimplentes** da Netwise, um
 
 Fluxo de status: Em carência → Disponível → Atribuída → Concluída → Conferida. Também existem Encerrada sem retirada, Cancelada e Devolvida na loja.
 
-Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). O 2FA é opcional para todos (ADR-015, nov/2026): quem configura TOTP ou chave de acesso usa como segundo fator ao entrar; quem não configurou entra só com a senha. A sessão dura 30 dias com rolagem.
+Papéis: `gestor`, `financeiro`, `tecnico`, `estoque` e `sistema` (este último só para as rotinas). O 2FA é opcional para todos (ADR-015, nov/2026): quem configura TOTP usa como segundo fator ao entrar; quem não configurou entra só com a senha. A **chave de acesso NÃO é segundo fator** — é um caminho alternativo de entrada (botão "Entrar com a digital ou o rosto" na tela de login), nunca obrigatório após a senha (revisão ADR-015, nov/2026). A sessão dura 30 dias com rolagem.
 
 ## Regras que não se negociam
 
@@ -125,7 +125,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 
 ## Onde paramos (nov/2026)
 
-- **Em produção:** `https://pedro.devioslab.com.br`, ainda com dados de teste ([docs/implantacao.md](docs/implantacao.md)). **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro. O workflow **"Implantar na produção"** ([.github/workflows/implantar.yml](.github/workflows/implantar.yml)) atualiza o servidor por um **self-hosted runner** instalado no próprio servidor (rótulo `producao`), porque o SSH público é fechado pelo ufw — só a VPN WireGuard entra. Aprovação do Pedro pelo Environment `producao` no GitHub.
+- **Em produção:** `https://pedro.devioslab.com.br`. O banco começou com dados de teste e, quando Pedro rodar `db/limpar-para-producao.sql` ([docs/implantacao.md, "Antes dos dados reais"](docs/implantacao.md#antes-dos-dados-reais-zerar-o-teste)), fica só o gestor `pedromendes211205@gmail.com` e os `parametro`. **A produção só recebe tag** (`VERSAO=vX.Y.Z`; o deploy recusa `main`). Quem lança a versão é o Pedro. O workflow **"Implantar na produção"** ([.github/workflows/implantar.yml](.github/workflows/implantar.yml)) atualiza o servidor por um **self-hosted runner** instalado no próprio servidor (rótulo `producao`), porque o SSH público é fechado pelo ufw — só a VPN WireGuard entra. Aprovação do Pedro pelo Environment `producao` no GitHub.
 - **Entregue depois do incremento 1:**
 
   | PR | O que entrou |
@@ -149,7 +149,7 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Pagamento pelo cliente:** fica **manual** (decisão de nov/2026, Pedro). O cliente paga por fora do sistema — nada de integrar PIX do cliente pelo app. Mantido o resgate ao técnico por PIX (ADR-014), que é outro fluxo.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Login com várias formas** (em andamento): deixar o usuário entrar de mais de uma maneira — senha, código do aplicativo, chave de acesso (digital/rosto), Microsoft 365, Google. No desktop sem digital, a senha ou o código bastam. Sessão persistida entre recarregamentos. Microsoft/Google dependem do admin do M365 e do console do Google Cloud.
+  1. **Microsoft 365 e Google** no login (ainda a fazer): dependem do admin do M365 e do console do Google Cloud. A senha + TOTP (opcional) + chave de acesso passwordless já atendem o desktop sem digital.
 - **Limpeza do disco:** o `deploy/limpar-disco.sh` roda num timer do systemd todo dia às 03:30, apagando imagens Docker não usadas, cache de build, backups antigos do `.env`, cache do apt e logs do journal com mais de 7 dias ([docs/implantacao.md](docs/implantacao.md#limpeza-diária-do-disco)).
 - **Backup na produção:** o script está pronto, mas falta o Pedro gerar a chave do age, preencher `BACKUP_*` no `.env`, configurar o rclone (ou o Veeam) e agendar no cron ([docs/implantacao.md](docs/implantacao.md#backup-automático)).
 - **Resgate na produção:** o código está pronto e desligado. Falta a Netwise abrir a conta no Asaas (CNPJ, só para os resgates), pôr a chave e o token no `.env` e configurar os dois webhooks ([docs/implantacao.md](docs/implantacao.md#resgate-por-pix-asaas)). Conferir no ambiente de testes do Asaas o formato da chave de celular.

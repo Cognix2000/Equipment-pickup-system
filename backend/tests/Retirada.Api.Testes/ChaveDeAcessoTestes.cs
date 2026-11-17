@@ -64,13 +64,15 @@ public class ChaveDeAcessoTestes(ApiDeTeste api)
     }
 
     [FatoComBanco]
-    public async Task Com_a_senha_quem_tem_chave_e_mandado_confirmar_com_ela_sem_abrir_sessao()
+    public async Task Com_a_senha_quem_tem_chave_entra_direto_porque_a_chave_nao_e_segundo_fator()
     {
+        // ADR-015 (nov/2026): a chave de acesso é um caminho alternativo de entrada, não um segundo fator.
+        // Em desktop sem biometria, obrigar a chave após a senha deixava o usuário preso.
         var (financeiro, _) = await FinanceiroComChaveAsync();
         var cliente = api.NovoCliente();
 
-        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(cliente, financeiro.Email))).ShouldBe("chave");
-        (await cliente.GetAsync("/api/acesso/eu")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await ApiDeTeste.EtapaAsync(await ApiDeTeste.EntrarAsync(cliente, financeiro.Email))).ShouldBe("pronto");
+        (await cliente.GetFromJsonAsync<JsonElement>("/api/acesso/eu")).GetProperty("etapa").GetString().ShouldBe(EtapasDeAcesso.Completo);
     }
 
     [FatoComBanco]
