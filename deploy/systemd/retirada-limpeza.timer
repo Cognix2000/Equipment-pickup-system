@@ -1,0 +1,15 @@
+[Unit]
+Description=Dispara a limpeza do disco todo dia de madrugada
+Documentation=https://github.com/Cognix2000/Equipment-pickup-system/blob/main/docs/implantacao.md
+
+[Timer]
+# Todo dia às 03:30 (horário do servidor). Evita a janela da madrugada do backup e o início do expediente.
+OnCalendar=*-*-* 03:30:00
+# Se o servidor estava desligado na hora marcada, roda assim que ele subir.
+Persistent=true
+# Pequeno jitter para quando houver mais servidores (distribui a carga).
+RandomizedDelaySec=5min
+Unit=retirada-limpeza.service
+
+[Install]
+WantedBy=timers.target

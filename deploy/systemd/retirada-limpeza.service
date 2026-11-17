@@ -1,0 +1,17 @@
+[Unit]
+Description=Limpeza diária do disco do servidor da Retirada (imagens Docker, .env.bak, apt, journal)
+Documentation=https://github.com/Cognix2000/Equipment-pickup-system/blob/main/docs/implantacao.md
+
+# Só roda quando o Docker estiver ativo; depois dele, para não brigar com o pull do deploy.
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+# Script versionado no repositório, instalado em /usr/local/sbin via docs/implantacao.md.
+ExecStart=/usr/local/sbin/limpar-disco.sh
+# Variáveis opcionais: RETIRADA_USUARIO (default cladmin), RETIRADA_PASTA (~/retirada), RETIRADA_MANTER_ENVBAK (3).
+# Edite com 'systemctl edit retirada-limpeza.service' se precisar sobrescrever.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
