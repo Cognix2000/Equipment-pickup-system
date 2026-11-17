@@ -108,19 +108,18 @@ test('quem prefere continua podendo usar o aplicativo autenticador', async ({ pa
   await expect(page.getByRole('button', { name: 'Cadastrar a digital ou o rosto' })).toBeVisible()
 })
 
-test('com a senha, quem já tem a chave é mandado confirmar com ela', async ({ page }) => {
+test('com a senha, quem já tem a chave entra direto — a chave é só uma opção (ADR-015)', async ({ page }) => {
   await simularApi(page, { logado: false })
-  await page.route('**/api/acesso/entrar', (rota) => rota.fulfill({ json: { etapa: 'chave', usuario: null } }))
+  await page.route('**/api/acesso/entrar', (rota) =>
+    rota.fulfill({ json: { etapa: 'pronto', usuario: { id: financeiro.id, nome: financeiro.nome, email: financeiro.email, papel: 'financeiro' } } }),
+  )
 
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill(financeiro.email)
   await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
-  await expect(page.getByRole('heading', { name: 'Confirme com a chave de acesso' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Usar a chave de acesso' })).toBeVisible()
-  await page.getByRole('button', { name: 'Voltar' }).click()
-  await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+  await expect(page).toHaveURL(/\/financeiro\/ordens/)
 })
 
 test('em Minha conta, remover a chave pede confirmação', async ({ page }) => {

@@ -10,7 +10,8 @@ using Retirada.Comum;
 
 namespace Retirada.Acesso.Casos;
 
-/// <summary>RF01: e-mail e senha. Gestor e financeiro seguem para o segundo fator (RNF03): o código do aplicativo ou a chave de acesso.</summary>
+/// <summary>RF01: e-mail e senha. Com TOTP ativado pede o código em seguida (RNF03);
+/// a chave de acesso NÃO é segundo fator: é um caminho alternativo de entrada (ADR-015, nov/2026).</summary>
 internal static class Entrar
 {
     internal sealed record Pedido(string Email, string Senha);
@@ -54,19 +55,16 @@ internal static class Entrar
             return Sessao.Recusa(Incorreto, "LOGIN_INCORRETO");
         }
 
-        // RNF03 (nov/2026): 2FA é opcional. Quem tem TOTP ou chave de acesso usa como segundo fator;
-        // quem não tem, entra direto com a senha. Sem obrigatoriedade por papel.
+        // RNF03 (nov/2026): 2FA é opcional. Quem tem TOTP ativado confirma com o código do aplicativo.
+        // A chave de acesso NÃO é tratada aqui: ela é um caminho de entrada próprio em /chave/entrar (ADR-015).
+        // Em desktop sem biometria, isso deixaria o usuário preso — por isso a chave fica opcional, escolhida pelo usuário.
         if (usuario.Tem2FA)
         {
             await Sessao.AbrirAsync(http, usuario, EtapasDeAcesso.Codigo);
             return TypedResults.Ok(new RespostaDeLogin("codigo", null));
         }
 
-        // Sem TOTP mas com chave de acesso cadastrada: confirma com ela, sem abrir sessão (a chave fecha o login sozinha).
-        if (await db.ChavesDeAcesso.AnyAsync(c => c.UsuarioId == usuario.Id, ct))
-            return TypedResults.Ok(new RespostaDeLogin("chave", null));
-
-        // Sem nenhum segundo fator: entra direto com a senha.
+        // Sem TOTP: entra direto com a senha (mesmo que o usuário tenha chave de acesso cadastrada).
         usuario.RegistrarEntrada(agora);
         await db.SaveChangesAsync(ct);
         await db.AuditarAsync(usuario.Id, "login", Sessao.Ip(http), ct);

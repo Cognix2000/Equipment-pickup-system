@@ -85,7 +85,31 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
 
 ## Antes dos dados reais: zerar o teste
 
-Enquanto o servidor tiver só dado de teste (usuários e ordens fictícias), zere tudo antes do primeiro dado real. Ordens e históricos nunca são apagados pela aplicação (RN12), então o teste não pode ficar misturado com o real. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
+Enquanto o servidor tiver só dado de teste (usuários e ordens fictícias), zere tudo antes do primeiro dado real. Ordens e históricos nunca são apagados pela aplicação (RN12), então o teste não pode ficar misturado com o real. Há dois caminhos:
+
+### Opção A — Zerar mantendo o gestor que você já cadastrou (recomendada)
+
+Use quando o gestor real já está no banco (por ter se cadastrado em homologação) e você quer manter a conta dele intacta, inclusive as chaves de acesso. O script `db/limpar-para-producao.sql` apaga toda a parte operacional (clientes, ordens, equipamentos, importações, histórico, parceiros, repasses, auditoria, convites, telefones, chaves pix) e todos os demais usuários — só o `parametro` e o gestor informado ficam.
+
+Rode no host de produção:
+
+```bash
+cd ~/retirada
+docker compose cp db/limpar-para-producao.sql banco:/tmp/limpar.sql
+docker compose exec -T banco psql -U retirada_dono -d retirada \
+    -v gestor_email='pedromendes211205@gmail.com' \
+    -f /tmp/limpar.sql
+```
+
+O script está em transação e só confirma se o gestor existir. Rodar de novo é inofensivo (tudo já estará vazio). As fotos no SeaweedFS continuam no bucket; se quiser apagá-las junto, zere o volume do seaweed antes:
+
+```bash
+docker compose stop seaweed && docker volume rm retirada_seaweed_data && docker compose up -d seaweed
+```
+
+### Opção B — Zerar banco, fotos, chaves e certificado (reset completo)
+
+Use quando quer começar do zero e recadastrar o gestor pelo fluxo de convite. O comando abaixo **apaga** o banco, as fotos, as chaves e o certificado:
 
 ```bash
 cd ~/retirada

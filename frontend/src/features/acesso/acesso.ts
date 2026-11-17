@@ -16,7 +16,8 @@ const eu = z.object({
 export type Eu = z.infer<typeof eu>
 
 export const respostaDeLogin = z.object({
-  etapa: z.enum(['pronto', 'codigo', 'configurar', 'chave']),
+  // 'chave' saiu em nov/2026 (ADR-015): a chave de acesso virou caminho alternativo, não segundo fator.
+  etapa: z.enum(['pronto', 'codigo', 'configurar']),
   usuario: z.object({ id: z.uuid(), nome: z.string(), email: z.string(), papel }).nullable(),
 })
 
