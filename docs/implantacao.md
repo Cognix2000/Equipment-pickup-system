@@ -220,6 +220,55 @@ sh deploy/atualizar.sh
 
 Nas próximas vezes, o próprio script leva o código para a tag.
 
+## Limpeza diária do disco
+
+O disco de 10 GB do VPS lota rápido: imagens antigas do Docker, cache de build, backups do `.env` que o workflow de deploy guarda, logs do journal e cache do apt. Quando passa de ~95 %, o `docker compose pull` do próximo deploy trava com `no space left on device`.
+
+Para evitar isso, o `deploy/limpar-disco.sh` roda a cada noite por um timer do systemd (ADR-006: o servidor cuida de si mesmo). O script:
+- apaga imagens Docker sem tag em uso e o cache do `buildx` (como `cladmin`);
+- mantém só os 3 backups do `.env` mais recentes (configurável);
+- limpa o cache do apt;
+- comprime logs do journal com mais de 7 dias.
+
+### Instalar (uma vez só, como root)
+
+```bash
+cd /home/cladmin/retirada
+sudo install -m 0755 deploy/limpar-disco.sh /usr/local/sbin/limpar-disco.sh
+sudo install -m 0644 deploy/systemd/retirada-limpeza.service /etc/systemd/system/
+sudo install -m 0644 deploy/systemd/retirada-limpeza.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now retirada-limpeza.timer
+```
+
+Confere que o timer está armado:
+
+```bash
+systemctl list-timers retirada-limpeza.timer
+```
+
+Deve aparecer `NEXT` com a próxima execução (padrão: todo dia às 03:30, com jitter de até 5 min).
+
+### Rodar na hora (teste)
+
+```bash
+sudo systemctl start retirada-limpeza.service
+journalctl -u retirada-limpeza.service -n 40 --no-pager
+```
+
+### Ajustar
+
+Se quiser mudar o horário, o usuário ou o número de backups guardados, use overrides do systemd:
+
+```bash
+# Horário do timer (ex.: 04:00 em vez de 03:30)
+sudo systemctl edit retirada-limpeza.timer
+# Variáveis do script (RETIRADA_USUARIO, RETIRADA_PASTA, RETIRADA_MANTER_ENVBAK)
+sudo systemctl edit retirada-limpeza.service
+```
+
+Para desligar: `sudo systemctl disable --now retirada-limpeza.timer`.
+
 ## Backup automático
 
 O `deploy/backup.sh` junta num arquivo só, **cifrado**, os quatro itens que fazem o sistema voltar inteiro ([ADR-013](adr/0013-backup.md)):
