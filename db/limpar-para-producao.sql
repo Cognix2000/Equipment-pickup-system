@@ -36,11 +36,15 @@ BEGIN;
 SET search_path = retirada, public;
 
 -- 1. Garante que o gestor está como admin ativo (sem vínculo CLT/terceiro, sem aprovador, sem parceiro).
+--    `aprovado_por` e `aprovado_em` andam juntos pelo CHECK
+--    `(aprovado_por IS NULL) = (aprovado_em IS NULL)`, então os dois saem ao mesmo tempo
+--    (o aprovador seria um dos usuários demo que vão sumir no passo 6, de qualquer jeito).
 UPDATE usuario
    SET papel                = 'admin',
        situacao             = 'ativo',
        vinculo              = NULL,
        aprovado_por         = NULL,
+       aprovado_em          = NULL,
        empresa_parceira_id  = NULL,
        atualizado_em        = now()
  WHERE email = :'gestor_email';
