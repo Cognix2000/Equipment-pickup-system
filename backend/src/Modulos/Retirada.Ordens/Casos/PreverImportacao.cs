@@ -38,12 +38,12 @@ internal static class PreverImportacao
 }
 
 internal sealed record ResumoDaImportacaoDto(
-    int Novas, int Atualizacoes, int Repetidas, int Duplicadas, int Pendencias, int Erros, int OrdensNovas, int OrdensAtualizadas)
+    int Novas, int Atualizacoes, int Repetidas, int Duplicadas, int Pendencias, int Erros, int Ignoradas, int OrdensNovas, int OrdensAtualizadas)
 {
     public static ResumoDaImportacaoDto De(Previa p) => new(
         p.Contar(ResultadoDaLinha.Nova), p.Contar(ResultadoDaLinha.Atualizacao), p.Contar(ResultadoDaLinha.Repetida),
         p.Contar(ResultadoDaLinha.Duplicada), p.Contar(ResultadoDaLinha.Pendencia), p.Contar(ResultadoDaLinha.Erro),
-        p.Novas.Count, p.Atualizacoes.Count);
+        p.Contar(ResultadoDaLinha.Ignorada), p.Novas.Count, p.Atualizacoes.Count);
 }
 
 internal sealed record LinhaDaPreviaDto(int Numero, ResultadoDaLinha Resultado, string? Cliente, string? Endereco, string? Bairro, string? TipoOs, IReadOnlyList<string> Detalhes);

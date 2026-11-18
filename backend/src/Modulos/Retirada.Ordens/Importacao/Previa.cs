@@ -2,7 +2,7 @@ using Retirada.Ordens.Dominio;
 
 namespace Retirada.Ordens.Importacao;
 
-internal enum ResultadoDaLinha { Nova, Atualizacao, Repetida, Duplicada, Pendencia, Erro }
+internal enum ResultadoDaLinha { Nova, Atualizacao, Repetida, Duplicada, Pendencia, Erro, Ignorada }
 
 /// <summary>O que já está gravado e importa para classificar o arquivo. Carregado de uma vez antes da prévia.</summary>
 internal sealed record RetratoDoBanco(
@@ -62,6 +62,12 @@ internal static class MontadorDaPrevia
         foreach (var linha in linhas)
         {
             var detalhes = new List<string>(linha.Alertas.Select(a => "alerta: " + a));
+            if (linha.FoiIgnorada)
+            {
+                // Pulada silenciosamente — típico do HubSoft que exporta tipos misturados. Não é erro.
+                resultado[linha.Numero] = (ResultadoDaLinha.Ignorada, [linha.MotivoIgnorada!]);
+                continue;
+            }
             if (linha.Ordem is not { } dados)
             {
                 detalhes.InsertRange(0, linha.Erros);

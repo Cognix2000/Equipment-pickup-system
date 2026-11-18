@@ -244,10 +244,46 @@ public class ImportacaoTestes
             "DUDA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;4;CENTRO;CIDADE;MG;00912345678;9504;ONU;Modelo;")), "ordens.csv");
 
         // Linha 2 (BIA) entra também: bairro vazio virou aviso, não erro (RF04 revisado).
+        // Linha 3 (CAIO) é IGNORADA silenciosamente: a planilha do HubSoft vem com todos os tipos (REMOÇÃO,
+        // REATIVAÇÃO, TROCA DE PLANO…) misturados; o que não é de remoção não é erro, só não interessa.
         previa.Novas.Select(g => g.Dados.Chave).OrderBy(c => c).ShouldBe(["os:9501", "os:9502"]);
         previa.Linhas.Single(l => l.Numero == 3).Detalhes.ShouldContain(d => d.Contains("sem bairro"));
-        previa.Linhas.Single(l => l.Numero == 4).Detalhes.ShouldContain(d => d.StartsWith("tipo da OS desconhecido"));
+        var ignorada = previa.Linhas.Single(l => l.Numero == 4);
+        ignorada.Resultado.ShouldBe(ResultadoDaLinha.Ignorada);
+        ignorada.Detalhes.ShouldContain(d => d.Contains("TROCA DE PLANO"));
         previa.Linhas.Single(l => l.Numero == 5).Detalhes.ShouldContain(d => d.StartsWith("falta o número de série"));
+    }
+
+    [Fact]
+    public void HubSoft_sem_coluna_de_telefone_extrai_do_texto_livre_e_descarta_o_resto() // RN04 + HubSoft real
+    {
+        // No HubSoft real a coluna `telefones` costuma vir vazia e o contato fica dentro de `descricao_servico`
+        // (que também carrega dado pessoal). A importação precisa extrair SÓ o telefone e esquecer o resto.
+        var csv = "nome_razaosocial;data_inicio_programado;hora_inicio_programado;tipo_ordem_servico;endereco;numero;bairro;cidade;estado;id_ordem_servico;descricao_servico;equipamento_tipo;equipamento_modelo;numero_serie\n"
+            + "ANA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;8100;TELEFONE PARA CONTATO: (00) 99123-4567 PLANO: 600 MB DEBITOS: 2 mensalidades;ONU;Modelo;SIMU0000FFFF";
+        var previa = Prever(Encoding.UTF8.GetBytes(csv), "ordens.csv");
+
+        var grupo = previa.Novas.Single();
+        grupo.Telefones.Count.ShouldBe(1);
+        grupo.Telefones[0].NumeroE164.ShouldBe("+5500991234567");
+        grupo.Telefones[0].FormatoValido.ShouldBeTrue();
+        // RN04: nenhum trecho da descrição vira observação ou outro campo.
+        grupo.Dados.Observacao.ShouldBeNull();
+    }
+
+    [Fact]
+    public void HubSoft_com_tipos_misturados_pula_os_que_nao_sao_de_remocao_sem_erro()
+    {
+        var previa = Prever(Encoding.UTF8.GetBytes(CsvDoHubsoft(
+            "ANA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;00912345678;7001;ONU;Modelo;SIMU0000AAAA",
+            "BIA;15/09/2026;09:00:00;REATIVAÇÃO;RUA;2;CENTRO;CIDADE;MG;00912345678;7002;ONU;Modelo;SIMU0000BBBB",
+            "CAIO;15/09/2026;09:00:00;INSTALAÇÃO FTTH;RUA;3;CENTRO;CIDADE;MG;00912345678;7003;ONU;Modelo;SIMU0000CCCC",
+            "DUDA;15/09/2026;09:00:00;MANUTENÇÃO PREVENTIVA;RUA;4;CENTRO;CIDADE;MG;00912345678;7004;ONU;Modelo;SIMU0000DDDD")),
+            "ordens.csv");
+
+        previa.Novas.Select(g => g.Dados.Chave).ShouldBe(["os:7001"]);
+        previa.Linhas.Where(l => l.Resultado == ResultadoDaLinha.Ignorada).Select(l => l.Numero).ShouldBe([3, 4, 5]);
+        previa.Linhas.Count(l => l.Resultado == ResultadoDaLinha.Erro).ShouldBe(0);
     }
 
     [Fact]
