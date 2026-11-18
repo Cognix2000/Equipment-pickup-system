@@ -2,7 +2,7 @@ using Retirada.Comum;
 
 namespace Retirada.Acesso.Dominio;
 
-public enum SituacaoUsuario { Pendente, Ativo, Suspenso, Revogado }
+public enum SituacaoUsuario { Pendente, Ativo, Suspenso, Revogado, Apagado }
 
 /// <summary>
 /// Quem entra no sistema. O carimbo de segurança muda sempre que o acesso precisa cair na hora
@@ -199,6 +199,36 @@ public sealed class Usuario : Entidade
         if (Situacao != SituacaoUsuario.Revogado)
             throw new RegraDeNegocioException("USUARIO_NAO_REVOGADO", "Só usuário revogado pode ser reativado.");
         Situacao = SenhaHash is null ? SituacaoUsuario.Pendente : SituacaoUsuario.Ativo;
+        Renovar(agora);
+    }
+
+    /// <summary>
+    /// RF02 (nov/2026): próximo passo depois de revogar. Some do sistema: perde nome, e-mail, senha,
+    /// chaves de acesso e 2FA. A linha fica no banco porque o histórico (RN12) aponta para este Id;
+    /// como o histórico mostra só o papel de quem fez (não o nome), o resultado para quem usa é idêntico
+    /// a um DELETE. A anonimização impede que esse usuário volte à lista ou torne a entrar.
+    /// </summary>
+    public void Apagar(Guid porQuem, DateTimeOffset agora)
+    {
+        if (porQuem == Id)
+            throw new RegraDeNegocioException("USUARIO_AUTOAPAGAR", "Você não pode apagar o próprio acesso.");
+        if (Situacao != SituacaoUsuario.Revogado && Situacao != SituacaoUsuario.Pendente)
+            throw new RegraDeNegocioException("USUARIO_APAGAR_SO_REVOGADO",
+                "Só usuário revogado ou pendente pode ser apagado. Revogue antes.");
+        Nome = "(apagado)";
+        // Preserva o UNIQUE do e-mail e deixa claro que a linha foi anonimizada.
+        Email = $"apagado-{Id:N}@exemplo.invalid";
+        Vinculo = null;
+        SenhaHash = null;
+        TotpSegredoCifrado = null;
+        TotpAtivadoEm = null;
+        TotpUltimoPasso = null;
+        FalhasLogin = 0;
+        BloqueadoAte = null;
+        UltimoLoginEm = null;
+        AprovadoPor = null;
+        AprovadoEm = null;
+        Situacao = SituacaoUsuario.Apagado;
         Renovar(agora);
     }
 

@@ -26,6 +26,7 @@ const situacao: Record<UsuarioNaLista['situacao'], { texto: string; tom: TomDoSe
   ativo: { texto: 'Ativo', tom: 'sucesso' },
   suspenso: { texto: 'Suspenso', tom: 'neutro' },
   revogado: { texto: 'Revogado', tom: 'erro' },
+  apagado: { texto: 'Apagado', tom: 'neutro' }, // backend não devolve na lista; aqui só para o enum fechar
 }
 
 const formatoData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
@@ -64,6 +65,7 @@ export function Usuarios() {
 function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; aoConvidar: (l: LinkDeConvite) => void }) {
   const clienteDeConsultas = useQueryClient()
   const [confirmarRevogacao, setConfirmarRevogacao] = useState(false)
+  const [confirmarApagar, setConfirmarApagar] = useState(false)
   const acao = useMutation({
     mutationFn: (caminho: string) => enviar(`/api/usuarios/${u.id}/${caminho}`),
     onSuccess: () => clienteDeConsultas.invalidateQueries({ queryKey: usuariosQuery.queryKey }),
@@ -120,9 +122,25 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
           </Button>
         )}
         {u.situacao === 'revogado' ? (
-          <Button variante="contorno" tamanho="compacto" onClick={() => acao.mutate('reativar')} disabled={acao.isPending}>
-            Reativar
-          </Button>
+          <>
+            <Button variante="contorno" tamanho="compacto" onClick={() => acao.mutate('reativar')} disabled={acao.isPending}>
+              Reativar
+            </Button>
+            {confirmarApagar ? (
+              <>
+                <Button variante="perigo" tamanho="compacto" onClick={() => acao.mutate('apagar')} disabled={acao.isPending}>
+                  Confirmar e apagar
+                </Button>
+                <Button variante="fantasma" tamanho="compacto" onClick={() => setConfirmarApagar(false)}>
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <Button variante="perigo" tamanho="compacto" onClick={() => setConfirmarApagar(true)}>
+                Apagar
+              </Button>
+            )}
+          </>
         ) : confirmarRevogacao ? (
           <>
             <Button variante="perigo" tamanho="compacto" onClick={() => acao.mutate('revogar')} disabled={acao.isPending}>

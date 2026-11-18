@@ -41,13 +41,40 @@ internal static class GestaoDeUsuarios
             .WithSummary("Mudar o vínculo do técnico: CLT (recebe na folha) ou terceiro (resgata por PIX)");
         grupo.MapPost("/{id:guid}/zerar-2fa", ZerarSegundoFatorAsync)
             .WithSummary("Zerar o 2FA de quem trocou de celular: apaga o aplicativo e as chaves de acesso");
+        grupo.MapPost("/{id:guid}/apagar", ApagarAsync)
+            .WithSummary("RF02 (nov/2026): depois de revogar, remove o usuário do sistema. Anonimiza e some da lista.");
     }
 
     private static async Task<Ok<List<UsuarioNaLista>>> ListarAsync(AcessoDbContext db, CancellationToken ct)
     {
-        var usuarios = await db.Usuarios.AsNoTracking().OrderBy(u => u.Nome).ToListAsync(ct);
+        // Usuários apagados ficam escondidos: a linha existe só para o histórico de ordens que eles tocaram manter autor.
+        var usuarios = await db.Usuarios.AsNoTracking()
+            .Where(u => u.Situacao != SituacaoUsuario.Apagado)
+            .OrderBy(u => u.Nome).ToListAsync(ct);
         var comChave = (await db.ChavesDeAcesso.Select(c => c.UsuarioId).Distinct().ToListAsync(ct)).ToHashSet();
         return TypedResults.Ok(usuarios.Select(u => NaLista(u, comChave.Contains(u.Id))).ToList());
+    }
+
+    /// <summary>
+    /// Último passo depois de revogar: anonimiza o usuário e tira ele da lista. A linha fica no banco
+    /// porque o histórico (RN12) aponta para este Id, mas sem nenhum dado pessoal e sem acesso. As chaves
+    /// de acesso e os convites saem junto. Idempotente: apagar um já-apagado não dá erro, só não faz nada.
+    /// </summary>
+    private static async Task<Results<NoContent, NotFound, ProblemHttpResult>> ApagarAsync(
+        Guid id, ClaimsPrincipal sessao, AcessoDbContext db, TimeProvider relogio, HttpContext http, CancellationToken ct)
+    {
+        var usuario = await db.Usuarios.SingleOrDefaultAsync(u => u.Id == id, ct);
+        if (usuario is null) return TypedResults.NotFound();
+        if (usuario.Situacao == SituacaoUsuario.Apagado) return TypedResults.NoContent();
+
+        try { usuario.Apagar(sessao.Id(), relogio.GetUtcNow()); }
+        catch (RegraDeNegocioException e) { return Sessao.Recusa(e.Message, e.Codigo, StatusCodes.Status422UnprocessableEntity); }
+
+        db.ChavesDeAcesso.RemoveRange(await db.ChavesDeAcesso.Where(c => c.UsuarioId == id).ToListAsync(ct));
+        db.Convites.RemoveRange(await db.Convites.Where(c => c.UsuarioId == id).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
+        await db.AuditarAsync(sessao.Id(), $"apagar_usuario:{usuario.Id}", Sessao.Ip(http), ct);
+        return TypedResults.NoContent();
     }
 
     /// <summary>Celular perdido ou trocado: some o aplicativo e todas as chaves, e as sessões abertas caem.</summary>
