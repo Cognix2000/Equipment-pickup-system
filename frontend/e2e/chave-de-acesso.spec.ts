@@ -109,7 +109,10 @@ test('quem prefere continua podendo usar o aplicativo autenticador', async ({ pa
 })
 
 test('com a senha, quem já tem a chave entra direto — a chave é só uma opção (ADR-015)', async ({ page }) => {
-  await simularApi(page, { logado: false })
+  // `estado` é lido pelo mock de /api/acesso/eu: muda para logado ANTES do click do Entrar, assim
+  // a invalidação da euQuery após o login enxerga a sessão pronta e o router segue para /financeiro/ordens.
+  const estado = { logado: false }
+  await simularApi(page, estado)
   await page.route('**/api/acesso/entrar', (rota) =>
     rota.fulfill({ json: { etapa: 'pronto', usuario: { id: financeiro.id, nome: financeiro.nome, email: financeiro.email, papel: 'financeiro' } } }),
   )
@@ -117,6 +120,7 @@ test('com a senha, quem já tem a chave entra direto — a chave é só uma opç
   await page.goto('/entrar')
   await page.getByLabel('E-mail').fill(financeiro.email)
   await page.getByLabel('Senha', { exact: true }).fill('Demo@Retirada2026')
+  estado.logado = true
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
   await expect(page).toHaveURL(/\/financeiro\/ordens/)
