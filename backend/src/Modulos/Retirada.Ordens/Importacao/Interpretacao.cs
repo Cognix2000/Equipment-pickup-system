@@ -40,9 +40,14 @@ internal sealed record OrdemLida(
     public string TipoPessoa => Regex.IsMatch(Cliente, @"\b(LTDA|EIRELI|EPP|MEI|ME|S\.?A\.?|S/A|CIA)\b", RegexOptions.IgnoreCase) ? "PJ" : "PF";
 }
 
-internal sealed record LinhaInterpretada(int Numero, OrdemLida? Ordem, IReadOnlyList<string> Erros, IReadOnlyList<string> Alertas)
+internal sealed record LinhaInterpretada(int Numero, OrdemLida? Ordem, IReadOnlyList<string> Erros, IReadOnlyList<string> Alertas, string? MotivoIgnorada = null)
 {
     public bool TemErro => Erros.Count > 0;
+    /// <summary>
+    /// Linha pulada silenciosamente — típico do HubSoft que exporta tipos misturados (REMOÇÃO junto com REATIVAÇÃO,
+    /// INSTALAÇÃO, MANUTENÇÃO). Diferente de erro: não precisa de atenção do financeiro, só é contada na prévia.
+    /// </summary>
+    public bool FoiIgnorada => MotivoIgnorada is not null;
 }
 
 /// <summary>Valida e normaliza linha a linha (UC01). Erro tira a linha da importação; alerta só avisa.</summary>
@@ -58,6 +63,19 @@ internal static partial class Interpretador
         var alertas = new List<string>();
         string? V(Campo c) => mapa.Valor(linha, c) is { } v ? EspacosRepetidos().Replace(v, " ") : null;
 
+        // RN02 + HubSoft real (nov/2026): a planilha vem com todos os tipos de OS misturados (REMOÇÃO, REATIVAÇÃO,
+        // INSTALAÇÃO, MANUTENÇÃO...). Linha que não é de remoção, retirada ou bloqueio não interessa ao sistema:
+        // pula sem erro, sem alerta — só conta na prévia. Isso tem que vir ANTES das validações de cliente/endereço
+        // para não entupir a aba de erros com linhas que nem deveriam ter sido olhadas.
+        var tipoOsLido = V(Campo.TipoOs);
+        if (tipoOsLido is not null)
+        {
+            var tipoNormalizado = SemAcento(tipoOsLido).ToUpperInvariant();
+            var ehDeRemocao = tipoNormalizado.Contains("REMOC") || tipoNormalizado.Contains("RETIRADA") || tipoNormalizado.Contains("BLOQUEIO");
+            if (!ehDeRemocao)
+                return new LinhaInterpretada(linha.Numero, null, [], [], MotivoIgnorada: $"tipo \"{tipoOsLido}\" não é de remoção");
+        }
+
         // RF04 revisado (nov/2026): só cliente, logradouro e cidade são obrigatórios. O resto ganha padrão e alerta
         // na prévia, para o financeiro ver e decidir. Planilhas vêm de mil jeitos; a importação não deveria barrar
         // por falta de telefone ou UF.
@@ -72,14 +90,12 @@ internal static partial class Interpretador
         var numero = V(Campo.Numero);
         if (numero is null) { numero = "s/n"; alertas.Add("sem número no endereço: entrou como \"s/n\""); }
 
-        // RN02: só vira ordem o cliente rescindido. Bloqueio temporário e serviço ainda suspenso viram pendência.
         // Sem tipo na planilha, o padrão é retirada de equipamento (que é o que o sistema faz).
-        var tipoOs = V(Campo.TipoOs);
+        var tipoOs = tipoOsLido;
         if (tipoOs is null) { tipoOs = "RETIRADA DE EQUIPAMENTO"; alertas.Add("sem tipo de OS: entrou como \"RETIRADA DE EQUIPAMENTO\""); }
         MotivoDePendencia? pendencia = null;
         var tipo = SemAcento(tipoOs).ToUpperInvariant();
         if (tipo.Contains("BLOQUEIO")) pendencia = MotivoDePendencia.BloqueioTemporario;
-        else if (!tipo.Contains("REMOC") && !tipo.Contains("RETIRADA")) erros.Add($"tipo da OS desconhecido: {tipoOs}");
         if (pendencia is null && V(Campo.SituacaoDoServico) is { } situacao && !SemAcento(situacao).Contains("CANCEL", StringComparison.OrdinalIgnoreCase))
             pendencia = MotivoDePendencia.SemRescisao;
 
@@ -122,6 +138,15 @@ internal static partial class Interpretador
                 telefones.Add(telefone);
                 if (!telefone.FormatoValido) alertas.Add($"telefone fora do padrão: {texto}");
             }
+
+        // HubSoft real: as colunas de telefone vêm vazias e o contato está dentro do texto livre
+        // (`TELEFONE PARA CONTATO: (37) 99951-3096`). Só vai nessa extração se nada válido saiu das colunas próprias.
+        // Todo o resto do texto livre é descartado (RN04).
+        if (!telefones.Any(t => t.FormatoValido) && V(Campo.DescricaoLivre) is { } textoLivre)
+            foreach (var bruto in TelefonesNaDescricao().Matches(textoLivre).Select(m => m.Value).Distinct())
+                if (Telefone(bruto, modoSimulacao) is { FormatoValido: true } telefoneDoTexto)
+                    telefones.Add(telefoneDoTexto);
+
         if (!telefones.Any(t => t.FormatoValido)) alertas.Add("sem telefone válido: o contato fica só por visita");
 
         var equipamento = Equipamento(V, erros, alertas);
@@ -280,4 +305,13 @@ internal static partial class Interpretador
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex EspacosRepetidos();
+
+    /// <summary>
+    /// Captura telefones brasileiros avulsos num texto livre. Aceita (37) 99951-3096, 37 99951 3096, 37998365063,
+    /// com ou sem o dígito 9, com +55 opcional, inclusive DDD 00 em modo simulação. A validação final (DDD, 9º
+    /// dígito, DDD válido) vai no `Telefone()` — aqui o papel é só pegar candidatos; falsos positivos são
+    /// descartados lá e nunca entram na ordem.
+    /// </summary>
+    [GeneratedRegex(@"(?:\+?55\s*)?\(?\s*\d{2}\s*\)?\s*9?\s*\d{4}[\s-]?\d{4}")]
+    private static partial Regex TelefonesNaDescricao();
 }

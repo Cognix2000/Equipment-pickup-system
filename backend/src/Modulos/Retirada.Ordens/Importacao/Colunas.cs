@@ -9,6 +9,10 @@ internal enum Campo
 {
     Cliente, TipoOs, Logradouro, Numero, Complemento, Referencia, Bairro, Cidade, Uf, Cep,
     Telefone1, Telefone2, Telefone3, Observacao,
+    // DescricaoLivre: coluna de texto livre que pode conter telefones embutidos (típico do HubSoft em
+    // `descricao_servico` e `descricao_abertura`). O conteúdo nunca é salvo em lugar nenhum — RN04 (LGPD)
+    // descarta dado pessoal — e só é usado para extrair telefones via regex quando a coluna dedicada vem vazia.
+    DescricaoLivre,
     DataProgramada, HoraProgramada, IdOrdemServico, Protocolo, NumeroOs, CodigoCliente, IdClienteServico,
     DataRescisao, SituacaoDoServico, Latitude, Longitude,
     EquipamentoTipo, EquipamentoModelo, NumeroSerie, Mac, ValorEquipamento,
@@ -54,6 +58,9 @@ internal static class Colunas
         ["telefone_terciario"] = Campo.Telefone3, ["telefone_3"] = Campo.Telefone3, ["tel_3"] = Campo.Telefone3,
         ["observacao"] = Campo.Observacao, ["observacoes"] = Campo.Observacao, ["obs"] = Campo.Observacao,
         ["anotacoes"] = Campo.Observacao, ["anotacao"] = Campo.Observacao,
+        // Texto livre do HubSoft: usado só para extrair telefones (LGPD RN04: nada do conteúdo é guardado).
+        ["descricao_servico"] = Campo.DescricaoLivre, ["descricao_abertura"] = Campo.DescricaoLivre,
+        ["descricao_fechamento"] = Campo.DescricaoLivre,
         ["data_inicio_programado"] = Campo.DataProgramada, ["data_programada"] = Campo.DataProgramada, ["data"] = Campo.DataProgramada,
         ["hora_inicio_programado"] = Campo.HoraProgramada, ["hora_programada"] = Campo.HoraProgramada,
         ["id_ordem_servico"] = Campo.IdOrdemServico,

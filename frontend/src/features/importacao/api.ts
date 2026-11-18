@@ -3,7 +3,7 @@ import type { TomDoSelo } from '@/components/ui/badge'
 import { enviar, enviarArquivo } from '@/lib/api'
 
 // Contrato da importação (Retirada.Ordens/Casos/PreverImportacao.cs e ConfirmarImportacao.cs).
-export const resultadoDaLinha = z.enum(['nova', 'atualizacao', 'repetida', 'duplicada', 'pendencia', 'erro'])
+export const resultadoDaLinha = z.enum(['nova', 'atualizacao', 'repetida', 'duplicada', 'pendencia', 'erro', 'ignorada'])
 export type ResultadoDaLinha = z.infer<typeof resultadoDaLinha>
 
 const resumo = z.object({
@@ -13,6 +13,8 @@ const resumo = z.object({
   duplicadas: z.number(),
   pendencias: z.number(),
   erros: z.number(),
+  // Ignoradas: linhas que não são de remoção (HubSoft exporta tudo misturado). Não é erro, só não interessa.
+  ignoradas: z.number(),
   ordensNovas: z.number(),
   ordensAtualizadas: z.number(),
 })
@@ -64,6 +66,7 @@ export const rotuloDoResultado: Record<ResultadoDaLinha, { texto: string; tom: T
   duplicada: { texto: 'Duplicada', tom: 'neutro' },
   pendencia: { texto: 'Pendência', tom: 'alerta' },
   erro: { texto: 'Erro', tom: 'erro' },
+  ignorada: { texto: 'Ignorada', tom: 'neutro' },
 }
 
 export const nomeDoFormato: Record<Previa['formato'], string> = {

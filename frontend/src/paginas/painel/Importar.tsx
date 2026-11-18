@@ -164,6 +164,7 @@ const recortes: { id: Recorte; texto: string }[] = [
   { id: 'atualizacao', texto: 'Atualizações' },
   { id: 'pendencia', texto: 'Pendências' },
   { id: 'erro', texto: 'Erros' },
+  { id: 'ignorada', texto: 'Ignoradas' },
   { id: 'repetida', texto: 'Sem mudança' },
   { id: 'duplicada', texto: 'Duplicadas' },
 ]

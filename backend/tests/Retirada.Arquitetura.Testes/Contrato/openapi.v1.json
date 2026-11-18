@@ -3650,7 +3650,8 @@
           "repetida",
           "duplicada",
           "pendencia",
-          "erro"
+          "erro",
+          "ignorada"
         ]
       },
       "ResumoDaImportacaoDto": {
@@ -3661,6 +3662,7 @@
           "duplicadas",
           "pendencias",
           "erros",
+          "ignoradas",
           "ordensNovas",
           "ordensAtualizadas"
         ],
@@ -3707,6 +3709,14 @@
             "format": "int32"
           },
           "erros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ignoradas": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

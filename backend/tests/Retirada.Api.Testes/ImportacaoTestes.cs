@@ -71,12 +71,13 @@ public class ImportacaoTestes(ApiDeTeste api)
             Linha(a, "ANA EXEMPLO", equipamento: "Roteador"),            // mesma OS: mais um equipamento
             Linha(b, "BETO EXEMPLO"),
             Linha(c, "CAIO EXEMPLO", tipoOs: "REMOÇÃO EQUIP BLOQUEIO TEMPORARIO"), // RN02: pendência
-            Linha(d, "DUDA EXEMPLO", tipoOs: "TROCA DE PLANO"));          // tipo desconhecido: erro, fica fora
+            Linha(d, "DUDA EXEMPLO", tipoOs: "TROCA DE PLANO"));          // não é de remoção: ignorada em silêncio (HubSoft)
 
         var previa = await PreverAsync(financeiro, arquivo);
 
         previa.GetProperty("formato").GetString().ShouldBe("csv");
-        (Resumo(previa, "novas"), Resumo(previa, "pendencias"), Resumo(previa, "erros"), Resumo(previa, "ordensNovas")).ShouldBe((3, 1, 1, 2));
+        (Resumo(previa, "novas"), Resumo(previa, "pendencias"), Resumo(previa, "erros"), Resumo(previa, "ignoradas"), Resumo(previa, "ordensNovas"))
+            .ShouldBe((3, 1, 0, 1, 2));
         (await OrdemDaOsAsync(a)).ShouldBe(Guid.Empty); // a prévia não grava nada
 
         var relatorio = await ConfirmarAsync(financeiro, previa, arquivo);
