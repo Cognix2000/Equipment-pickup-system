@@ -552,6 +552,33 @@
         }
       }
     },
+    "/api/usuarios/{id}/apagar": {
+      "post": {
+        "tags": [
+          "Usu\u00E1rios"
+        ],
+        "summary": "RF02 (nov/2026): depois de revogar, remove o usu\u00E1rio do sistema. Anonimiza e some da lista.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/ordens": {
       "get": {
         "tags": [

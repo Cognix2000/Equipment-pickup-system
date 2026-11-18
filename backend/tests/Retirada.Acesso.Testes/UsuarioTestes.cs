@@ -116,6 +116,51 @@ public class UsuarioTestes
         DeveViolar(() => Ativo().Reativar(Agora), "USUARIO_NAO_REVOGADO");
     }
 
+    [Fact]
+    public void Apagar_anonimiza_e_marca_situacao() // RF02 (nov/2026)
+    {
+        var u = Ativo();
+        u.DefinirSenha("senha forte 123!", Agora);
+        var id = u.Id;
+        var carimbo = u.CarimboSeguranca;
+
+        u.Revogar(Gestor, Agora);
+        u.Apagar(Gestor, Agora);
+
+        u.Situacao.ShouldBe(SituacaoUsuario.Apagado);
+        u.Nome.ShouldBe("(apagado)");
+        u.Email.ShouldBe($"apagado-{id:N}@exemplo.invalid");
+        u.SenhaHash.ShouldBeNull();
+        u.TotpSegredoCifrado.ShouldBeNull();
+        u.TotpAtivadoEm.ShouldBeNull();
+        u.AprovadoPor.ShouldBeNull();
+        u.AprovadoEm.ShouldBeNull();
+        u.UltimoLoginEm.ShouldBeNull();
+        u.FalhasLogin.ShouldBe((short)0);
+        u.BloqueadoAte.ShouldBeNull();
+        u.CarimboSeguranca.ShouldNotBe(carimbo);
+        u.PodeEntrar(Agora).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Apagar_so_funciona_em_revogado_ou_pendente()
+    {
+        DeveViolar(() => Ativo().Apagar(Gestor, Agora), "USUARIO_APAGAR_SO_REVOGADO");
+
+        // Pendente (nunca aceitou o convite) pode ser apagado direto.
+        var pendente = Usuario.Cadastrar("Ana", "ana@exemplo.invalid", Papeis.Estoque, Gestor, Agora);
+        pendente.Apagar(Gestor, Agora);
+        pendente.Situacao.ShouldBe(SituacaoUsuario.Apagado);
+    }
+
+    [Fact]
+    public void Ninguem_apaga_a_si_mesmo()
+    {
+        var u = Ativo(Papeis.Gestor);
+        u.Revogar(Guid.NewGuid(), Agora); // revoga antes, para passar na outra regra
+        DeveViolar(() => u.Apagar(u.Id, Agora), "USUARIO_AUTOAPAGAR");
+    }
+
     [Theory]
     [InlineData(Papeis.Gestor)]
     [InlineData(Papeis.Financeiro)]

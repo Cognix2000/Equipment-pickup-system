@@ -29,7 +29,8 @@ export const usuarioNaLista = z.object({
   email: z.string(),
   papel,
   vinculo: z.enum(['clt', 'terceiro']).nullable(),
-  situacao: z.enum(['pendente', 'ativo', 'suspenso', 'revogado']),
+  // 'apagado' nunca entra na lista normal (o backend filtra), mas o enum reconhece para não quebrar cenários limite.
+  situacao: z.enum(['pendente', 'ativo', 'suspenso', 'revogado', 'apagado']),
   doisFatores: z.boolean(),
   ultimoLoginEm: z.iso.datetime({ offset: true }).nullable(),
 })
