@@ -1,7 +1,7 @@
-import { CloudUpload, LogOut, Map as IconeMapa, UserRound } from 'lucide-react'
+import { CloudUpload, Map as IconeMapa, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { useEu } from '@/features/acesso/acesso'
-import { useSair } from '@/features/acesso/useSair'
+import { BotaoDeSairNoMenu } from '@/features/acesso/BotaoDeSair'
 import { useCompartilharPosicao } from '@/features/mapa/minhaPosicao'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils'
  * Com o app aberto, o técnico compartilha a posição com o gestor (o gestor que abre esta tela, não).
  */
 export function LayoutTecnico() {
-  const sair = useSair()
   const { data: eu } = useEu()
   useCompartilharPosicao(eu?.papel === 'tecnico')
   return (
@@ -24,14 +23,7 @@ export function LayoutTecnico() {
           <ItemDeNavegacao para="/tecnico/ordens" icone={<IconeMapa aria-hidden />} texto="Ordens" />
           <ItemDeNavegacao para="/tecnico/envios" icone={<CloudUpload aria-hidden />} texto="Envios" />
           <ItemDeNavegacao para="/conta" icone={<UserRound aria-hidden />} texto="Conta" />
-          <button
-            type="button"
-            onClick={() => void sair()}
-            className="flex flex-col items-center justify-center gap-0.5 text-xs text-texto-suave [&_svg]:size-[22px]"
-          >
-            <LogOut aria-hidden />
-            Sair
-          </button>
+          <BotaoDeSairNoMenu />
         </nav>
       </div>
     </div>
