@@ -16,6 +16,7 @@ export const ordemMaria: Ordem = {
   endereco: { logradouro: 'RUA DOS IPÊS', numero: '120', complemento: 'CASA 2', bairro: 'CENTRO', cidade: 'CIDADE SIMULADA', uf: 'MG', referencia: 'PORTÃO AZUL' },
   localizacao: { latitude: -21.0012, longitude: -38.9978 },
   observacao: 'Cliente só fica em casa à tarde',
+  plano: '600 Mbps',
   carenciaAte: emDias(-1),
   aguardaBaixaNoHubsoft: false,
   equipamentos: [
@@ -44,6 +45,7 @@ export const ordemJoao: Ordem = {
   endereco: { logradouro: 'AVENIDA DA LAGOA', numero: '455', complemento: null, bairro: 'CENTRO', cidade: 'CIDADE SIMULADA', uf: 'MG', referencia: null },
   localizacao: { latitude: -21.0031, longitude: -38.9921 },
   observacao: null,
+  plano: null,
   carenciaAte: emDias(0),
   equipamentos: [{ id: '0192f000-0000-7000-8000-000000051021', tipo: 'ont', modelo: 'Huawei EG8145V5', numeroSerie: 'HWTC5E6F7A8B', situacao: 'pendente' }],
 }
@@ -85,6 +87,7 @@ export const ordemAna: Ordem = {
   endereco: { logradouro: 'RUA DAS PALMEIRAS', numero: '88', complemento: null, bairro: 'JARDIM', cidade: 'CIDADE SIMULADA', uf: 'MG', referencia: null },
   localizacao: null,
   observacao: null,
+  plano: null,
   carenciaAte: emDias(-12),
   responsavelId: null,
   equipamentos: [{ id: '0192f000-0000-7000-8000-000000051051', tipo: 'onu', modelo: 'Huawei EG8010H', numeroSerie: 'HWTC7A7B7C7D', situacao: 'pendente' }],

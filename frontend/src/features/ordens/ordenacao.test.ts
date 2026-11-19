@@ -13,6 +13,7 @@ function ordem(sobrepor: Partial<Ordem>): Ordem {
     endereco: { logradouro: 'RUA A', numero: '1', complemento: null, bairro: 'CENTRO', cidade: 'CIDADE SIMULADA', uf: 'MG', referencia: null },
     localizacao: null,
     observacao: null,
+    plano: null,
     carenciaAte: '2026-11-13T10:00:00-03:00',
     aguardaBaixaNoHubsoft: false,
     equipamentos: [],

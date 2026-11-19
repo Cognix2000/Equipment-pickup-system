@@ -54,6 +54,7 @@ public sealed class OrdensDbContext(DbContextOptions<OrdensDbContext> options) :
         o.Property(x => x.TipoOs).HasColumnName("tipo_os");
         o.Property(x => x.ClienteId).HasColumnName("cliente_id");
         o.Property(x => x.Observacao).HasColumnName("observacao");
+        o.Property(x => x.Plano).HasColumnName("plano");
         o.Property(x => x.Status).HasColumnName("status").HasConversion(TextoSnake<StatusOrdem>());
         o.Property(x => x.CarenciaAte).HasColumnName("carencia_ate");
         o.Property(x => x.ResponsavelId).HasColumnName("responsavel_id");
