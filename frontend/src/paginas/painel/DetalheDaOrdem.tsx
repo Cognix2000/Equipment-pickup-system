@@ -84,6 +84,11 @@ function ConteudoDaOrdem({ ordem, papel }: { ordem: Ordem; papel?: Papel }) {
                 {ordem.endereco.referencia && ` · ${caixaDeTitulo(ordem.endereco.referencia)}`}
               </p>
             </div>
+            {ordem.plano && (
+              <p className="rounded-lg bg-mapa/40 px-2.5 py-2 text-[13px] font-medium text-marinho">
+                <span className="text-texto-suave">Plano:</span> {ordem.plano}
+              </p>
+            )}
             {ordem.observacao && <p className="rounded-lg bg-fundo px-2.5 py-2 text-[13px] text-texto-suave">Obs.: {ordem.observacao}</p>}
           </Card>
 

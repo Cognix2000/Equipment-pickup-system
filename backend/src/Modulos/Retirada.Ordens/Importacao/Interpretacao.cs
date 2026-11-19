@@ -25,6 +25,7 @@ internal sealed record OrdemLida(
     Endereco Endereco,
     string? Cep,
     string? Observacao,
+    string? Plano,
     Localizacao? Localizacao,
     int? NumeroOs,
     ReferenciasDaImportacao Referencias,
@@ -32,10 +33,10 @@ internal sealed record OrdemLida(
     EquipamentoLido? Equipamento)
 {
     /// <summary>Duas linhas são da mesma OS quando estes campos batem; o equipamento pode mudar de uma para outra.</summary>
-    public object DadosDaOs => (Cliente, TipoOs, Endereco, Observacao, NumeroOs);
+    public object DadosDaOs => (Cliente, TipoOs, Endereco, Observacao, Plano, NumeroOs);
 
     public DadosDaImportacao ParaAtualizar() =>
-        new(Endereco, Cep, Observacao, NumeroOs, Referencias.DataProgramada, Referencias.DataRescisao, Localizacao);
+        new(Endereco, Cep, Observacao, NumeroOs, Referencias.DataProgramada, Referencias.DataRescisao, Localizacao, Plano);
 
     public string TipoPessoa => Regex.IsMatch(Cliente, @"\b(LTDA|EIRELI|EPP|MEI|ME|S\.?A\.?|S/A|CIA)\b", RegexOptions.IgnoreCase) ? "PJ" : "PF";
 }
@@ -131,6 +132,10 @@ internal static partial class Interpretador
         var cep = V(Campo.Cep) is { } textoCep ? Cep(textoCep, alertas) : null;
         var localizacao = Localizacao(V(Campo.Latitude), V(Campo.Longitude), mapa.Tem(Campo.Latitude) && mapa.Tem(Campo.Longitude), alertas);
 
+        // DescricaoLivre: lemos cru, SEM colapsar \n (ao contrário do `V()`). A observação precisa das
+        // quebras de linha para separar os rótulos; o extrator de telefone lida com espaços de qualquer forma.
+        var textoLivre = mapa.Valor(linha, Campo.DescricaoLivre);
+
         var telefones = new List<TelefoneLido>();
         foreach (var campo in new[] { Campo.Telefone1, Campo.Telefone2, Campo.Telefone3 })
             if (V(campo) is { } texto && Telefone(texto, modoSimulacao) is { } telefone)
@@ -142,7 +147,7 @@ internal static partial class Interpretador
         // HubSoft real: as colunas de telefone vêm vazias e o contato está dentro do texto livre
         // (`TELEFONE PARA CONTATO: (37) 99951-3096`). Só vai nessa extração se nada válido saiu das colunas próprias.
         // Todo o resto do texto livre é descartado (RN04).
-        if (!telefones.Any(t => t.FormatoValido) && V(Campo.DescricaoLivre) is { } textoLivre)
+        if (!telefones.Any(t => t.FormatoValido) && textoLivre is not null)
             foreach (var bruto in TelefonesNaDescricao().Matches(textoLivre).Select(m => m.Value).Distinct())
                 if (Telefone(bruto, modoSimulacao) is { FormatoValido: true } telefoneDoTexto)
                     telefones.Add(telefoneDoTexto);
@@ -154,10 +159,16 @@ internal static partial class Interpretador
         if (erros.Count > 0 || chave is null)
             return new LinhaInterpretada(linha.Numero, null, erros, alertas);
 
+        // HubSoft real (nov/2026): a descrição livre carrega plano e dicas de visita misturados com dado sensível.
+        // Observação da coluna própria vem primeiro; se vier vazia, extraímos só os campos rotulados SEGUROS da
+        // descrição (os que não revelam dado pessoal) — ver `ObservacaoDoTextoLivre`. O plano é independente.
+        var observacao = V(Campo.Observacao) ?? (textoLivre is not null ? ObservacaoDoTextoLivre(textoLivre) : null);
+        var plano = textoLivre is not null ? PlanoDoTextoLivre(textoLivre) : null;
+
         var ordem = new OrdemLida(
             chave, cliente!, codigoCliente, tipoOs!, pendencia,
             new Endereco(logradouro!, numero, V(Campo.Complemento), bairro!, cidade!, uf!, V(Campo.Referencia)),
-            cep, V(Campo.Observacao), localizacao, numeroOs,
+            cep, observacao, plano, localizacao, numeroOs,
             new ReferenciasDaImportacao(protocolo, idOs, idClienteServico, dataProgramada, dataRescisao, cep),
             telefones, equipamento);
         return new LinhaInterpretada(linha.Numero, ordem, erros, alertas);
@@ -314,4 +325,56 @@ internal static partial class Interpretador
     /// </summary>
     [GeneratedRegex(@"(?:\+?55\s*)?\(?\s*\d{2}\s*\)?\s*9?\s*\d{4}[\s-]?\d{4}")]
     private static partial Regex TelefonesNaDescricao();
+
+    // Padrão típico do HubSoft: "PLANO: 600 MB 99,99", "PLANO:  600MB", "PLANO 1 GB".
+    // Grupo 1 = número; grupo 2 = unidade (MB ou GB, com variantes). Normaliza para "600 Mbps" / "1 Gbps".
+    [GeneratedRegex(@"PLANO\s*:?\s*(\d+)\s*(MB|MEGAS?|MBPS|GB|GIGAS?|GBPS)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex PlanoNaDescricao();
+
+    /// <summary>
+    /// RF03 + RN04: extrai o plano do cliente da descrição do HubSoft e normaliza. Devolve null quando
+    /// não encontra padrão conhecido; o resto da descrição é descartado.
+    /// </summary>
+    internal static string? PlanoDoTextoLivre(string texto)
+    {
+        var casamento = PlanoNaDescricao().Match(texto);
+        if (!casamento.Success) return null;
+        var valor = int.Parse(casamento.Groups[1].Value, CultureInfo.InvariantCulture);
+        var unidade = casamento.Groups[2].Value.ToUpperInvariant();
+        var ehGiga = unidade.StartsWith('G');
+        return ehGiga ? $"{valor} Gbps" : $"{valor} Mbps";
+    }
+
+    // Campos rotulados que podemos levar para a observação visível no app do técnico. A lista é EXPLÍCITA
+    // (allow-list): tudo que não estiver aqui é descartado. Rótulos escolhidos por carregarem instrução de
+    // visita, nunca dado pessoal — RN04.
+    private static readonly string[] RotulosSeguros =
+    [
+        "OBSERVACOES", "OBSERVACAO",
+        "DISPONIBILIDADE PARA ATENDIMENTO", "DISPONIBILIDADE",
+        "CLIENTE EM CASA",
+        "REMOCAO DE EQUIPAMENTO",
+        "LOCALIZACAO ZONA RURAL",
+    ];
+
+    /// <summary>
+    /// Extrai das linhas "RÓTULO: valor" do texto livre só o que está na allow-list de rótulos seguros.
+    /// Nunca pega SOLICITANTE, PLANO, DÉBITOS, TELEFONE, MOTIVO DO CANCELAMENTO (dado pessoal/sensível).
+    /// Devolve null quando não encontra nada útil — melhor vazio que meio.
+    /// </summary>
+    internal static string? ObservacaoDoTextoLivre(string texto)
+    {
+        var achados = new List<string>();
+        foreach (var bruta in texto.Split('\n'))
+        {
+            var dois = bruta.Split(':', 2);
+            if (dois.Length != 2) continue;
+            var rotulo = SemAcento(dois[0]).ToUpperInvariant().Trim();
+            var valor = dois[1].Trim();
+            if (valor.Length == 0) continue;
+            if (!RotulosSeguros.Contains(rotulo)) continue;
+            achados.Add($"{dois[0].Trim()}: {valor}");
+        }
+        return achados.Count == 0 ? null : string.Join(" · ", achados);
+    }
 }

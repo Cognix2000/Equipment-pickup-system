@@ -197,6 +197,24 @@ internal static class MontadorDaPrevia
         if (!colunas.Tem(Campo.EquipamentoTipo))
             avisos.Add("O arquivo não traz os equipamentos: o técnico registra tipo, modelo e série em campo.");
 
+        // Agrupa as linhas que foram puladas por tipo (REATIVAÇÃO, INSTALAÇÃO, MANUTENÇÃO...). Dá destaque
+        // à soma para o financeiro ter certeza de que não deixou pendência passando: "a planilha também tem
+        // X linhas de REATIVAÇÃO que não viram ordem" (HubSoft exporta tudo misturado).
+        var tiposIgnorados = linhas.Where(l => l.FoiIgnorada && l.MotivoIgnorada is not null)
+            .GroupBy(l => TipoNoMotivo(l.MotivoIgnorada!))
+            .Where(g => g.Key is not null)
+            .Select(g => (Tipo: g.Key!, Quantidade: g.Count()))
+            .OrderByDescending(x => x.Quantidade)
+            .ToList();
+        if (tiposIgnorados.Count > 0)
+        {
+            var textoDosTipos = string.Join(", ", tiposIgnorados.Select(t => $"{t.Quantidade} de {t.Tipo}"));
+            var total = tiposIgnorados.Sum(t => t.Quantidade);
+            avisos.Add(total == 1
+                ? $"A planilha também tem 1 linha que não é de remoção ({textoDosTipos}): ignorada, não virou ordem."
+                : $"A planilha também tem {total} linhas que não são de remoção ({textoDosTipos}): ignoradas, não viraram ordem.");
+        }
+
         var validos = grupos.Values.Where(g => g.Erro is null).ToList();
         return new Previa(
             arquivo.Formato, colunas, linhasDaPrevia,
@@ -207,4 +225,14 @@ internal static class MontadorDaPrevia
     }
 
     private static string EnderecoCurto(Endereco e) => e.Numero is null ? e.Logradouro : $"{e.Logradouro}, {e.Numero}";
+
+    // Extrai o tipo da mensagem "tipo \"REATIVAÇÃO\" não é de remoção". Devolve null quando não encontra,
+    // evitando contagem de tipos vazios no agrupamento.
+    private static string? TipoNoMotivo(string motivo)
+    {
+        var abre = motivo.IndexOf('"');
+        if (abre < 0) return null;
+        var fecha = motivo.IndexOf('"', abre + 1);
+        return fecha < 0 ? null : motivo[(abre + 1)..fecha];
+    }
 }

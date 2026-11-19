@@ -89,6 +89,11 @@ function ConteudoDaOrdem({ ordem }: { ordem: Ordem }) {
         {!ordem.localizacao && (
           <p className="text-[13px] text-texto-suave">Rota pelo endereço escrito: confira o número na chegada.</p>
         )}
+        {ordem.plano && (
+          <p className="rounded-lg bg-mapa/40 px-2.5 py-2 text-[13px] font-medium text-marinho">
+            <span className="text-texto-suave">Plano:</span> {ordem.plano}
+          </p>
+        )}
         {ordem.observacao && <p className="rounded-lg bg-fundo px-2.5 py-2 text-[13px] text-texto-suave">Obs.: {ordem.observacao}</p>}
         <Telefones ordem={ordem} />
       </Card>

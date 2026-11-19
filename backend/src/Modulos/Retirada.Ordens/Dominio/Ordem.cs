@@ -31,6 +31,8 @@ public sealed class Ordem : Entidade
     public Endereco Endereco { get; private set; } = null!;
     public Localizacao? Localizacao { get; private set; }
     public string? Observacao { get; private set; }
+    /// <summary>Plano de internet do cliente (ex.: "600 Mbps", "1 Gbps"). Vem extraído da descrição do HubSoft. Nulo se não reconhecido.</summary>
+    public string? Plano { get; private set; }
     public StatusOrdem Status { get; private set; }
     public DateTimeOffset CarenciaAte { get; private set; }
     public Guid? ResponsavelId { get; private set; }
@@ -74,7 +76,8 @@ public sealed class Ordem : Entidade
         IEnumerable<Equipamento> equipamentos,
         DateTimeOffset agora,
         TimeSpan carencia,
-        ReferenciasDaImportacao? referencias = null)
+        ReferenciasDaImportacao? referencias = null,
+        string? plano = null)
     {
         if (string.IsNullOrWhiteSpace(chaveImportacao))
             throw new RegraDeNegocioException("RN01", "A ordem precisa de uma chave de importação.");
@@ -88,6 +91,7 @@ public sealed class Ordem : Entidade
             Endereco = endereco,
             Localizacao = localizacao,
             Observacao = observacao,
+            Plano = plano,
             Status = StatusOrdem.Nova,
             CarenciaAte = agora + carencia,
             CriadoEm = agora,
@@ -154,6 +158,7 @@ public sealed class Ordem : Entidade
         if (novos.Endereco != Endereco) mudancas.Add("endereço");
         if (novos.Cep is not null && novos.Cep != Cep) mudancas.Add("CEP");
         if (novos.Observacao != Observacao) mudancas.Add("observação");
+        if (novos.Plano is not null && novos.Plano != Plano) mudancas.Add("plano");
         if (novos.NumeroOs is not null && novos.NumeroOs != NumeroOs) mudancas.Add("nº da OS");
         if (novos.DataProgramada is not null && novos.DataProgramada != DataProgramada) mudancas.Add("data programada");
         if (novos.DataRescisao is not null && novos.DataRescisao != DataRescisao) mudancas.Add("data da rescisão");
@@ -174,6 +179,7 @@ public sealed class Ordem : Entidade
         Endereco = novos.Endereco;
         Cep = novos.Cep ?? Cep;
         Observacao = novos.Observacao;
+        Plano = novos.Plano ?? Plano;
         NumeroOs = novos.NumeroOs ?? NumeroOs;
         DataProgramada = novos.DataProgramada ?? DataProgramada;
         DataRescisao = novos.DataRescisao ?? DataRescisao;
@@ -458,7 +464,8 @@ public sealed record DadosDaImportacao(
     int? NumeroOs,
     DateTimeOffset? DataProgramada,
     DateOnly? DataRescisao,
-    Localizacao? Localizacao);
+    Localizacao? Localizacao,
+    string? Plano = null);
 
 /// <summary>RN14: uma foto da retirada. A da etiqueta diz de qual item é; a dos equipamentos pode mostrar todos juntos.</summary>
 public sealed record FotoDaRetirada(TipoDeFoto Tipo, Guid? EquipamentoId = null);

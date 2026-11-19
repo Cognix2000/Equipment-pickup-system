@@ -255,6 +255,46 @@ public class ImportacaoTestes
     }
 
     [Fact]
+    public void Plano_e_observacao_saem_do_texto_livre_sem_arrastar_dado_sensivel() // RF03 + RN04
+    {
+        // Simula a descrição real do HubSoft, que vem multilinha dentro da célula (RFC 4180 permite \n entre aspas).
+        var csv = "nome_razaosocial;data_inicio_programado;hora_inicio_programado;tipo_ordem_servico;endereco;numero;bairro;cidade;estado;id_ordem_servico;descricao_servico;equipamento_tipo;equipamento_modelo;numero_serie\n"
+            + "ANA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;9001;"
+            + "\"SOLICITANTE: MARIA\nTELEFONE PARA CONTATO: (00) 99123-4567\nPLANO: 600 MB 99,99\n"
+            + "DÉBITOS: 2 mensalidades\nDISPONIBILIDADE PARA ATENDIMENTO: cliente pediu no sábado\n"
+            + "CLIENTE EM CASA: ligar antes de ir\nMOTIVO DO CANCELAMENTO: trocou de provedor\""
+            + ";ONU;Modelo;SIMU0000IIII";
+
+        var previa = Prever(Encoding.UTF8.GetBytes(csv), "ordens.csv");
+        var grupo = previa.Novas.Single();
+
+        grupo.Dados.Plano.ShouldBe("600 Mbps");
+        grupo.Dados.Observacao.ShouldNotBeNull();
+        grupo.Dados.Observacao!.ShouldContain("DISPONIBILIDADE PARA ATENDIMENTO: cliente pediu no sábado");
+        grupo.Dados.Observacao.ShouldContain("CLIENTE EM CASA: ligar antes de ir");
+        // RN04: campos sensíveis NÃO entram na observação (allow-list de rótulos seguros).
+        grupo.Dados.Observacao.ShouldNotContain("MARIA");
+        grupo.Dados.Observacao.ShouldNotContain("DÉBITOS");
+        grupo.Dados.Observacao.ShouldNotContain("MOTIVO");
+        grupo.Dados.Observacao.ShouldNotContain("TELEFONE");
+        // Telefone é extraído do texto livre pelo caminho já existente (RN05 em simulação).
+        grupo.Telefones.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Aviso_destaca_quantas_linhas_de_cada_tipo_foram_ignoradas()
+    {
+        var previa = Prever(Encoding.UTF8.GetBytes(CsvDoHubsoft(
+            "ANA;15/09/2026;09:00:00;REMOÇÃO EQUIP FTTH;RUA;1;CENTRO;CIDADE;MG;00912345678;6001;ONU;Modelo;SIMU00006001",
+            "BIA;15/09/2026;09:00:00;REATIVAÇÃO;RUA;2;CENTRO;CIDADE;MG;00912345678;6002;ONU;Modelo;SIMU00006002",
+            "CAIO;15/09/2026;09:00:00;REATIVAÇÃO;RUA;3;CENTRO;CIDADE;MG;00912345678;6003;ONU;Modelo;SIMU00006003",
+            "DUDA;15/09/2026;09:00:00;INSTALAÇÃO FTTH;RUA;4;CENTRO;CIDADE;MG;00912345678;6004;ONU;Modelo;SIMU00006004")),
+            "ordens.csv");
+
+        previa.AvisosDoArquivo.ShouldContain(a => a.Contains("3 linhas") && a.Contains("REATIVAÇÃO") && a.Contains("INSTALAÇÃO FTTH"));
+    }
+
+    [Fact]
     public void HubSoft_sem_coluna_de_telefone_extrai_do_texto_livre_e_descarta_o_resto() // RN04 + HubSoft real
     {
         // No HubSoft real a coluna `telefones` costuma vir vazia e o contato fica dentro de `descricao_servico`

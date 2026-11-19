@@ -76,6 +76,8 @@ export const ordem = z.object({
   }),
   localizacao: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
   observacao: z.string().nullable(),
+  // Plano de internet do cliente (ex.: "600 Mbps", "1 Gbps"). Extraído da descrição do HubSoft; null se desconhecido.
+  plano: z.string().nullable(),
   carenciaAte: z.iso.datetime({ offset: true }),
   responsavelId: z.uuid().nullable().optional(),
   visitasSemSucesso: z.number().optional(),
