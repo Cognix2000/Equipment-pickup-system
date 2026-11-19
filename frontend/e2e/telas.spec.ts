@@ -289,7 +289,7 @@ const previaFicticia = {
   arquivo: 'retiradas_outubro.csv',
   formato: 'csv',
   totalDeLinhas: 5,
-  resumo: { novas: 3, atualizacoes: 0, repetidas: 0, duplicadas: 0, pendencias: 1, erros: 1, ordensNovas: 2, ordensAtualizadas: 0 },
+  resumo: { novas: 3, atualizacoes: 0, repetidas: 0, duplicadas: 0, pendencias: 1, erros: 1, ignoradas: 0, ordensNovas: 2, ordensAtualizadas: 0 },
   colunasReconhecidas: ['nome_razaosocial', 'tipo_ordem_servico', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'telefone_primario', 'id_ordem_servico'],
   colunasDescartadas: ['CPF/CNPJ', 'Plano'],
   avisos: ['O arquivo não traz latitude e longitude: as ordens novas aparecem só na lista, até o mapa ser ligado.'],
