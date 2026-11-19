@@ -1,8 +1,7 @@
 import { LogOut, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
-import { Button } from '@/components/ui/button'
 import { useEu, type Papel } from '@/features/acesso/acesso'
-import { useSair } from '@/features/acesso/useSair'
+import { BotaoDeSair } from '@/features/acesso/BotaoDeSair'
 import { cn } from '@/lib/utils'
 
 const secoes: { para: string; texto: string; papeis: Papel[] }[] = [
@@ -18,7 +17,6 @@ const secoes: { para: string; texto: string; papeis: Papel[] }[] = [
 /** Casca do painel web. No celular, o menu desce para a linha de baixo e rola de lado. */
 export function LayoutPainel() {
   const { data: eu } = useEu()
-  const sair = useSair()
   const visiveis = secoes.filter((s) => eu && s.papeis.includes(eu.papel))
 
   return (
@@ -59,9 +57,9 @@ export function LayoutPainel() {
                 <UserRound aria-hidden /> {eu.nome}
               </NavLink>
             )}
-            <Button variante="fantasma" tamanho="compacto" className="text-white hover:bg-white/10" onClick={() => void sair()}>
+            <BotaoDeSair className="flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm text-texto-claro hover:bg-white/10 [&_svg]:size-[18px]">
               <LogOut aria-hidden /> Sair
-            </Button>
+            </BotaoDeSair>
           </div>
         </div>
       </header>
