@@ -145,11 +145,15 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #56 | Ordenação da lista do técnico por proximidade (GPS), por urgência e por bairro |
   | #57 | Mapa 3D no técnico: prédios extrudados via OpenMapTiles sobre o mapa real, botão 2D/3D no canto, preferência salva por sessão |
   | #59 | Deploy automático em produção: workflow "Implantar na produção" (SSH no servidor, dispara em `release.published`, Environment `producao` pede aprovação do Pedro) |
+  | #73 | Importação: campo `plano` como coluna própria da ordem; `OBSERVACAO` sai do texto livre por **allow-list rígida** (OBSERVAÇÕES, DISPONIBILIDADE, CLIENTE EM CASA, REMOÇÃO DE EQUIPAMENTO, LOCALIZAÇÃO ZONA RURAL) — descarta SOLICITANTE, PLANO em texto bruto, DÉBITO, MOTIVO, TELEFONE (RN04); prévia agrupa e exibe linhas ignoradas por tipo (REATIVAÇÃO, INSTALAÇÃO, TROCA DE PLANO...) |
+  | #74 | Botão Sair com confirmação (modal `<dialog>` nativo, acessível, sem lib): evita deslogar sem querer no celular. Componente `BotaoDeSair` em `features/acesso/`, usado no `LayoutPainel` e no `LayoutTecnico` |
+  | #75 | Mapa Imersivo 3D (Pedro, nov/2026, Opção 2 do comparativo): paleta bege quente sobre o Liberty via `aplicarEstiloImersivo()` (sobrescreve paint em runtime, sem trocar a fonte), prédios extrudados com interpolação base/meio/topo e luz lateral ambrada, pins em formato de gota vermelho-laranja; 3D ligado por padrão (só `localStorage === 'false'` força 2D) |
 
 - **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Pagamento pelo cliente:** fica **manual** (decisão de nov/2026, Pedro). O cliente paga por fora do sistema — nada de integrar PIX do cliente pelo app. Mantido o resgate ao técnico por PIX (ADR-014), que é outro fluxo.
 - **Próximos pedidos do Pedro, nesta ordem:**
-  1. **Microsoft 365 e Google** no login (ainda a fazer): dependem do admin do M365 e do console do Google Cloud. A senha + TOTP (opcional) + chave de acesso passwordless já atendem o desktop sem digital.
+  1. **Notificações push no PWA** (ainda a fazer): alinhadas com o SO do técnico; usar Web Push padrão (VAPID), sem depender de serviço proprietário. Serve para avisar ordem designada, prazo de carência vencendo e lembrete de visita.
+  2. **Microsoft 365 e Google** no login (ainda a fazer): dependem do admin do M365 e do console do Google Cloud. A senha + TOTP (opcional) + chave de acesso passwordless já atendem o desktop sem digital.
 - **Limpeza do disco:** o `deploy/limpar-disco.sh` roda num timer do systemd todo dia às 03:30, apagando imagens Docker não usadas, cache de build, backups antigos do `.env`, cache do apt e logs do journal com mais de 7 dias ([docs/implantacao.md](docs/implantacao.md#limpeza-diária-do-disco)).
 - **Backup na produção:** o script está pronto, mas falta o Pedro gerar a chave do age, preencher `BACKUP_*` no `.env`, configurar o rclone (ou o Veeam) e agendar no cron ([docs/implantacao.md](docs/implantacao.md#backup-automático)).
 - **Resgate na produção:** o código está pronto e desligado. Falta a Netwise abrir a conta no Asaas (CNPJ, só para os resgates), pôr a chave e o token no `.env` e configurar os dois webhooks ([docs/implantacao.md](docs/implantacao.md#resgate-por-pix-asaas)). Conferir no ambiente de testes do Asaas o formato da chave de celular.
