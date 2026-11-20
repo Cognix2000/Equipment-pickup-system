@@ -90,7 +90,7 @@ Entre como **gestor** (janela anônima) → **Ordens** → a mesma OS → **Desi
 ### Fechamento
 
 - O **histórico** da ordem conta tudo: quem fez (só o papel), o quê e quando. O registro é só de acréscimo; ninguém apaga.
-- **Gestão de usuários** (gestor): cadastro por convite, revogação na hora e 2FA obrigatório para gestor e financeiro, pela digital do aparelho ou por um aplicativo.
+- **Gestão de usuários** (gestor): cadastro por convite, revogação na hora e "Zerar 2FA e chaves" de quem trocou de celular. O 2FA é opcional para todos os papéis (ADR-015): cada pessoa liga em Minha conta, pela digital do aparelho ou por um aplicativo.
 
 ## 3. Se algo sair do roteiro
 

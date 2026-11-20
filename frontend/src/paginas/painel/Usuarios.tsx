@@ -30,7 +30,6 @@ const situacao: Record<UsuarioNaLista['situacao'], { texto: string; tom: TomDoSe
 }
 
 const formatoData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
-const exigeDoisFatores = (papel: UsuarioNaLista['papel']) => papel === 'admin' || papel === 'financeiro'
 
 /** RF02, só para o gestor: cadastro por convite, revogação imediata e 2FA. */
 export function Usuarios() {
@@ -96,7 +95,7 @@ function LinhaDoUsuario({ usuario: u, aoConvidar }: { usuario: UsuarioNaLista; a
         </span>
       </div>
       <p className="text-[13px] text-texto-suave">
-        {exigeDoisFatores(u.papel) && (u.doisFatores ? '2FA ativo · ' : '2FA configura no primeiro login · ')}
+        {u.doisFatores && '2FA ativo · '}
         {u.ultimoLoginEm ? `Último acesso ${formatoData.format(new Date(u.ultimoLoginEm))}` : 'Nunca entrou'}
       </p>
       {erro && <AvisoDeErro mensagem={erro instanceof ErroDaApi ? erro.message : 'Não foi possível concluir.'} />}
@@ -198,7 +197,7 @@ function CadastroDeUsuario({ aoCadastrar }: { aoCadastrar: (nome: string, link: 
         <Campo id="email-novo" rotulo="E-mail" erro={errors.email?.message}>
           <input id="email-novo" type="email" autoComplete="off" className={classeDoInput} aria-invalid={errors.email ? true : undefined} {...register('email')} />
         </Campo>
-        <Campo id="papel" rotulo="Papel" ajuda="Gestor e financeiro confirmam a entrada com a digital do aparelho ou com um aplicativo (2FA).">
+        <Campo id="papel" rotulo="Papel" ajuda="O 2FA é opcional para todos os papéis: cada pessoa liga em Minha conta, se quiser.">
           <select id="papel" className={classeDoInput} aria-describedby="papel-ajuda" {...register('papel')}>
             <option value="tecnico">Técnico</option>
             <option value="financeiro">Financeiro</option>
