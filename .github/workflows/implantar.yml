@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: implantar-producao
@@ -47,6 +48,9 @@ jobs:
             *) echo "Versão inválida: $versao. Use vX.Y.Z." >&2; exit 1 ;;
           esac
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
+
+      - name: Entrar no GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Atualizar na mesma pasta do agente
         env:
