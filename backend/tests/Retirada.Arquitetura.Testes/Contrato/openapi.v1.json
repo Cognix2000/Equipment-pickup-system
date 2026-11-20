@@ -2942,6 +2942,7 @@
           "endereco",
           "localizacao",
           "observacao",
+          "plano",
           "carenciaAte",
           "responsavelId",
           "visitasSemSucesso",
@@ -2986,6 +2987,12 @@
             ]
           },
           "observacao": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plano": {
             "type": [
               "null",
               "string"

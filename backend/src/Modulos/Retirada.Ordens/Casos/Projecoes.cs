@@ -78,6 +78,7 @@ internal sealed record OrdemDto(
     Endereco Endereco,
     Localizacao? Localizacao,
     string? Observacao,
+    string? Plano,
     DateTimeOffset CarenciaAte,
     Guid? ResponsavelId,
     short VisitasSemSucesso,
@@ -89,7 +90,7 @@ internal sealed record OrdemDto(
     bool? SemContatoNoPrazo = null)
 {
     public static OrdemDto De(Ordem o, string cliente, IEnumerable<Equipamento> equipamentos) => new(
-        o.Id, o.NumeroOs, o.TipoOs, o.Status, cliente, o.Endereco, o.Localizacao, o.Observacao,
+        o.Id, o.NumeroOs, o.TipoOs, o.Status, cliente, o.Endereco, o.Localizacao, o.Observacao, o.Plano,
         o.CarenciaAte, o.ResponsavelId, o.VisitasSemSucesso, o.AguardaBaixaNoHubsoft,
         [.. equipamentos.Select(e => new EquipamentoDto(e.Id, e.Tipo, e.Modelo, e.NumeroSerie?.Valor, e.Situacao))]);
 }
