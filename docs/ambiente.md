@@ -93,7 +93,7 @@ A senha de todos é `Demo@Retirada2026`, e só vale para os e-mails `@exemplo.in
 | `financeiro.demo@exemplo.invalid` | Financeiro | sim, no primeiro login |
 | `gestor.demo@exemplo.invalid` | Gestor | sim, no primeiro login |
 
-No primeiro login de gestor e financeiro, escolha **"Cadastrar a digital ou o rosto"** (chave de acesso) ou um aplicativo autenticador. A chave de acesso só funciona em `localhost` ou com HTTPS.
+Todo papel entra só com a senha. O 2FA (aplicativo autenticador) e a chave de acesso (digital ou rosto) são opcionais e se ligam em **Minha conta** (ADR-015). A chave de acesso só funciona em `localhost` ou com HTTPS.
 
 ## 4. Desenvolver com recarga automática
 

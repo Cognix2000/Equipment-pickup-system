@@ -81,7 +81,7 @@ Só as portas 80 e 443 ficam abertas para a internet. O banco (5432) e o app (80
    docker compose -f docker-compose.yml -f docker-compose.producao.yml run --rm migrador \
      criar-usuario --nome "Técnico CLT" --email tecnico@empresa --papel tecnico --senha 'SuaSenhaAqui123!' --vinculo clt
    ```
-   A senha segue a política do login (mínimo 12 caracteres, não pode conter o começo do e-mail). Gestor e financeiro **ainda precisam cadastrar o 2FA** no primeiro login (digital, rosto ou aplicativo autenticador).
+   A senha segue a política do login (mínimo 12 caracteres, não pode conter o começo do e-mail). O 2FA é opcional para todos os papéis (ADR-015): quem quiser liga em **Minha conta** (aplicativo autenticador ou digital/rosto).
 
 ## Antes dos dados reais: zerar o teste
 
