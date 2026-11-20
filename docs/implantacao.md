@@ -139,6 +139,7 @@ O caminho de um merge até a produção, sempre com uma decisão sua no meio:
    ```bash
    git tag v0.2.0 origin/main && git push origin v0.2.0
    ```
+   Use sempre `vX.Y.Z`, sem ponto depois do `v`. Se uma tag sair como `v.X.Y.Z` por engano (como a `v.0.3.0`), o deploy ainda a aceita: o `deploy/atualizar.sh` procura `v.X.Y.Z` quando `vX.Y.Z` não existe e grava no `.env` a tag que achou.
 4. **Espere** o workflow "Publicar imagens" da tag terminar verde (aba Actions). Ele publica `retirada-api:v0.2.0` e `retirada-web:v0.2.0`.
 5. **O deploy anda sozinho** quando a [implantação automática](#implantação-automática) está configurada: o workflow "Implantar na produção" entra em cena, pede sua aprovação no Environment `producao` e atualiza o servidor. Sem ela, no servidor:
    ```bash
