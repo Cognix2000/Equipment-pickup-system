@@ -30,4 +30,5 @@ Kanban no GitHub Projects: Backlog → Pronto para começar → Em andamento →
 ## Consequências
 
 - O histórico da `main` vira o changelog.
+- A proteção depende de plano pago: em repositório privado, o GitHub Free não aplica ruleset nem branch protection (responde 403). A organização foi para o plano **Team** em nov/2026, depois que dois commits entraram direto na `main` sem que a regra valesse. Se voltar para o Free, a `main` fica sem proteção.
 - Modelos de issue e de PR, rótulos e CODEOWNERS ficam em `.github/`; o CI recusa título de PR fora do padrão.
