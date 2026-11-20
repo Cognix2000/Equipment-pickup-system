@@ -12,7 +12,7 @@ GitHub Flow:
 
 | Item | Regra |
 | --- | --- |
-| `main` | Protegida: só entra por PR com o CI verde |
+| `main` | Protegida: só entra por PR com o CI verde. Ruleset sem bypass, nem para o admin, versionado em `.github/protecao-main.json` e aplicado com `sh .github/proteger-main.sh` |
 | Branches | Curtas, com tipo e requisito: `feat/rf12-registrar-retirada`, `fix/importacao-telefone` |
 | Commits e título do PR | Conventional Commits em português: `feat(ordens): registrar retirada (RF12)` |
 | Merge | Squash: um commit por PR |

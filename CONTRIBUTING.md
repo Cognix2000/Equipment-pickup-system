@@ -45,7 +45,7 @@ As regras abaixo vêm do [ADR-006](docs/adr/0006-gestao-do-codigo.md) e do [ADR-
    Cite a issue no fim do assunto, quando houver: `feat(ordens): mapa com a posição do técnico (#42)`. **Não use emoji**: o CI confere o título do PR pelo padrão.
 
 4. Abra o PR com o título no mesmo padrão (o CI recusa outro formato) e preencha o checklist. Mova a issue para **Em revisão**.
-5. Com o CI verde, faça **squash merge**. A `main` vai para homologação; mova a issue para **Em homologação**.
+5. Com o CI verde, faça **squash merge**. A `main` não aceita push direto, nem do admin: o ruleset de `.github/protecao-main.json` exige PR, os checks do CI e do CodeQL verdes e só deixa squash. Mudou o ruleset ou o nome de um job do CI? Atualize o JSON e rode `sh .github/proteger-main.sh` com o `gh` logado. A `main` vai para homologação; mova a issue para **Em homologação**.
 6. Conferido em homologação, mova para **Concluído**.
 
 ## Antes de abrir o PR
