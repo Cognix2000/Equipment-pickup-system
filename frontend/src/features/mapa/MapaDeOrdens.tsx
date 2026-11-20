@@ -10,15 +10,38 @@ import { useMinhaPosicao } from './minhaPosicao'
 type Props = { ordens: Ordem[]; className?: string }
 
 // Preferência fica por sessão: no celular com rede fraca, o técnico que escolheu 2D não quer o mapa
-// reabrir em 3D no próximo passo pela cidade.
+// reabrir em 3D no próximo passo pela cidade. Imersivo 3D (nov/2026, Opção 2): quem nunca escolheu
+// nada abre em 3D — é a vibe padrão do app agora. Só explícito 'false' força 2D.
 const ChaveModo3D = 'mapa:modo3d'
 
 function modo3dInicial(): boolean {
   try {
-    return localStorage.getItem(ChaveModo3D) === 'true'
+    return localStorage.getItem(ChaveModo3D) !== 'false'
   } catch {
-    return false
+    return true
   }
+}
+
+/**
+ * Pino de ordem em formato de gota, vermelho-laranja vívido como no comparativo visual (Opção 2).
+ * Usa SVG inline (acessível por `aria-label`) em vez de classes para garantir o visual igual em
+ * dark mode e em viewports antigos — o fundo do mapa pode ser bege ou dark, mas o pino é sempre o mesmo.
+ */
+function pinoDeOrdem(numero: number, destacado: boolean): HTMLElement {
+  const cor = destacado ? '#ff3a00' : '#ff6b1a'
+  const corNumero = destacado ? '#8a1b00' : '#a53500'
+  const pino = document.createElement('button')
+  pino.type = 'button'
+  pino.className = 'block cursor-pointer bg-transparent border-0 p-0'
+  pino.innerHTML =
+    `<svg width="34" height="42" viewBox="0 0 34 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+    `<path d="M17 1 C 8 1 2 8 2 16 C 2 26 17 40 17 40 C 17 40 32 26 32 16 C 32 8 26 1 17 1 Z" ` +
+    `fill="${cor}" stroke="#ffffff" stroke-width="2.5"/>` +
+    `<circle cx="17" cy="16" r="7" fill="#ffffff"/>` +
+    `<text x="17" y="20" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="700" ` +
+    `fill="${corNumero}">${numero}</text>` +
+    `</svg>`
+  return pino
 }
 
 /**
@@ -56,13 +79,8 @@ export default function MapaDeOrdens({ ordens, className }: Props) {
     const comPonto = ordens.filter((o) => o.localizacao)
 
     const marcadores = comPonto.map((o, i) => {
-      const pino = document.createElement('button')
-      pino.type = 'button'
-      pino.textContent = String(i + 1)
+      const pino = pinoDeOrdem(i + 1, i === 0)
       pino.setAttribute('aria-label', `Abrir ordem ${i + 1}: ${o.endereco.logradouro}, ${o.endereco.numero ?? 's/ nº'}`)
-      pino.className =
-        'grid size-9 place-items-center rounded-full border-[3px] border-white text-sm font-semibold text-white shadow-md ' +
-        (i === 0 ? 'bg-azul' : 'bg-marinho')
       pino.addEventListener('click', () => navegar(`/tecnico/ordens/${o.id}`))
       return new Marker({ element: pino }).setLngLat([o.localizacao!.longitude, o.localizacao!.latitude]).addTo(novo)
     })

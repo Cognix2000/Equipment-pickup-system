@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { desabilitarEdificios3D, habilitarEdificios3D, reabilitarEdificios3D } from './baseDoMapa'
+import { aplicarEstiloImersivo, desabilitarEdificios3D, habilitarEdificios3D, reabilitarEdificios3D } from './baseDoMapa'
 
 /**
  * Um fake minimalista do MapLibre Map. Guarda o que foi adicionado e permite inspecionar as chamadas.
@@ -57,6 +57,59 @@ describe('habilitarEdificios3D', () => {
     const mapa = mapaMock({ comSourceOpenMapTiles: false, comLayerPlano: false })
     expect(() => habilitarEdificios3D(mapa as unknown as Parameters<typeof habilitarEdificios3D>[0], 'real')).not.toThrow()
     expect(mapa._layers['edificios-3d']).toBeUndefined()
+  })
+})
+
+describe('aplicarEstiloImersivo', () => {
+  function mapaComEstilo(layers: { id: string; type: string }[]) {
+    const paint: Record<string, Record<string, string>> = {}
+    return {
+      isStyleLoaded: () => true,
+      once: (_e: string, cb: () => void) => cb(),
+      getStyle: () => ({ layers }),
+      setPaintProperty: (id: string, prop: string, valor: string) => {
+        paint[id] ??= {}
+        paint[id]![prop] = valor
+      },
+      setSky: vi.fn(),
+      _paint: paint,
+    }
+  }
+
+  it('recolore background, água, parque, bairro e rua para a paleta Imersivo (Opção 2)', () => {
+    const mapa = mapaComEstilo([
+      { id: 'background', type: 'background' },
+      { id: 'water', type: 'fill' },
+      { id: 'landuse_park', type: 'fill' },
+      { id: 'landuse_residential', type: 'fill' },
+      { id: 'road_motorway', type: 'line' },
+      { id: 'road_minor', type: 'line' },
+    ])
+    aplicarEstiloImersivo(mapa as unknown as Parameters<typeof aplicarEstiloImersivo>[0])
+    // Bege claro no fundo.
+    expect(mapa._paint.background!['background-color']).toBe('#f1e6d2')
+    // Azul suave na água, quente nos usos de solo.
+    expect(mapa._paint.water!['fill-color']).toBe('#9cc6d9')
+    expect(mapa._paint.landuse_park!['fill-color']).toBe('#d9d5a8')
+    expect(mapa._paint.landuse_residential!['fill-color']).toBe('#e8dcc0')
+    // Avenida amarelada, rua secundária creme.
+    expect(mapa._paint.road_motorway!['line-color']).toBe('#ffe8a8')
+    expect(mapa._paint.road_minor!['line-color']).toBe('#f8ead0')
+    // Céu azulado quando o mapa inclinar.
+    expect(mapa.setSky).toHaveBeenCalled()
+  })
+
+  it('não quebra se setSky não existir na versão do MapLibre (tipos antigos)', () => {
+    const mapa = {
+      isStyleLoaded: () => true,
+      once: (_e: string, cb: () => void) => cb(),
+      getStyle: () => ({ layers: [{ id: 'background', type: 'background' }] }),
+      setPaintProperty: () => {},
+      setSky: () => {
+        throw new Error('sem setSky nessa versão')
+      },
+    }
+    expect(() => aplicarEstiloImersivo(mapa as unknown as Parameters<typeof aplicarEstiloImersivo>[0])).not.toThrow()
   })
 })
 

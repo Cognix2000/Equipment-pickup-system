@@ -101,7 +101,7 @@ O documento completo de requisitos não está no repositório. O resumo abaixo f
 | RF16 | Histórico |
 | RF18 | Parâmetros ajustáveis |
 | RF19 | Baixa no HubSoft |
-| Localização | O técnico manda só a última posição, com o app aberto; só o gestor vê a equipe (`/gestao/equipe`). Mapa real em produção (`Mapa:Estilo=real`, OpenFreeMap) |
+| Localização | O técnico manda só a última posição, com o app aberto; só o gestor vê a equipe (`/gestao/equipe`). Mapa real em produção (`Mapa:Estilo=real`, OpenFreeMap). Visual "Imersivo 3D" (Pedro, nov/2026): paleta bege quente aplicada ao Liberty, prédios extrudados em ambrado com sombra lateral, pitch 55° e 3D ligado por padrão, pins de ordem em formato de gota vermelho-laranja. `aplicarEstiloImersivo()` sobrescreve o paint do estilo Liberty em runtime, sem mudar a fonte de dados |
 | Repasse | R$ 5,00 por retirada **conferida** para quem retirou (CLT ou terceiro, igual; `Ordens:ValorPorRetiradaCentavos`). O CLT recebe na folha e o financeiro registra o pagamento; o terceiro resgata por PIX (linha abaixo) |
 | Resgate (ADR-014) | **Terceiro** aperta "Resgatar" (`/tecnico/resgate`) e recebe por PIX pelo **Asaas**, só do que o estoque já conferiu, para a chave PIX que o financeiro aprovou; o Asaas valida com o servidor antes de pagar (`/api/webhooks/asaas/validacao`) e o aviso `TRANSFER_DONE` traz o ID de Fim a Fim e o comprovante. **CLT** recebe na folha e só acompanha; o financeiro vê a folha do mês. Campo `vinculo` no técnico. `Pagamentos:Gateway` = `asaas`, `simulado` (homologação) ou `desligado` (padrão) |
 | RN01 | Reimportar não duplica |
