@@ -8,21 +8,29 @@ cd "$(dirname "$0")/.."
 # Tudo dentro de uma função: o "git checkout" troca este arquivo pela versão da tag, e o shell já leu o corpo inteiro.
 principal() {
   versao=$(sed -n 's/^VERSAO=//p' .env | tail -n 1)
-  case "$versao" in
-    v[0-9]*.[0-9]*.[0-9]*) ;;
-    *)
-      echo "VERSAO=\"$versao\" no .env: a produção só recebe versão com tag, como VERSAO=v0.1.0." >&2
-      echo "Veja \"Lançar uma versão\" em docs/implantacao.md." >&2
-      exit 1 ;;
-  esac
+  if ! printf '%s\n' "$versao" | grep -Eq '^v\.?[0-9]+\.[0-9]+\.[0-9]+$'; then
+    echo "VERSAO=\"$versao\" no .env: a produção só recebe versão com tag, como VERSAO=v0.1.0." >&2
+    echo "Veja \"Lançar uma versão\" em docs/implantacao.md." >&2
+    exit 1
+  fi
 
   git fetch --quiet --tags --force origin
-  if ! git rev-parse --quiet --verify "refs/tags/$versao" >/dev/null; then
+  tag="$versao"
+  if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
+    if [ "${versao#v.}" = "$versao" ] && [ "${versao#v}" != "$versao" ]; then
+      alias="v.${versao#v}"
+      if git rev-parse --quiet --verify "refs/tags/$alias" >/dev/null; then
+        tag="$alias"
+      fi
+    fi
+  fi
+  if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
     echo "A tag $versao não existe no GitHub. Crie a versão antes (docs/implantacao.md, \"Lançar uma versão\")." >&2
     exit 1
   fi
-  git -c advice.detachedHead=false checkout --quiet "$versao"
-  echo "Código e imagens na versão $versao ($(git rev-parse --short HEAD))."
+  sed -i "s/^VERSAO=.*/VERSAO=$tag/" .env
+  git -c advice.detachedHead=false checkout --quiet "$tag"
+  echo "Código e imagens na versão $tag ($(git rev-parse --short HEAD))."
 
   compose="docker compose -f docker-compose.yml -f docker-compose.producao.yml"
 
