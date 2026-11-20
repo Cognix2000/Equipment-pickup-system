@@ -12,7 +12,7 @@ GitHub Flow:
 
 | Item | Regra |
 | --- | --- |
-| `main` | Protegida: só entra por PR com o CI verde |
+| `main` | Só entra por PR com o CI verde. No plano Free o GitHub não bloqueia: o hook `.githooks/pre-push` recusa o push na máquina e o workflow **Guarda da main** denuncia (fica vermelho e abre issue) commit que não veio de PR. O ruleset para plano pago fica pronto em `.github/protecao-main.json` (`sh .github/proteger-main.sh`) |
 | Branches | Curtas, com tipo e requisito: `feat/rf12-registrar-retirada`, `fix/importacao-telefone` |
 | Commits e título do PR | Conventional Commits em português: `feat(ordens): registrar retirada (RF12)` |
 | Merge | Squash: um commit por PR |
@@ -30,4 +30,5 @@ Kanban no GitHub Projects: Backlog → Pronto para começar → Em andamento →
 ## Consequências
 
 - O histórico da `main` vira o changelog.
+- O bloqueio no servidor depende de plano pago: em repositório privado, o GitHub Free não aplica ruleset nem branch protection (responde 403). Por isso dois commits entraram direto na `main` em nov/2026. Decisão de nov/2026 (Pedro): seguir no Free, com o hook local e a denúncia pelo workflow; o bloqueio de verdade só vem se a organização passar para o Team, e aí basta rodar `.github/proteger-main.sh`.
 - Modelos de issue e de PR, rótulos e CODEOWNERS ficam em `.github/`; o CI recusa título de PR fora do padrão.

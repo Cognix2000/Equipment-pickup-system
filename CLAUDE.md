@@ -144,12 +144,15 @@ RF10, RF17 e RF20 ainda não têm implementação. Peça a definição antes de 
   | #55 | Cadastro manual de ordem pelo financeiro em `/financeiro/nova-ordem` (POST `/api/ordens`, RF03 estendido) |
   | #56 | Ordenação da lista do técnico por proximidade (GPS), por urgência e por bairro |
   | #57 | Mapa 3D no técnico: prédios extrudados via OpenMapTiles sobre o mapa real, botão 2D/3D no canto, preferência salva por sessão |
-  | #59 | Deploy automático em produção: workflow "Implantar na produção" (SSH no servidor, dispara em `release.published`, Environment `producao` pede aprovação do Pedro) |
+  | #59 | Deploy automático em produção: workflow "Implantar na produção" (dispara em `release.published`, Environment `producao` pede aprovação do Pedro). Hoje roda no self-hosted runner do servidor, não por SSH (veja acima) |
   | #73 | Importação: campo `plano` como coluna própria da ordem; `OBSERVACAO` sai do texto livre por **allow-list rígida** (OBSERVAÇÕES, DISPONIBILIDADE, CLIENTE EM CASA, REMOÇÃO DE EQUIPAMENTO, LOCALIZAÇÃO ZONA RURAL) — descarta SOLICITANTE, PLANO em texto bruto, DÉBITO, MOTIVO, TELEFONE (RN04); prévia agrupa e exibe linhas ignoradas por tipo (REATIVAÇÃO, INSTALAÇÃO, TROCA DE PLANO...) |
   | #74 | Botão Sair com confirmação (modal `<dialog>` nativo, acessível, sem lib): evita deslogar sem querer no celular. Componente `BotaoDeSair` em `features/acesso/`, usado no `LayoutPainel` e no `LayoutTecnico` |
   | #75 | Mapa Imersivo 3D (Pedro, nov/2026, Opção 2 do comparativo): paleta bege quente sobre o Liberty via `aplicarEstiloImersivo()` (sobrescreve paint em runtime, sem trocar a fonte), prédios extrudados com interpolação base/meio/topo e luz lateral ambrada, pins em formato de gota vermelho-laranja; 3D ligado por padrão (só `localStorage === 'false'` força 2D) |
+  | #77 | Deploy aceita a tag com ponto extra (`v.0.3.0`, criada por engano): `implantar.yml` e `deploy/atualizar.sh` validam `^v\.?X.Y.Z$`; se a `VERSAO=vX.Y.Z` do `.env` não existir como tag, o script tenta `v.X.Y.Z` e grava no `.env` a tag que achou |
+  | — | Guarda da `main` sem plano pago (ADR-006): o GitHub Free não protege branch em repositório privado (403). O hook `.githooks/pre-push` bloqueia o push local (`git config core.hooksPath .githooks`) e o workflow `guarda-da-main.yml` abre issue para commit fora de PR. O ruleset fica pronto em `.github/protecao-main.json` para quando houver o Team. Os dois commits da linha abaixo motivaram a mudança |
+  | — | Direto na `main`, sem PR: `implantar.yml` ganhou `packages: read` para puxar as imagens do GHCR (`61bb5d5`); `OrdemDto` passou a expor `Plano`, com o contrato `openapi.v1.json` atualizado (`d6c4b6b`, complemento do #73) |
 
-- **Versão:** a `v0.1.0` ainda não foi lançada. O agente não tem permissão para criar release: quem cria é o Pedro.
+- **Versão:** a última é a `v0.3.2` (no `d6c4b6b`). Existe também a tag `v.0.3.0`, com ponto extra, criada por engano; não crie outras assim, use sempre `vX.Y.Z`. O agente não tem permissão para criar release: quem cria é o Pedro.
 - **Pagamento pelo cliente:** fica **manual** (decisão de nov/2026, Pedro). O cliente paga por fora do sistema — nada de integrar PIX do cliente pelo app. Mantido o resgate ao técnico por PIX (ADR-014), que é outro fluxo.
 - **Próximos pedidos do Pedro, nesta ordem:**
   1. **Notificações push no PWA** (ainda a fazer): alinhadas com o SO do técnico; usar Web Push padrão (VAPID), sem depender de serviço proprietário. Serve para avisar ordem designada, prazo de carência vencendo e lembrete de visita.
