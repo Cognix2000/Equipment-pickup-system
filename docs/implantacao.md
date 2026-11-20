@@ -189,12 +189,10 @@ O workflow **"Implantar na produção"** usa um **self-hosted runner** no própr
    sudo ./svc.sh status   # confirma que está "active (running)"
    ```
 
-5. No **GHCR**, o `atualizar.sh` precisa puxar as imagens privadas. Dê ao Docker do servidor o login do GHCR, uma vez só (como `cladmin`):
+5. No **GHCR**, o workflow já entra sozinho com o `github.token` do job (permissão `packages: read`). Esse login fica em `$RUNNER_TEMP/docker` (variável `DOCKER_CONFIG`), **não** em `~/.docker/config.json`: o token vence no fim do job e, se ficasse lá, sobrescreveria o login permanente e o `sh deploy/atualizar.sh` manual passaria a dar `error from registry: denied`. O deploy manual continua usando o token clássico só com `read:packages` do passo 2 da [primeira vez](#primeira-vez). Se o manual der `denied`, refaça esse login:
    ```bash
-   gh auth login                         # ou: echo "$TOKEN" | docker login ghcr.io -u <seu-usuario> --password-stdin
-   gh auth token | docker login ghcr.io -u <seu-usuario> --password-stdin
+   docker login ghcr.io -u <seu-usuario-github>   # cole o token read:packages quando pedir a senha
    ```
-   Isso grava `~/.docker/config.json`; o agente usa daqui em diante.
 
 #### 2. Crie o Environment `producao` no GitHub
 
