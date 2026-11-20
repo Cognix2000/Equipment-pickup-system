@@ -43,10 +43,10 @@ jobs:
         id: versao
         run: |
           versao="${{ github.event.inputs.versao || github.ref_name }}"
-          case "$versao" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "Versão inválida: $versao. Use vX.Y.Z." >&2; exit 1 ;;
-          esac
+          if [[ ! "$versao" =~ ^v\.?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Versão inválida: $versao. Use vX.Y.Z." >&2
+            exit 1
+          fi
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
 
       - name: Entrar no GHCR
