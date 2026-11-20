@@ -1,5 +1,6 @@
 #!/bin/sh
-# Aplica no GitHub a proteção da main de .github/protecao-main.json (ADR-006). Precisa do gh logado como admin.
+# Aplica no GitHub a proteção da main de .github/protecao-main.json (ADR-006). Precisa do gh logado como admin
+# e de plano pago (Team): no Free, repositório privado responde 403. Sem plano, vale o .githooks/pre-push e o workflow "Guarda da main".
 #
 #     sh .github/proteger-main.sh
 #

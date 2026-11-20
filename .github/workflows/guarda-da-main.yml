@@ -1,0 +1,51 @@
+# ADR-006: a main só recebe merge de PR. No plano Free, repositório privado não tem
+# proteção de branch (o GitHub responde 403), então este workflow não impede o commit
+# direto: ele o denuncia. Fica vermelho e abre uma issue para cada push na main que
+# traga commit fora de PR mergeado. Com plano pago, vale o ruleset de .github/protecao-main.json.
+name: Guarda da main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  conferir:
+    name: Commit só por PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confere se cada commit veio de PR mergeado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ANTES: ${{ github.event.before }}
+          DEPOIS: ${{ github.event.after }}
+        run: |
+          diretos=""
+          for sha in $(jq -r '.commits[].id' "$GITHUB_EVENT_PATH"); do
+            prs=$(gh api "repos/$REPO/commits/$sha/pulls" \
+              -q '[.[] | select(.merged_at != null and .base.ref == "main")] | length')
+            if [ "$prs" = "0" ]; then
+              autor=$(jq -r --arg s "$sha" '.commits[] | select(.id == $s) | .author.username // .author.name' "$GITHUB_EVENT_PATH")
+              titulo=$(jq -r --arg s "$sha" '.commits[] | select(.id == $s) | .message | split("\n")[0]' "$GITHUB_EVENT_PATH")
+              diretos="$diretos- \`${sha:0:7}\` $titulo (autor: $autor)"$'\n'
+            fi
+          done
+
+          if [ -z "$diretos" ]; then
+            echo "Todos os commits vieram de PR mergeado."
+            exit 0
+          fi
+
+          corpo="Commit entrou na \`main\` sem PR (ADR-006). Push de \`${ANTES:0:7}\` para \`${DEPOIS:0:7}\`, feito por @${{ github.actor }}:
+
+          $diretos
+          O CI não rodou antes. Confira o que entrou e, se precisar, desfaça com um PR de revert. Para não repetir: \`git config core.hooksPath .githooks\` (CONTRIBUTING, \"Antes de abrir o PR\")."
+          gh issue create -R "$REPO" --title "Commit direto na main: ${DEPOIS:0:7}" --label "prioridade: alta" --body "$corpo"
+          echo "::error::Commit direto na main, sem PR:"
+          printf '%s' "$diretos"
+          exit 1

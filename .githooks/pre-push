@@ -1,0 +1,13 @@
+#!/bin/sh
+# ADR-006: recusa push direto na main. Instale uma vez por clone:
+#     git config core.hooksPath .githooks
+# O GitHub não bloqueia (repositório privado no plano Free); este hook bloqueia na sua máquina
+# e o workflow "Guarda da main" denuncia o que passar por fora.
+while read -r _ref_local _sha_local ref_remoto _sha_remoto; do
+  if [ "$ref_remoto" = "refs/heads/main" ]; then
+    echo "Push direto na main recusado (ADR-006). Abra uma branch e um PR:" >&2
+    echo "  git switch -c tipo/descricao && git push -u origin HEAD" >&2
+    exit 1
+  fi
+done
+exit 0
