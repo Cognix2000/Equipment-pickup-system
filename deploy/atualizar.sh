@@ -36,7 +36,7 @@ principal() {
 
   $compose pull                      # imagens da API e do app nessa versão (GHCR), banco, fotos e Caddy
   $compose up -d --no-build --remove-orphans
-  docker image prune -f              # disco pequeno: apaga as imagens antigas que ficaram sem uso
+  docker image prune -af             # disco pequeno: apaga TODA imagem sem uso (não só as sem tag), logo após o deploy
   $compose ps
 }
 
