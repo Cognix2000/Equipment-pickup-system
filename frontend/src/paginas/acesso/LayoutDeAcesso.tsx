@@ -9,7 +9,13 @@ export function LayoutDeAcesso({ titulo, subtitulo, children }: { titulo: string
       <header className="relative overflow-hidden bg-marinho px-4 pt-10 pb-20 text-white">
         <MapaDaRetirada className="pointer-events-none absolute bottom-0 left-1/2 max-w-none -translate-x-1/2" />
         <div className="relative mx-auto max-w-[408px]">
-          <p className="font-titulo text-lg font-bold">Retirada · Netwise</p>
+          <div className="flex items-center gap-2.5">
+            <svg aria-hidden viewBox="0 0 64 64" className="size-8 shrink-0">
+              <path d="M32 54 22 36a12 12 0 1 1 20 0z" className="fill-white" />
+              <circle cx="32" cy="27" r="5" className="fill-ciano" />
+            </svg>
+            <p className="font-titulo text-2xl font-bold tracking-tight">Retirada · Netwise</p>
+          </div>
           {/* Até 1023 px a cena vem inteira aqui; a partir de 1024 px, ela vai para os lados do formulário. */}
           <CenaDaRetirada className="mt-5 block h-auto w-full lg:hidden" />
           <h1 className="mt-4 lg:mt-6 text-[28px] leading-tight font-bold">{titulo}</h1>
