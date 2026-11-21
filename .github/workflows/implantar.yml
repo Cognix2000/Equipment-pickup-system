@@ -67,6 +67,8 @@ jobs:
           fi
           # Backup carimbado do .env antes de alterar, para voltar sem drama.
           cp .env ".env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+          # Mantém só os 3 backups mais recentes do .env (disco do servidor é pequeno).
+          ls -1t .env.bak.* 2>/dev/null | tail -n +4 | xargs -r rm --
           sed -i "s/^VERSAO=.*/VERSAO=${VERSAO}/" .env
           # O atualizar.sh cuida do resto: confere a tag, pull das imagens, up -d, prune.
           git fetch --quiet --tags --force origin
