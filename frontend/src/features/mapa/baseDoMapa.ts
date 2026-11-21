@@ -1,5 +1,5 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { Map as MapaMapLibre, Marker, setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
+import { Map as MapaMapLibre, Marker, AttributionControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
 import urlDoWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import type { Gps } from '@/features/ordens/comandos'
 import type { EstiloDoMapa } from './localizacao'
@@ -49,11 +49,14 @@ export function criarMapa(container: HTMLElement, estilo: EstiloDoMapa) {
     center: CentroDaCidadeSimulada,
     zoom: 14,
     // A atribuição do OpenStreetMap é obrigatória no mapa real; a cidade simulada não usa dado de ninguém.
-    attributionControl: estilo === 'real' ? { compact: true } : false,
+    attributionControl: false,
     cooperativeGestures: true, // rolar a página não dá zoom sem querer
     maxPitch: 75, // deixa o 3D funcionar; o default do MapLibre é 60°
   })
-  if (estilo === 'real') aplicarEstiloImersivo(mapa)
+  if (estilo === 'real') {
+    aplicarEstiloImersivo(mapa)
+    mapa.addControl(new AttributionControl({ compact: true }), 'bottom-left')
+  }
   return mapa
 }
 
