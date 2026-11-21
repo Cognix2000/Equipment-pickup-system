@@ -49,8 +49,16 @@ jobs:
           fi
           echo "versao=$versao" >> "$GITHUB_OUTPUT"
 
-      - name: Entrar no GHCR
-        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      # O runner roda como cladmin, o mesmo usuário do deploy manual. Sem DOCKER_CONFIG próprio, este
+      # login gravaria o github.token (que vence no fim do job) por cima do login permanente em
+      # ~/.docker/config.json, e o "sh deploy/atualizar.sh" manual passaria a dar "denied" no GHCR.
+      # Por isso o login do job fica na pasta temporária do runner, que ele apaga ao terminar.
+      - name: Entrar no GHCR (só neste job)
+        run: |
+          set -eu
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/docker" >> "$GITHUB_ENV"
+          export DOCKER_CONFIG="$RUNNER_TEMP/docker"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Atualizar na mesma pasta do agente
         env:
