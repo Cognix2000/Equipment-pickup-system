@@ -39,7 +39,7 @@ export function BotaoDeSair({ className, children }: { className?: string; child
       </button>
       <dialog
         ref={dialog}
-        className="rounded-xl bg-superficie p-5 text-marinho shadow-xl backdrop:bg-black/40 open:flex open:flex-col open:gap-4 open:w-[min(360px,calc(100vw-2rem))]"
+        className="rounded-xl bg-superficie p-5 text-marinho shadow-xl backdrop:bg-black/40 open:flex open:flex-col open:gap-4 open:w-[min(360px,calc(100vw-2rem))] open:m-auto"
       >
         <div>
           <h2 className="text-base font-semibold">Sair da conta?</h2>
