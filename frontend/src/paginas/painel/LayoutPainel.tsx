@@ -26,7 +26,7 @@ export function LayoutPainel() {
           <NavLink to="/" className="flex min-h-12 items-center font-titulo text-xl font-bold whitespace-nowrap text-white no-underline">
             Retirada · Netwise
           </NavLink>
-          <nav aria-label="Seções do painel" className="flex min-w-0 grow-[999] basis-[420px] gap-1 overflow-x-auto">
+          <nav aria-label="Seções do painel" className="flex min-w-0 grow-[999] basis-[420px] gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] [&::-webkit-scrollbar]:hidden">
             {visiveis.map((s) => (
               <NavLink
                 key={s.para}
