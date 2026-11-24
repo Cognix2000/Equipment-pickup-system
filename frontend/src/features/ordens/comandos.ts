@@ -1,5 +1,6 @@
 import { enviar } from '@/lib/api'
 import { ordem } from './tipos'
+import type { TipoEquipamento } from './tipos'
 
 /** GPS do aparelho no momento da ação (RF12, RF13). */
 export type Gps = { latitude: number; longitude: number; precisaoM: number | null }
@@ -81,6 +82,45 @@ export const comandos = {
   cancelar: (id: string, motivo: MotivoDeCancelamento, chave: string) => comando(id, 'cancelar', { motivo }, chave),
   marcarBaixa: (id: string, chave: string) => comando(id, 'baixa-hubsoft', {}, chave),
 }
+
+/** Equipamento na edição da ordem (id='' indica novo). */
+export type EquipamentoAEditar = {
+  id: string  // '' = novo
+  tipo: TipoEquipamento
+  modelo: string
+  serie: string | null
+  mac: string | null
+  valor: number | null
+}
+
+/** Payload do PATCH /api/ordens/{id} — edição completa pelo financeiro/gestor. */
+export type PedidoDeEdicao = {
+  numeroOs: number | null
+  tipoOs: string
+  endereco: {
+    logradouro: string
+    numero: string | null
+    complemento: string | null
+    bairro: string
+    cidade: string
+    uf: string
+    referencia: string | null
+  }
+  cep: string | null
+  localizacao: { latitude: number; longitude: number } | null
+  observacao: string | null
+  plano: string | null
+  protocolo: string | null
+  idOrdemServicoHubsoft: number | null
+  idClienteServicoHubsoft: number | null
+  dataProgramada: string | null
+  dataRescisao: string | null
+  equipamentos: EquipamentoAEditar[]
+}
+
+/** Edição completa da ordem (PATCH /api/ordens/{id}), disponível para financeiro e gestor. */
+export const editarOrdem = (id: string, pedido: PedidoDeEdicao, chave: string) =>
+  enviar(`/api/ordens/${id}`, pedido, ordem, { 'Idempotency-Key': chave }, 'PATCH')
 
 /**
  * Mesma normalização do servidor (NumeroSerie): sem espaço e em maiúscula. O SN GPON digitado em hexadecimal

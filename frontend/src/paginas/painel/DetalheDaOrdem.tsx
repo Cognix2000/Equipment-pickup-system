@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft } from 'lucide-react'
-import { useId, useState, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Carregando, FalhaAoCarregar } from '@/components/EstadoDaTela'
 import { Badge, type TomDoSelo } from '@/components/ui/badge'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
 import { classeDoInput } from '@/components/ui/input'
 import { useEu, usuariosQuery, type Papel } from '@/features/acesso/acesso'
-import { comandos, type MotivoDeCancelamento } from '@/features/ordens/comandos'
+import { comandos, editarOrdem, novaChave, type EquipamentoAEditar, type MotivoDeCancelamento, type PedidoDeEdicao } from '@/features/ordens/comandos'
 import { formatarTelefone, janelaDeContato } from '@/features/ordens/contato'
 import { enderecoDaFoto } from '@/features/ordens/fotos'
 import { useOrdem } from '@/features/ordens/consultas'
@@ -16,10 +16,22 @@ import { Historico } from '@/features/ordens/Historico'
 import { descreverPrazo, statusComEquipamentoNoCliente } from '@/features/ordens/prazo'
 import { RegistroDeContato } from '@/features/ordens/RegistroDeContato'
 import { StatusBadge } from '@/features/ordens/StatusBadge'
-import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem, type Telefone } from '@/features/ordens/tipos'
+import { caixaDeTitulo, enderecoCurto, rotuloDoTipo, type Equipamento, type Ordem, type TipoEquipamento, type Telefone } from '@/features/ordens/tipos'
 import { mensagemDaFalha, useComandoDaOrdem } from '@/features/ordens/useComandoDaOrdem'
 
 const formatoData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
+
+const encerrados: Ordem['status'][] = ['conferida', 'cancelada', 'devolvida_na_loja', 'encerrada_sem_retirada']
+const podeEditar = (o: Ordem) => !encerrados.includes(o.status)
+const ehGestorOuFinanceiro = (papel?: Papel) => papel === 'financeiro' || papel === 'admin'
+
+const tiposDeEquipamento: { valor: TipoEquipamento; texto: string }[] = [
+  { valor: 'ont', texto: 'ONT' },
+  { valor: 'onu', texto: 'ONU' },
+  { valor: 'roteador', texto: 'Roteador' },
+  { valor: 'repetidor_mesh', texto: 'Repetidor Mesh' },
+  { valor: 'fonte', texto: 'Fonte' },
+]
 
 const situacaoDoItem: Record<Equipamento['situacao'], { texto: string; tom: TomDoSelo }> = {
   pendente: { texto: 'Com o cliente', tom: 'neutro' },
@@ -272,7 +284,9 @@ function Telefones({ ordem, podeRegistrar }: { ordem: Ordem; podeRegistrar: bool
 function Acoes({ ordem, papel }: { ordem: Ordem; papel?: Papel }) {
   const [feito, setFeito] = useState<string | null>(null)
   const financeiro = ehDoFinanceiro(papel)
+  const gestorOuFinanceiro = ehGestorOuFinanceiro(papel)
   const acoes = [
+    gestorOuFinanceiro && podeEditar(ordem) && <EditarOrdemAcao key="editar" ordem={ordem} aoConcluir={setFeito} />,
     financeiro && ordem.status === 'nova' && <Liberar key="liberar" ordem={ordem} aoConcluir={setFeito} />,
     financeiro && ordem.status === 'nova' && <AjustarCarencia key="carencia" ordem={ordem} aoConcluir={setFeito} />,
     papel === 'admin' && ordem.status === 'disponivel' && <Designar key="designar" ordem={ordem} aoConcluir={setFeito} />,
@@ -316,6 +330,247 @@ function Falha({ erro }: { erro: Error | null }) {
       {mensagem}
     </p>
   ) : null
+}
+
+/** Edição de todos os campos da ordem pelo financeiro ou gestor (qualquer status antes do encerramento). */
+function EditarOrdemAcao({ ordem, aoConcluir }: PropsDaAcao) {
+  const [aberto, setAberto] = useState(false)
+  const chaveRef = useRef(novaChave())
+  const queryClient = useQueryClient()
+
+  const editar = useMutation({
+    mutationFn: (pedido: PedidoDeEdicao) => editarOrdem(ordem.id, pedido, chaveRef.current),
+    onSuccess: (ordemAtualizada) => {
+      queryClient.setQueryData(['ordens', ordem.id], ordemAtualizada)
+      void queryClient.invalidateQueries({ queryKey: ['ordens'] })
+      setAberto(false)
+      chaveRef.current = novaChave()
+      aoConcluir('Ordem atualizada com sucesso.')
+    },
+  })
+
+  if (!aberto)
+    return (
+      <Acao titulo="Editar a ordem">
+        <p className="text-sm text-texto-suave">Corrija ou complete qualquer campo da ordem antes do encerramento.</p>
+        <Button type="button" variante="contorno" tamanho="compacto" className="inline-flex gap-1.5 self-start" onClick={() => setAberto(true)}>
+          <Pencil className="size-4" aria-hidden />
+          Editar
+        </Button>
+      </Acao>
+    )
+
+  return (
+    <Acao titulo="Editar a ordem">
+      <FormularioDeEdicao
+        ordem={ordem}
+        aoSalvar={(pedido) => editar.mutate(pedido)}
+        aoCancelar={() => setAberto(false)}
+        salvando={editar.isPending}
+        erro={editar.error instanceof Error ? editar.error : null}
+      />
+    </Acao>
+  )
+}
+
+type PropsDoFormulario = {
+  ordem: Ordem
+  aoSalvar: (pedido: PedidoDeEdicao) => void
+  aoCancelar: () => void
+  salvando: boolean
+  erro: Error | null
+}
+
+function FormularioDeEdicao({ ordem, aoSalvar, aoCancelar, salvando, erro }: PropsDoFormulario) {
+  const id = useId()
+  const [numeroOs, setNumeroOs] = useState(ordem.numeroOs !== null ? String(ordem.numeroOs) : '')
+  const [tipoOs, setTipoOs] = useState(ordem.tipoOs)
+  const [logradouro, setLogradouro] = useState(ordem.endereco.logradouro)
+  const [numero, setNumero] = useState(ordem.endereco.numero ?? '')
+  const [complemento, setComplemento] = useState(ordem.endereco.complemento ?? '')
+  const [bairro, setBairro] = useState(ordem.endereco.bairro)
+  const [cidade, setCidade] = useState(ordem.endereco.cidade)
+  const [uf, setUf] = useState(ordem.endereco.uf)
+  const [referencia, setReferencia] = useState(ordem.endereco.referencia ?? '')
+  const [cep, setCep] = useState('')
+  const [observacao, setObservacao] = useState(ordem.observacao ?? '')
+  const [plano, setPlano] = useState(ordem.plano ?? '')
+  const [protocolo, setProtocolo] = useState('')
+  const [equipamentos, setEquipamentos] = useState<EquipamentoAEditar[]>(() =>
+    ordem.equipamentos.map((e) => ({
+      id: e.id,
+      tipo: e.tipo,
+      modelo: e.modelo,
+      serie: e.numeroSerie,
+      mac: null,
+      valor: null,
+    }))
+  )
+
+  function atualizarEquipamento(idx: number, campo: Partial<EquipamentoAEditar>) {
+    setEquipamentos((prev) => prev.map((e, i) => (i === idx ? { ...e, ...campo } : e)))
+  }
+
+  function adicionarEquipamento() {
+    setEquipamentos((prev) => [...prev, { id: '', tipo: 'ont', modelo: '', serie: null, mac: null, valor: null }])
+  }
+
+  function removerEquipamento(idx: number) {
+    setEquipamentos((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function submeter(e: React.FormEvent) {
+    e.preventDefault()
+    const pedido: PedidoDeEdicao = {
+      numeroOs: numeroOs.trim() ? Number(numeroOs) : null,
+      tipoOs: tipoOs.trim(),
+      endereco: {
+        logradouro: logradouro.trim(),
+        numero: numero.trim() || null,
+        complemento: complemento.trim() || null,
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        uf: uf.trim().toUpperCase(),
+        referencia: referencia.trim() || null,
+      },
+      cep: cep.trim() || null,
+      localizacao: ordem.localizacao,
+      observacao: observacao.trim() || null,
+      plano: plano.trim() || null,
+      protocolo: protocolo.trim() || null,
+      idOrdemServicoHubsoft: null,
+      idClienteServicoHubsoft: null,
+      dataProgramada: null,
+      dataRescisao: null,
+      equipamentos,
+    }
+    aoSalvar(pedido)
+  }
+
+  const idf = (sufixo: string) => `${id}-${sufixo}`
+  const campoTexto = (label: string, valor: string, onChange: (v: string) => void, props?: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <label className="flex flex-col gap-0.5 text-sm">
+      {label}
+      <input className={classeDoInput} value={valor} onChange={(e) => onChange(e.target.value)} {...props} />
+    </label>
+  )
+
+  return (
+    <form onSubmit={submeter} className="flex flex-col gap-4">
+      {/* OS e tipo */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-marinho">Identificação</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {campoTexto('Nº da OS', numeroOs, setNumeroOs, { type: 'number', min: 1, placeholder: 'Sem nº' })}
+          {campoTexto('Tipo de OS', tipoOs, setTipoOs, { required: true, placeholder: 'Ex.: REMOÇÃO' })}
+        </div>
+        {campoTexto('Protocolo HubSoft', protocolo, setProtocolo, { placeholder: 'Opcional' })}
+        {campoTexto('Plano do cliente', plano, setPlano, { placeholder: 'Ex.: 600 Mbps' })}
+      </fieldset>
+
+      {/* Endereço */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-marinho">Endereço</legend>
+        {campoTexto('Logradouro', logradouro, setLogradouro, { required: true })}
+        <div className="grid grid-cols-2 gap-2">
+          {campoTexto('Número', numero, setNumero, { placeholder: 'S/N' })}
+          {campoTexto('Complemento', complemento, setComplemento)}
+        </div>
+        {campoTexto('Bairro', bairro, setBairro, { required: true })}
+        <div className="grid grid-cols-[1fr_72px] gap-2">
+          {campoTexto('Cidade', cidade, setCidade, { required: true })}
+          {campoTexto('UF', uf, setUf, { required: true, maxLength: 2, placeholder: 'SP' })}
+        </div>
+        {campoTexto('CEP', cep, setCep, { placeholder: '00000-000' })}
+        {campoTexto('Referência', referencia, setReferencia, { placeholder: 'Ponto de referência (opcional)' })}
+        {campoTexto('Observação', observacao, setObservacao)}
+      </fieldset>
+
+      {/* Equipamentos */}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold text-marinho">Equipamentos</legend>
+        {equipamentos.map((eq, idx) => {
+          const pendente = eq.id === '' || ordem.equipamentos.find((e) => e.id === eq.id)?.situacao === 'pendente'
+          return (
+            <div key={eq.id || idx} className="flex flex-col gap-2 rounded-lg border border-borda p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor={idf(`tipo-${idx}`)} className="text-sm font-medium">
+                  Item {idx + 1}
+                </label>
+                {pendente && (
+                  <Button
+                    type="button"
+                    variante="fantasma"
+                    tamanho="compacto"
+                    onClick={() => removerEquipamento(idx)}
+                    aria-label={`Remover item ${idx + 1}`}
+                  >
+                    <Trash2 className="size-4 text-erro" aria-hidden />
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col gap-0.5 text-sm">
+                  Tipo
+                  <select
+                    id={idf(`tipo-${idx}`)}
+                    className={classeDoInput}
+                    value={eq.tipo}
+                    onChange={(e) => atualizarEquipamento(idx, { tipo: e.target.value as TipoEquipamento })}
+                    disabled={!pendente}
+                  >
+                    {tiposDeEquipamento.map((t) => (
+                      <option key={t.valor} value={t.valor}>{t.texto}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-0.5 text-sm">
+                  Modelo
+                  <input
+                    className={classeDoInput}
+                    value={eq.modelo}
+                    onChange={(e) => atualizarEquipamento(idx, { modelo: e.target.value })}
+                    required
+                    placeholder="Marca e modelo"
+                  />
+                </label>
+              </div>
+              {eq.tipo !== 'fonte' && (
+                <label className="flex flex-col gap-0.5 text-sm">
+                  Número de série
+                  <input
+                    className={classeDoInput}
+                    value={eq.serie ?? ''}
+                    onChange={(e) => atualizarEquipamento(idx, { serie: e.target.value || null })}
+                    placeholder="Opcional até a retirada"
+                    disabled={!pendente}
+                  />
+                </label>
+              )}
+              {!pendente && (
+                <p className="text-xs text-texto-suave">Item já retirado ou devolvido — tipo e série não podem ser alterados.</p>
+              )}
+            </div>
+          )
+        })}
+        <Button type="button" variante="contorno" tamanho="compacto" className="inline-flex gap-1.5 self-start" onClick={adicionarEquipamento}>
+          <Plus className="size-4" aria-hidden />
+          Adicionar item
+        </Button>
+      </fieldset>
+
+      {erro && <Falha erro={erro} />}
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" tamanho="compacto" disabled={salvando}>
+          {salvando ? 'Salvando…' : 'Salvar alterações'}
+        </Button>
+        <Button type="button" variante="fantasma" tamanho="compacto" disabled={salvando} onClick={aoCancelar}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
 }
 
 /** RN03: liberar antes do fim da carência, quando o financeiro já deu a baixa no HubSoft. */
