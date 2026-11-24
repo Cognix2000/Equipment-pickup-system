@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -39,10 +40,10 @@ internal static class InscricaoPush
         grupo.MapPost("/push/inscricao", async (
             PedidoDeInscricao corpo,
             AcessoDbContext db,
-            UsuarioAtual eu,
+            ClaimsPrincipal sessao,
             CancellationToken ct) =>
         {
-            var usuarioId = eu.Id();
+            var usuarioId = sessao.Id();
             var agora = DateTimeOffset.UtcNow;
 
             var existente = await db.PushInscricoes
@@ -67,10 +68,10 @@ internal static class InscricaoPush
         grupo.MapDelete("/push/inscricao", async (
             string endpoint,
             AcessoDbContext db,
-            UsuarioAtual eu,
+            ClaimsPrincipal sessao,
             CancellationToken ct) =>
         {
-            var usuarioId = eu.Id();
+            var usuarioId = sessao.Id();
             var inscricao = await db.PushInscricoes
                 .FirstOrDefaultAsync(p => p.UsuarioId == usuarioId && p.Endpoint == endpoint, ct);
 

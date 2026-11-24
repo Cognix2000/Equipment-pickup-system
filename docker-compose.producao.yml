@@ -47,6 +47,10 @@ services:
       Pagamentos__Asaas__Endereco: ${ASAAS_ENDERECO:-https://api.asaas.com}
       Pagamentos__Asaas__ChaveDaApi: ${ASAAS_CHAVE_DA_API:-}
       Pagamentos__Asaas__TokenDoWebhook: ${ASAAS_TOKEN_DO_WEBHOOK:-}
+      # Push: vazio desativa o recurso (RF — notificações no PWA). Gerar com: npx web-push generate-vapid-keys
+      Push__VapidPublicKey: ${PUSH_VAPID_PUBLIC_KEY:-}
+      Push__VapidPrivateKey: ${PUSH_VAPID_PRIVATE_KEY:-}
+      Push__Subject: ${PUSH_SUBJECT:-}
 
   fotos:
     <<: *logs
