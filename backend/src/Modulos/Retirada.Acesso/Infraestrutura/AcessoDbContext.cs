@@ -10,6 +10,7 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Convite> Convites => Set<Convite>();
     public DbSet<ChaveDeAcesso> ChavesDeAcesso => Set<ChaveDeAcesso>();
+    public DbSet<PushInscricao> PushInscricoes => Set<PushInscricao>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,6 +73,21 @@ public sealed class AcessoDbContext(DbContextOptions<AcessoDbContext> options) :
             c.Property(x => x.CriadaEm).HasColumnName("criada_em");
             c.Property(x => x.UltimoUsoEm).HasColumnName("ultimo_uso_em");
             c.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId);
+        });
+
+        modelBuilder.Entity<PushInscricao>(p =>
+        {
+            p.ToTable("push_inscricao");
+            p.HasKey(x => x.Id);
+            p.Property(x => x.Id).HasColumnName("id");
+            p.Property(x => x.UsuarioId).HasColumnName("usuario_id");
+            p.Property(x => x.Endpoint).HasColumnName("endpoint");
+            p.Property(x => x.ChaveP256Dh).HasColumnName("chave_p256dh");
+            p.Property(x => x.ChaveAuth).HasColumnName("chave_auth");
+            p.Property(x => x.Agente).HasColumnName("agente");
+            p.Property(x => x.InscritaEm).HasColumnName("inscrita_em");
+            p.Property(x => x.AtualizadaEm).HasColumnName("atualizada_em");
+            p.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId);
         });
     }
 

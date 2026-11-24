@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FingerprintPattern, Shield, ShieldCheck, Trash2 } from 'lucide-react'
+import { Bell, BellOff, BellRing, FingerprintPattern, Shield, ShieldCheck, Trash2 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -11,6 +11,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { classeDoInput } from '@/components/ui/input'
 import { acesso, euQuery, rotuloDoPapel, useEu } from '@/features/acesso/acesso'
 import { aparelhoAceitaChave, chaveDeAcesso, chavesQuery, ErroDaChave, type ChaveNaLista } from '@/features/acesso/chaveDeAcesso'
+import { useNotificacoesPush } from '@/features/pwa/useNotificacoesPush'
 import { ErroDaApi } from '@/lib/api'
 import { AvisoDeErro } from '@/paginas/acesso/LayoutDeAcesso'
 
@@ -48,6 +49,8 @@ export function MinhaConta() {
 
       <SecaoDo2FA />
 
+      <SecaoDeNotificacoes />
+
       <Card className="max-w-[640px]">
         <CardTitle>Chaves de acesso</CardTitle>
         <p className="text-[15px] text-texto-suave">
@@ -77,6 +80,61 @@ export function MinhaConta() {
         )}
       </Card>
     </div>
+  )
+}
+
+/** Ativar/desativar notificações push (Web Push / VAPID) neste dispositivo. */
+function SecaoDeNotificacoes() {
+  const { estado, ativar, desativar } = useNotificacoesPush()
+
+  // Push não configurado no servidor: não exibe a seção para não confundir.
+  if (estado === 'nao-configurado') return null
+
+  return (
+    <Card className="max-w-[640px]">
+      <CardTitle>Notificações neste aparelho</CardTitle>
+      <p className="text-[15px] text-texto-suave">
+        Avisa quando uma ordem for designada para você, quando o prazo de carência vencer e quando houver lembrete de visita.
+        Funciona mesmo com o navegador fechado.
+      </p>
+
+      {estado === 'nao-suportado' && (
+        <p className="text-[15px] text-texto-suave">
+          Este navegador não aceita notificações push. Abra o sistema num navegador atualizado (Chrome, Firefox, Edge ou Safari 16.4+).
+        </p>
+      )}
+
+      {estado === 'negado' && (
+        <p className="flex items-center gap-2 text-[15px] text-alerta">
+          <BellOff aria-hidden className="size-5 shrink-0" />
+          Notificações bloqueadas nas configurações do navegador. Para reativar, clique no cadeado na barra de endereço e permita notificações.
+        </p>
+      )}
+
+      {estado === 'inativo' && (
+        <>
+          <p className="flex items-center gap-2 text-[15px] text-texto-suave">
+            <Bell aria-hidden className="size-5" /> Notificações desativadas neste aparelho.
+          </p>
+          <Button type="button" className="self-start" onClick={() => void ativar()}>
+            <BellRing aria-hidden /> Ativar notificações
+          </Button>
+        </>
+      )}
+
+      {estado === 'ativo' && (
+        <>
+          <p className="flex items-center gap-2 text-[15px] font-semibold text-sucesso">
+            <BellRing aria-hidden className="size-5" /> Notificações ativas neste aparelho.
+          </p>
+          <Button type="button" variante="contorno" className="self-start" onClick={() => void desativar()}>
+            <BellOff aria-hidden /> Desativar notificações
+          </Button>
+        </>
+      )}
+
+      {estado === 'carregando' && <Carregando linhas={1} rotulo="Verificando notificações" />}
+    </Card>
   )
 }
 
