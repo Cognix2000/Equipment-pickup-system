@@ -10,6 +10,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // injectManifest: usamos um SW customizado (src/sw.ts) que adiciona o handler de push.
+      // O Workbox injeta o manifesto de pré-cache via __WB_MANIFEST e o build compila o TS.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icones/apple-touch-icon.png'],
       manifest: {
@@ -27,9 +32,8 @@ export default defineConfig({
           { src: '/icones/icone-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         // A API nunca vem do cache: ordem cancelada precisa aparecer na hora (RN07).
-        navigateFallbackDenylist: [/^\/api\//, /^\/health/],
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,woff2,geojson}'],
       },
     }),

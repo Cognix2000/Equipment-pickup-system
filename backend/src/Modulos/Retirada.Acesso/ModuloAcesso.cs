@@ -35,6 +35,8 @@ public static class ModuloAcesso
         services.AddSingleton<SegundoFator>();
         services.AddSingleton<CerimoniaDaChave>();
         services.AddSingleton<IFido2>(new Fido2(CerimoniaDaChave.Configuracao(config)));
+        services.AddScoped<ServicoDeNotificacoes>();
+        services.AddScoped<INotificacoesPush>(sp => sp.GetRequiredService<ServicoDeNotificacoes>());
 
         // As chaves cifram o cookie e o segredo do 2FA. Perdê-las derruba sessões e invalida todo 2FA:
         // fora do desenvolvimento, a pasta é obrigatória e precisa estar num volume com backup.
@@ -149,6 +151,7 @@ public static class ModuloAcesso
         ConfirmarConfiguracao2FA.Mapear(grupo);
         DesativarSegundoFator.Mapear(grupo);
         ChaveDeAcessoCasos.Mapear(grupo);
+        InscricaoPush.Mapear(grupo);
         QuemSouEu.Mapear(grupo);
         Sair.Mapear(grupo);
         AceitarConvite.Mapear(grupo);
