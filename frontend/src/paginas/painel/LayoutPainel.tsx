@@ -2,6 +2,7 @@ import { LogOut, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
 import { useEu, type Papel } from '@/features/acesso/acesso'
 import { BotaoDeSair } from '@/features/acesso/BotaoDeSair'
+import { BannerDeInstalacao } from '@/features/pwa/BannerDeInstalacao'
 import { cn } from '@/lib/utils'
 
 const secoes: { para: string; texto: string; papeis: Papel[] }[] = [
@@ -63,6 +64,7 @@ export function LayoutPainel() {
           </div>
         </div>
       </header>
+      <BannerDeInstalacao />
       <main className="mx-auto flex max-w-[1200px] flex-col gap-5 px-4 pt-6">
         <Outlet />
       </main>

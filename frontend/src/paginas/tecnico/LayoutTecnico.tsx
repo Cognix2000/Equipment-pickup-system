@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useEu } from '@/features/acesso/acesso'
 import { BotaoDeSairNoMenu } from '@/features/acesso/BotaoDeSair'
 import { useCompartilharPosicao } from '@/features/mapa/minhaPosicao'
+import { BannerDeInstalacao } from '@/features/pwa/BannerDeInstalacao'
 import { cn } from '@/lib/utils'
 
 /**
@@ -16,6 +17,7 @@ export function LayoutTecnico() {
   return (
     <div className="min-h-dvh bg-moldura">
       <div className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col bg-fundo">
+        <BannerDeInstalacao />
         <div className="flex flex-1 flex-col">
           <Outlet />
         </div>
