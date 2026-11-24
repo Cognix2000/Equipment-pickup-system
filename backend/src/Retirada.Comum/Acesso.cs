@@ -61,6 +61,9 @@ public static class Politicas
 
     /// <summary>Tentativa de contato com o cliente (RN10): financeiro, gestor ou o técnico com a ordem.</summary>
     public const string Contato = "contato";
+
+    /// <summary>Ver quanto cada técnico tem a receber (só leitura, sem registrar pagamento): financeiro, estoque ou gestor.</summary>
+    public const string RepasseLeitura = "repasse_leitura";
 }
 
 public static class UsuarioAtual

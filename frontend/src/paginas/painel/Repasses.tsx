@@ -5,6 +5,7 @@ import { Carregando, FalhaAoCarregar, Vazio } from '@/components/EstadoDaTela'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { classeDoInput } from '@/components/ui/input'
+import { useEu } from '@/features/acesso/acesso'
 import {
   detalheDoRepasseQuery,
   emReais,
@@ -36,6 +37,8 @@ const formatoDataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', t
  * do pagamento. O sistema não transfere dinheiro: o financeiro paga por fora (folha ou PIX) e registra aqui.
  */
 export function Repasses() {
+  const { data: eu } = useEu()
+  const podeAgir = eu?.papel !== 'estoque'
   const { data, isPending, isError, error, refetch } = useQuery(repassesQuery)
   const total = (data ?? []).reduce((soma, t) => soma + t.valorCentavos, 0)
 
@@ -58,18 +61,22 @@ export function Repasses() {
       {data?.length === 0 && <Vazio titulo="Nenhum técnico ainda">Quando houver técnico cadastrado, ele aparece aqui.</Vazio>}
       <div className="flex max-w-[860px] flex-col gap-3">
         {data?.map((t) => (
-          <LinhaDoTecnico key={t.id} tecnico={t} />
+          <LinhaDoTecnico key={t.id} tecnico={t} somenteLeitura={!podeAgir} />
         ))}
       </div>
 
-      <ChavesPixParaAprovar />
-      <ResgatesPorPix />
-      <FolhaDoMes />
+      {podeAgir && (
+        <>
+          <ChavesPixParaAprovar />
+          <ResgatesPorPix />
+          <FolhaDoMes />
+        </>
+      )}
     </>
   )
 }
 
-function LinhaDoTecnico({ tecnico: t }: { tecnico: TecnicoNaLista }) {
+function LinhaDoTecnico({ tecnico: t, somenteLeitura }: { tecnico: TecnicoNaLista; somenteLeitura: boolean }) {
   const [aberto, setAberto] = useState(false)
   const idDoDetalhe = useId()
 
@@ -102,14 +109,14 @@ function LinhaDoTecnico({ tecnico: t }: { tecnico: TecnicoNaLista }) {
       </button>
       {aberto && (
         <div id={idDoDetalhe} className="border-t border-borda p-4">
-          <DetalheDoTecnico tecnicoId={t.id} />
+          <DetalheDoTecnico tecnicoId={t.id} somenteLeitura={somenteLeitura} />
         </div>
       )}
     </article>
   )
 }
 
-function DetalheDoTecnico({ tecnicoId }: { tecnicoId: string }) {
+function DetalheDoTecnico({ tecnicoId, somenteLeitura }: { tecnicoId: string; somenteLeitura: boolean }) {
   const { data, isPending, isError, error, refetch } = useQuery(detalheDoRepasseQuery(tecnicoId))
   if (isPending) return <Carregando linhas={1} rotulo="Carregando as retiradas" />
   if (isError) return <FalhaAoCarregar erro={error} tentarDeNovo={() => void refetch()} />
@@ -141,7 +148,9 @@ function DetalheDoTecnico({ tecnicoId }: { tecnicoId: string }) {
               </tbody>
             </table>
           </div>
-          <RegistroDePagamento tecnicoId={tecnicoId} valorCentavos={data.valorCentavos} quantidade={data.quantidade} />
+          {!somenteLeitura && (
+            <RegistroDePagamento tecnicoId={tecnicoId} valorCentavos={data.valorCentavos} quantidade={data.quantidade} />
+          )}
         </>
       ) : (
         <p className="text-[15px] text-texto-suave">Nada a pagar agora.</p>
