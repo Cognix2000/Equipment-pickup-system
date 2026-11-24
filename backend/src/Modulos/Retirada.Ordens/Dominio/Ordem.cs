@@ -422,6 +422,84 @@ public sealed class Ordem : Entidade
         Registrar("baixa_hubsoft", agora);
     }
 
+    /// <summary>
+    /// Edição manual pelo financeiro ou gestor. Pode ser usada em qualquer status antes do encerramento.
+    /// Atualiza todos os campos editáveis: dados do endereço, observação, plano, equipamentos, datas, etc.
+    /// Os equipamentos são substituídos pela lista nova — itens removidos da lista saem, novos entram.
+    /// Equipamentos já retirados ou devolvidos não podem ser removidos da ordem.
+    /// </summary>
+    public void Editar(
+        int? numeroOs,
+        string tipoOs,
+        Endereco endereco,
+        string? cep,
+        Localizacao? localizacao,
+        string? observacao,
+        string? plano,
+        string? protocolo,
+        int? idOrdemServicoHubsoft,
+        int? idClienteServicoHubsoft,
+        DateTimeOffset? dataProgramada,
+        DateOnly? dataRescisao,
+        IReadOnlyList<EquipamentoEditado> equipamentos,
+        DateTimeOffset agora)
+    {
+        Exigir(!Encerrados.Contains(Status), "RF_EDIT", "Ordem encerrada não pode ser editada.");
+        Exigir(!string.IsNullOrWhiteSpace(tipoOs), "RF_EDIT", "Informe o tipo da ordem de serviço.");
+        Exigir(!string.IsNullOrWhiteSpace(endereco.Logradouro), "RF_EDIT", "Informe o logradouro.");
+        Exigir(!string.IsNullOrWhiteSpace(endereco.Cidade), "RF_EDIT", "Informe a cidade.");
+        Exigir(equipamentos.Count > 0, "RF_EDIT", "A ordem precisa de pelo menos um equipamento.");
+
+        // Não permite remover itens que já foram retirados ou devolvidos (pois têm evidências).
+        var jaSaidos = _equipamentos.Where(e => e.Situacao != SituacaoEquipamento.Pendente).Select(e => e.Id).ToHashSet();
+        var novaLista = equipamentos.Select(e => e.Id).Where(id => id != Guid.Empty).ToHashSet();
+        var removidos = jaSaidos.Except(novaLista).ToList();
+        Exigir(removidos.Count == 0, "RF_EDIT",
+            "Equipamentos já retirados ou devolvidos não podem ser removidos da ordem.");
+
+        NumeroOs = numeroOs;
+        TipoOs = tipoOs.Trim().ToUpperInvariant();
+        Endereco = endereco;
+        Cep = cep;
+        Localizacao = localizacao;
+        Observacao = observacao;
+        Plano = plano;
+        Protocolo = protocolo;
+        IdOrdemServicoHubsoft = idOrdemServicoHubsoft;
+        IdClienteServicoHubsoft = idClienteServicoHubsoft;
+        DataProgramada = dataProgramada;
+        DataRescisao = dataRescisao;
+
+        // Atualiza equipamentos: mantém os existentes (preservando série/MAC se não mudar), remove os que saíram
+        // e adiciona os novos.
+        var existentesPorId = _equipamentos.ToDictionary(e => e.Id);
+        var idsNovos = new HashSet<Guid>(equipamentos.Where(e => e.Id != Guid.Empty).Select(e => e.Id));
+
+        // Remove os que não estão mais na lista e ainda estão pendentes.
+        _equipamentos.RemoveAll(e => !idsNovos.Contains(e.Id) && e.Situacao == SituacaoEquipamento.Pendente);
+
+        foreach (var eq in equipamentos)
+        {
+            if (eq.Id != Guid.Empty && existentesPorId.TryGetValue(eq.Id, out var existente))
+            {
+                // Atualiza o existente (tipo, modelo, valor — série/MAC só se não tiver sido retirado).
+                existente.Editar(eq.Tipo, eq.Modelo, eq.Serie, eq.Mac, eq.Valor);
+            }
+            else if (eq.Id == Guid.Empty)
+            {
+                // Novo equipamento.
+                _equipamentos.Add(Equipamento.Criar(
+                    eq.Tipo, eq.Modelo,
+                    string.IsNullOrWhiteSpace(eq.Serie) ? null : NumeroSerie.Criar(eq.Serie),
+                    string.IsNullOrWhiteSpace(eq.Mac) ? null : eq.Mac,
+                    eq.Valor));
+            }
+        }
+
+        Tocar(agora);
+        Registrar("editada", agora);
+    }
+
     private void Mudar(StatusOrdem novo, string evento, DateTimeOffset agora)
     {
         Status = novo;

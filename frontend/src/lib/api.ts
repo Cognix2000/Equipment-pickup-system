@@ -33,15 +33,16 @@ export async function buscarJson<T extends z.ZodType>(caminho: string, schema: T
   return schema.parse(await resposta.json())
 }
 
-/** POST com o cabeçalho anti-CSRF. Sem schema, ignora o corpo da resposta (204). */
+/** POST (ou outro método) com o cabeçalho anti-CSRF. Sem schema, ignora o corpo da resposta (204). */
 export async function enviar<T extends z.ZodType>(
   caminho: string,
   corpo?: unknown,
   schema?: T,
   cabecalhos: Record<string, string> = {},
+  metodo: 'POST' | 'PATCH' | 'PUT' | 'DELETE' = 'POST',
 ): Promise<z.infer<T>> {
   const resposta = await fetch(caminho, {
-    method: 'POST',
+    method: metodo,
     credentials: 'same-origin',
     headers: {
       Accept: 'application/json',

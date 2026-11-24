@@ -47,4 +47,36 @@ public sealed class Equipamento : Entidade
     internal void RegistrarDevolucaoNaLoja() => Situacao = SituacaoEquipamento.DevolvidoNaLoja;
 
     internal bool Confere(NumeroSerie? serieLida) => !EhPatrimonio || serieLida == NumeroSerie;
+
+    /// <summary>Atualiza os campos de um equipamento já existente na ordem (edição manual pelo financeiro/gestor).</summary>
+    internal void Editar(TipoEquipamento tipo, string modelo, string? serie, string? mac, decimal? valor)
+    {
+        if (valor is < 0)
+            throw new RegraDeNegocioException("VALOR", "O valor do equipamento não pode ser negativo.");
+        if (string.IsNullOrWhiteSpace(modelo))
+            throw new RegraDeNegocioException("MODELO", "Informe marca e modelo do equipamento.");
+
+        Tipo = tipo;
+        Modelo = modelo.Trim();
+        Mac = string.IsNullOrWhiteSpace(mac) ? null : mac.Trim();
+        Valor = valor;
+
+        // Série e MAC só atualizamos se o equipamento ainda está pendente (não foi retirado nem devolvido).
+        if (Situacao == SituacaoEquipamento.Pendente)
+        {
+            if (tipo == TipoEquipamento.Fonte)
+                NumeroSerie = null;
+            else if (!string.IsNullOrWhiteSpace(serie))
+                NumeroSerie = Dominio.NumeroSerie.Criar(serie.Trim());
+        }
+    }
 }
+
+/// <summary>Representa um equipamento na edição manual (pode ser novo ou existente).</summary>
+public sealed record EquipamentoEditado(
+    Guid Id,  // Guid.Empty = novo
+    TipoEquipamento Tipo,
+    string Modelo,
+    string? Serie,
+    string? Mac,
+    decimal? Valor);
