@@ -21,8 +21,8 @@ internal static class RepassesDosTecnicos
 
     public static void Mapear(IEndpointRouteBuilder grupo)
     {
-        grupo.MapGet("/", ListarAsync).RequireAuthorization(Politicas.Financeiro).WithSummary("Repasse de cada técnico: retiradas conferidas a pagar");
-        grupo.MapGet("/{tecnicoId:guid}", DetalharAsync).RequireAuthorization(Politicas.Financeiro).WithSummary("Retiradas a pagar e pagamentos de um técnico");
+        grupo.MapGet("/", ListarAsync).RequireAuthorization(Politicas.RepasseLeitura).WithSummary("Repasse de cada técnico: retiradas conferidas a pagar");
+        grupo.MapGet("/{tecnicoId:guid}", DetalharAsync).RequireAuthorization(Politicas.RepasseLeitura).WithSummary("Retiradas a pagar e pagamentos de um técnico");
     }
 
     /// <summary>Técnico revogado sem nada a receber sai da lista; com saldo, continua até ser pago.</summary>

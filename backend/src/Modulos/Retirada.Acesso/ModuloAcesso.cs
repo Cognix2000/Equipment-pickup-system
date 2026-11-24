@@ -72,7 +72,8 @@ public static class ModuloAcesso
             .AddPolicy(Politicas.Financeiro, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro))
             .AddPolicy(Politicas.Campo, p => Completo(p).RequireRole(Papeis.Tecnico))
             .AddPolicy(Politicas.Estoque, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Estoque))
-            .AddPolicy(Politicas.Contato, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico));
+            .AddPolicy(Politicas.Contato, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Tecnico))
+            .AddPolicy(Politicas.RepasseLeitura, p => Completo(p).RequireRole(Papeis.Gestor, Papeis.Financeiro, Papeis.Estoque));
 
         // Sem sessão o limite é por IP, e a equipe inteira pode entrar pela mesma rede do escritório
         // no começo do turno (um IP só). Os valores comportam uns 30 técnicos logando no mesmo minuto;
