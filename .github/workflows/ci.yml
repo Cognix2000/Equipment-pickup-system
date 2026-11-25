@@ -76,14 +76,6 @@ jobs:
         env:
           RETIRADA_TESTE_BANCO: Host=localhost;Database=retirada_teste;Username=retirada_dono;Password=senha_so_do_ci;GSS Encryption Mode=Disable
           RETIRADA_TESTE_S3: http://localhost:8333
-          ATUALIZAR_CONTRATO: "1" # TEMP: gerar Contrato/openapi.v1.json pra pegar via artifact; remover depois.
-      - name: TEMP — sobe o contrato gerado como artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: openapi-contrato
-          path: backend/tests/Retirada.Arquitetura.Testes/Contrato/openapi.v1.json
-          retention-days: 1
 
   frontend:
     name: PWA React
