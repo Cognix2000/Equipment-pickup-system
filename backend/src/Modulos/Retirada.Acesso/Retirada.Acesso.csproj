@@ -16,6 +16,10 @@
          NuGetAudit do CI trata o advisory como erro. Pode sair quando o Fido2
          subir a dependência. -->
     <PackageReference Include="System.Formats.Cbor" Version="11.0.0" />
+    <!-- Força a 13.0.3: o WebPush 1.0.11 puxa a 10.0.3 por transitivo, que tem
+         GHSA-5crp-9r3c-p9vr (vulnerabilidade alta), e o NuGetAudit do CI trata
+         o advisory como erro. Pode sair quando o WebPush subir a dependência. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <PropertyGroup>
