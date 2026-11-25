@@ -265,6 +265,63 @@
         }
       }
     },
+    "/api/acesso/push/chave-publica": {
+      "get": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Chave p\u00FAblica VAPID (RF \u2014 push de ordens)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/acesso/push/inscricao": {
+      "post": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Salvar inscri\u00E7\u00E3o de push do dispositivo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PedidoDeInscricao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Acesso"
+        ],
+        "summary": "Remover inscri\u00E7\u00E3o de push do dispositivo",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/acesso/eu": {
       "get": {
         "tags": [
@@ -3348,6 +3405,32 @@
         "properties": {
           "credencial": {
             "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
+      "PedidoDeInscricao": {
+        "required": [
+          "endpoint",
+          "chaveP256Dh",
+          "chaveAuth",
+          "agente"
+        ],
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "chaveP256Dh": {
+            "type": "string"
+          },
+          "chaveAuth": {
+            "type": "string"
+          },
+          "agente": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

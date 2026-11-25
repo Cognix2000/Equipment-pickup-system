@@ -55,6 +55,10 @@ services:
       # ADR-014: resgate do técnico terceiro por PIX. Na homologação o PIX é simulado: "cai" na hora e nenhum dinheiro sai.
       Pagamentos__Gateway: simulado
       Pagamentos__ResgateMinimoCentavos: "500"
+      # Push: vazio desativa o recurso (RF — notificações no PWA). Gerar com: npx web-push generate-vapid-keys
+      Push__VapidPublicKey: ${PUSH_VAPID_PUBLIC_KEY:-}
+      Push__VapidPrivateKey: ${PUSH_VAPID_PRIVATE_KEY:-}
+      Push__Subject: ${PUSH_SUBJECT:-}
     volumes:
       # ADR-010: chaves que cifram a sessão e o 2FA. Perder este volume derruba sessões e todo 2FA: entra no backup.
       - chaves:/chaves
