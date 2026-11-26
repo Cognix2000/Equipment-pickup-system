@@ -80,6 +80,45 @@ services:
       - api
       - web
 
+  # Observabilidade leve: expõem métricas só na VPN (wg0), para um Grafana/Prometheus externo fazer scrape.
+  # Sem Loki/Tempo/Grafana aqui: o disco deste servidor não comporta (ver docs/adr/0008-observabilidade.md).
+  node-exporter:
+    <<: *logs
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+)($$|/)"
+    ports:
+      - "${REDE_VPN_IP:?defina REDE_VPN_IP no .env}:9100:9100"
+
+  cadvisor:
+    <<: *logs
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    # Docker 29 usa containerd como snapshotter; cAdvisor precisa falar com o containerd direto
+    # (o layout clássico de /var/lib/docker/.../layerdb não existe mais nesse modo).
+    command:
+      - "--docker_only=true"
+      - "--containerd=/var/run/containerd/containerd.sock"
+      - "--containerd-namespace=moby"
+    ports:
+      - "${REDE_VPN_IP:?defina REDE_VPN_IP no .env}:8081:8080"
+
 volumes:
   caddy_dados:
   caddy_config:
